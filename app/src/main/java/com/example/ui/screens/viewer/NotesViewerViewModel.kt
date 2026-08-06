@@ -1,8 +1,8 @@
 package com.example.ui.screens.viewer
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.database.ProjectDao
 import com.example.domain.services.export.ExportEngine
 import com.example.domain.services.html.HtmlMergeEngine
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,23 +15,32 @@ import java.io.File
 data class NotesViewerState(
     val htmlContent: String = "",
     val isLoading: Boolean = true,
-    val generatedFile: File? = null
+    val generatedPdfFile: File? = null,
+    val generatedHtmlFile: File? = null,
+    val projectName: String = "Project",
+    val outputFormat: String = "PDF"
 )
 
 class NotesViewerViewModel(
     private val htmlMergeEngine: HtmlMergeEngine,
-    private val exportEngine: ExportEngine
+    private val exportEngine: ExportEngine,
+    private val projectDao: ProjectDao
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(NotesViewerState())
     val state: StateFlow<NotesViewerState> = _state.asStateFlow()
 
-    fun loadHtml(projectId: Int) {
+    fun loadData(projectId: Int) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             try {
+                val project = projectDao.getProjectById(projectId)
                 val html = htmlMergeEngine.generateMasterHtml(projectId)
-                _state.update { it.copy(htmlContent = html, isLoading = false) }
+                _state.update { it.copy(
+                    htmlContent = html, 
+                    isLoading = false,
+                    projectName = project?.title ?: "Project",
+                    outputFormat = project?.outputFormat ?: "PDF"
+                ) }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _state.update { it.copy(isLoading = false, htmlContent = "<p>Error loading content.</p>") }
@@ -39,18 +48,10 @@ class NotesViewerViewModel(
         }
     }
 
-    fun exportDocument(fileName: String, format: String, onComplete: (File) -> Unit) {
-        viewModelScope.launch {
-            if (format.equals("pdf", ignoreCase = true)) {
-                exportEngine.generatePdfFromHtml(_state.value.htmlContent, fileName) { file ->
-                    _state.update { it.copy(generatedFile = file) }
-                    onComplete(file)
-                }
-            } else {
-                val file = exportEngine.saveAsHtml(_state.value.htmlContent, fileName)
-                _state.update { it.copy(generatedFile = file) }
-                onComplete(file)
-            }
+    fun exportDocument(onComplete: (File, File) -> Unit) {
+        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.htmlContent) { pdfFile, htmlFile ->
+            _state.update { it.copy(generatedPdfFile = pdfFile, generatedHtmlFile = htmlFile) }
+            onComplete(pdfFile, htmlFile)
         }
     }
 }

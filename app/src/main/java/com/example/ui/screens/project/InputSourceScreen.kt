@@ -1,5 +1,8 @@
 package com.example.ui.screens.project
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,13 +17,17 @@ import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.domain.services.file.TxtFileReaderService
+import com.example.domain.services.ocr.LocalOcrEngine
+import kotlinx.coroutines.launch
 
 data class InputSourceItem(
     val title: String,
@@ -37,19 +44,50 @@ fun InputSourceScreen(
     onNavigateNext: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+
+    val txtReader = remember { TxtFileReaderService() }
+    val ocrEngine = remember { LocalOcrEngine() }
+
+    val txtPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val text = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
-                viewModel.updateExtractedText(text)
-                onNavigateNext()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                android.widget.Toast.makeText(context, "Failed to read file", android.widget.Toast.LENGTH_SHORT).show()
+            coroutineScope.launch {
+                isLoading = true
+                try {
+                    val text = txtReader.readTextFromUri(uri, context)
+                    viewModel.updateExtractedText(text)
+                    isLoading = false
+                    onNavigateNext()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    isLoading = false
+                    Toast.makeText(context, "Failed to read text file", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                isLoading = true
+                Toast.makeText(context, "Extracting text from image...", Toast.LENGTH_SHORT).show()
+                try {
+                    val text = ocrEngine.extractTextFromImageUri(uri, context)
+                    viewModel.updateExtractedText(text)
+                    isLoading = false
+                    onNavigateNext()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    isLoading = false
+                    Toast.makeText(context, "Failed to extract text from image", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -59,13 +97,13 @@ fun InputSourceScreen(
             title = "YouTube Link",
             description = "Extract transcript from YouTube video",
             icon = Icons.Default.OndemandVideo,
-            route = "youtube_input"
+            route = "youtube_link"
         ),
         InputSourceItem(
-            title = "Upload PDF",
-            description = "OCR and extract content from scanned slides",
+            title = "Upload PDF or Image",
+            description = "OCR and extract content from scanned slides or PDF",
             icon = Icons.Default.PictureAsPdf,
-            route = "pdf_input"
+            route = "image_input"
         ),
         InputSourceItem(
             title = "Paste Transcript",
@@ -75,9 +113,9 @@ fun InputSourceScreen(
         ),
         InputSourceItem(
             title = "Import from File",
-            description = "Supports TXT and MD formats",
+            description = "Supports TXT formats",
             icon = Icons.Default.FileUpload,
-            route = "file_input"
+            route = "txt_input"
         )
     )
 
@@ -110,6 +148,17 @@ fun InputSourceScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
+            
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -119,16 +168,16 @@ fun InputSourceScreen(
                     SourceCard(
                         item = source,
                         onClick = { 
-                            if (source.route == "file_input") {
-                                filePickerLauncher.launch("text/*")
-                            } else {
-                                onNavigate(source.route)
+                            if (isLoading) return@SourceCard
+                            when (source.route) {
+                                "txt_input" -> txtPickerLauncher.launch("text/plain")
+                                "image_input" -> imagePickerLauncher.launch("image/*")
+                                else -> onNavigate(source.route)
                             }
                         }
                     )
                 }
             }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -1,6 +1,10 @@
 package com.example.ui.screens.viewer
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,6 +19,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,15 +28,45 @@ import androidx.core.content.FileProvider
 fun NotesViewerScreen(
     viewModel: NotesViewerViewModel,
     projectId: Int,
-    projectName: String,
-    outputFormat: String,
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    var showPreviewModal by remember { mutableStateOf(false) }
 
     LaunchedEffect(projectId) {
-        viewModel.loadHtml(projectId)
+        viewModel.loadData(projectId)
+    }
+
+    if (showPreviewModal) {
+        ExportPreviewModal(
+            htmlContent = state.htmlContent,
+            onConfirm = {
+                showPreviewModal = false
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
+                } else {
+                    viewModel.exportDocument { pdfFile, htmlFile ->
+                        val selectedFile = if (state.outputFormat.equals("pdf", ignoreCase = true)) pdfFile else htmlFile
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            selectedFile
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            val mimeType = if (state.outputFormat.equals("pdf", ignoreCase = true)) "application/pdf" else "text/html"
+                            setDataAndType(uri, mimeType)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(intent)
+                    }
+                }
+            },
+            onDismiss = { showPreviewModal = false }
+        )
     }
 
     Scaffold(
@@ -57,21 +93,7 @@ fun NotesViewerScreen(
                     .padding(16.dp)
             ) {
                 Button(
-                    onClick = {
-                        viewModel.exportDocument(projectName, outputFormat) { file ->
-                            val uri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                file
-                            )
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                val mimeType = if (outputFormat.equals("pdf", ignoreCase = true)) "application/pdf" else "text/html"
-                                setDataAndType(uri, mimeType)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(intent)
-                        }
-                    },
+                    onClick = { showPreviewModal = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -80,7 +102,7 @@ fun NotesViewerScreen(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Open Final Document", style = MaterialTheme.typography.titleMedium)
+                    Text("Export Final Document", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -104,6 +126,70 @@ fun NotesViewerScreen(
                         view.loadDataWithBaseURL(null, state.htmlContent, "text/HTML", "UTF-8", null)
                     }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun ExportPreviewModal(
+    htmlContent: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.8f)
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = "Export Preview",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(16.dp)
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
+                            }
+                        },
+                        update = { view ->
+                            view.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
+                        }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onConfirm) {
+                        Text("Confirm Export")
+                    }
+                }
             }
         }
     }

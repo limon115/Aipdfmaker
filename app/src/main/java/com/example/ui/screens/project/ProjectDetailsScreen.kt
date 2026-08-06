@@ -131,7 +131,7 @@ fun ProjectDetailsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val formats = listOf("PDF", "DOCX", "HTML")
+                    val formats = listOf("PDF", "HTML")
                     formats.forEach { format ->
                         FilterChip(
                             selected = state.outputFormat == format,

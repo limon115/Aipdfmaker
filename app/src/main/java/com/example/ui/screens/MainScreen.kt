@@ -31,7 +31,6 @@ import com.example.ui.screens.project.InputSourceScreen
 import com.example.ui.screens.project.NewProjectViewModel
 import com.example.ui.screens.project.PdfUploadScreen
 import com.example.ui.screens.project.ProjectDetailsScreen
-import com.example.ui.screens.project.YouTubeInputScreen
 import com.example.ui.screens.settings.AiSettingsScreen
 import com.example.ui.screens.settings.ProviderSelectionScreen
 import com.example.ui.screens.settings.SettingsViewModel
@@ -143,8 +142,8 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-            composable("youtube_input") {
-                YouTubeInputScreen(
+            composable("youtube_link") {
+                com.example.ui.screens.project.YouTubeLinkScreen(
                     viewModel = newProjectViewModel,
                     onNavigateNext = { navController.navigate("project_details") },
                     onNavigateBack = { navController.popBackStack() }
@@ -231,7 +230,7 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
                 
                 val factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                        return com.example.ui.screens.viewer.NotesViewerViewModel(htmlMergeEngine, exportEngine) as T
+                        return com.example.ui.screens.viewer.NotesViewerViewModel(htmlMergeEngine, exportEngine, db.projectDao()) as T
                     }
                 }
                 val notesViewerViewModel: com.example.ui.screens.viewer.NotesViewerViewModel = 
@@ -240,8 +239,6 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
                 com.example.ui.screens.viewer.NotesViewerScreen(
                     viewModel = notesViewerViewModel,
                     projectId = projectId,
-                    projectName = "Project",
-                    outputFormat = "pdf",
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
