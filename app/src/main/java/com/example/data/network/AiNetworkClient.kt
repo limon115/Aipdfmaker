@@ -181,7 +181,7 @@ class AiNetworkClient(
     private fun getSafeGeminiModel(inputModel: String): String {
         // If the user typed "gemini-1.5-flash", upgrade it because Google disabled it in 2026.
         if (inputModel.contains("1.5-flash") || inputModel.isBlank()) {
-            return "gemini-3.5-flash" 
+            return "gemini-1.5-flash" 
         }
         return inputModel
     }
