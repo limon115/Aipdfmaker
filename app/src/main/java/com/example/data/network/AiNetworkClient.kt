@@ -1,4 +1,4 @@
-package com.limon.docmorph.data.network
+com.example.data.network
 
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.generationConfig
@@ -186,4 +186,3 @@ class AiNetworkClient(
         return inputModel
     }
 }
-
