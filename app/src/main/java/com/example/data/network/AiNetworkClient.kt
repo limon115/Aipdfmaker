@@ -1,4 +1,4 @@
-com.example.data.network
+package com.example.data.network
 
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.generationConfig
