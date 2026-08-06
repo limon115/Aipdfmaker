@@ -1,3 +1,4 @@
+import com.example.data.network.AiNetworkClient
 package com.example.ui.screens.settings
 
 import android.app.Application
@@ -50,27 +51,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
 
-        fun testConnection(
-        provider: String,
-        model: String,
-        apiKey: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val cleanKey = apiKey.trim()
-        val lowerProvider = provider.lowercase()
-        if (cleanKey.isEmpty() && !lowerProvider.contains("ollama") && !lowerProvider.contains("lm studio")) {
-            onError("Please enter an API Key first.")
-            return
-        }
-
-        viewModelScope.launch {
-            try {
-                val client = AiNetworkClient(provider, apiKey, model, 0.7f)
-                val isSuccess = client.testConnection()
-                if (isSuccess) {
-                    onSuccess()
-                } else {
+         else {
                     onError("Unknown error")
                 }
             } catch (e: Throwable) {
@@ -107,4 +88,38 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             }
         }
     }
+
+    fun testConnection(
+        provider: String,
+        model: String,
+        apiKey: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val cleanKey = apiKey.trim()
+        val lowerProvider = provider.lowercase()
+        if (cleanKey.isEmpty() && !lowerProvider.contains("ollama") && !lowerProvider.contains("lm studio")) {
+            onError("Please enter an API Key first.")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val client = AiNetworkClient(provider, apiKey, model, 0.7f)
+                val isSuccess = client.testConnection()
+                if (isSuccess) {
+                    onSuccess()
+                } else {
+                    onError("Unknown error")
+                }
+            } catch (e: Throwable) {
+                if (e is io.ktor.client.plugins.ClientRequestException) {
+                    onError("API Error " + e.response.status.value)
+                } else {
+                    onError("NET: " + (e.message ?: "").takeLast(35))
+                }
+            }
+        }
+    }
+
 }
