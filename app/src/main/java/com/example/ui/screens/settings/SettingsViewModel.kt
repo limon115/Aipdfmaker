@@ -58,7 +58,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         onError: (String) -> Unit
     ) {
         val cleanKey = apiKey.trim()
-        if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") {
+        val p = provider.lowercase(); if (cleanKey.isEmpty() if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio")if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") !p.contains("ollama") if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio")if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") !p.contains("lm studio")) {
             onError("Please enter an API Key first.")
             return
         }
