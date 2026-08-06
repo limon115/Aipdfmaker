@@ -2,16 +2,25 @@ package com.example.data.network
 
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.generationConfig
-import io.ktor.client.*
-import io.ktor.client.engine.android.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.android.Android
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.request.header
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.HttpCallValidator
 
 @Serializable
 data class OpenAiMessage(
@@ -23,7 +32,8 @@ data class OpenAiMessage(
 data class OpenAiRequest(
     val model: String,
     val messages: List<OpenAiMessage>,
-    val temperature: Float
+    val temperature: Float,
+    val max_tokens: Int? = null
 )
 
 @Serializable
@@ -43,6 +53,7 @@ class AiNetworkClient(
     private val temperature: Float
 ) {
     private val ktorClient = HttpClient(Android) {
+        expectSuccess = true // this will cause Ktor to throw ClientRequestException on 4xx/5xx
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
@@ -91,6 +102,7 @@ class AiNetworkClient(
                 "lm studio" -> "http://10.0.2.2:1234/v1/chat/completions"
                 else -> "https://api.openai.com/v1/chat/completions"
             }
+
             val messages = mutableListOf<OpenAiMessage>()
             if (customSystemPrompt != null) {
                 messages.add(OpenAiMessage(role = "system", content = customSystemPrompt))
@@ -102,16 +114,15 @@ class AiNetworkClient(
                 messages = messages,
                 temperature = temperature
             )
+
             val response: HttpResponse = ktorClient.post(baseUrl) {
                 contentType(ContentType.Application.Json)
-                if (apiKey.isNotBlank()) {
-                    bearerAuth(apiKey)
+                if (apiKey.isNotBlank() && provider.lowercase() != "ollama") {
+                    header(HttpHeaders.Authorization, "Bearer $apiKey")
                 }
                 setBody(requestPayload)
             }
-            if (!response.status.isSuccess()) {
-                throw IllegalStateException("API error: ${response.status.value} - ${response.bodyAsText()}")
-            }
+
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
             jsonResponse.choices.firstOrNull()?.message?.content
                 ?: throw IllegalStateException("Empty response from AI Provider")
@@ -119,48 +130,43 @@ class AiNetworkClient(
     }
 
     suspend fun testConnection(): Boolean {
-        return try {
-            val response = if (provider.equals("Gemini", ignoreCase = true) || provider.equals("Google Gemini", ignoreCase = true)) {
-                val generativeModel = GenerativeModel(
-                    modelName = model.ifBlank { "gemini-1.5-flash" },
-                    apiKey = apiKey,
-                    generationConfig = generationConfig {
-                        this.temperature = 0f
-                    }
-                )
-                generativeModel.generateContent("Reply with the word 'Test'").text
-            } else {
-                val baseUrl = when (provider.lowercase()) {
-                    "openai" -> "https://api.openai.com/v1/chat/completions"
-                    "openrouter" -> "https://openrouter.ai/api/v1/chat/completions"
-                    "ollama" -> "http://10.0.2.2:11434/v1/chat/completions"
-                    "lm studio" -> "http://10.0.2.2:1234/v1/chat/completions"
-                    else -> "https://api.openai.com/v1/chat/completions"
+        val response = if (provider.equals("Gemini", ignoreCase = true) || provider.equals("Google Gemini", ignoreCase = true)) {
+            val generativeModel = GenerativeModel(
+                modelName = model.ifBlank { "gemini-1.5-flash" },
+                apiKey = apiKey,
+                generationConfig = generationConfig {
+                    this.temperature = 0f
                 }
-                val requestPayload = OpenAiRequest(
-                    model = model.ifBlank { "gpt-3.5-turbo" },
-                    messages = listOf(
-                        OpenAiMessage(role = "user", content = "Reply with the word 'Test'")
-                    ),
-                    temperature = 0f
-                )
-                val resp: HttpResponse = ktorClient.post(baseUrl) {
-                    contentType(ContentType.Application.Json)
-                    if (apiKey.isNotBlank()) {
-                        bearerAuth(apiKey)
-                    }
-                    setBody(requestPayload)
-                }
-                if (!resp.status.isSuccess()) {
-                    throw IllegalStateException("API error: ${resp.status.value} - ${resp.bodyAsText()}")
-                }
-                val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(resp.bodyAsText())
-                jsonResponse.choices.firstOrNull()?.message?.content
+            )
+            generativeModel.generateContent("Reply with the word 'Test'").text
+        } else {
+            val baseUrl = when (provider.lowercase()) {
+                "openai" -> "https://api.openai.com/v1/chat/completions"
+                "openrouter" -> "https://openrouter.ai/api/v1/chat/completions"
+                "ollama" -> "http://10.0.2.2:11434/v1/chat/completions"
+                "lm studio" -> "http://10.0.2.2:1234/v1/chat/completions"
+                else -> "https://api.openai.com/v1/chat/completions"
             }
-            response != null
-        } catch (e: Exception) {
-            throw e
+            val requestPayload = OpenAiRequest(
+                model = model.ifBlank { "gpt-3.5-turbo" },
+                messages = listOf(
+                    OpenAiMessage(role = "user", content = "Reply with 'Test'")
+                ),
+                temperature = 0f,
+                max_tokens = 5
+            )
+            val resp: HttpResponse = ktorClient.post(baseUrl) {
+                contentType(ContentType.Application.Json)
+                if (apiKey.isNotBlank() && provider.lowercase() != "ollama") {
+                    header(HttpHeaders.Authorization, "Bearer $apiKey")
+                }
+                setBody(requestPayload)
+            }
+            
+            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(resp.bodyAsText())
+            jsonResponse.choices.firstOrNull()?.message?.content
         }
+        return response != null
     }
 
     private suspend fun generateWithGemini(extractedText: String): String {
@@ -182,7 +188,7 @@ class AiNetworkClient(
         val baseUrl = when (provider.lowercase()) {
             "openai" -> "https://api.openai.com/v1/chat/completions"
             "openrouter" -> "https://openrouter.ai/api/v1/chat/completions"
-            "ollama" -> "http://10.0.2.2:11434/v1/chat/completions" // typical for local emulator testing
+            "ollama" -> "http://10.0.2.2:11434/v1/chat/completions" 
             "lm studio" -> "http://10.0.2.2:1234/v1/chat/completions"
             else -> "https://api.openai.com/v1/chat/completions"
         }
@@ -198,14 +204,10 @@ class AiNetworkClient(
 
         val response: HttpResponse = ktorClient.post(baseUrl) {
             contentType(ContentType.Application.Json)
-            if (apiKey.isNotBlank()) {
-                bearerAuth(apiKey)
+            if (apiKey.isNotBlank() && provider.lowercase() != "ollama") {
+                header(HttpHeaders.Authorization, "Bearer $apiKey")
             }
             setBody(requestPayload)
-        }
-
-        if (!response.status.isSuccess()) {
-            throw IllegalStateException("API error: ${response.status.value} - ${response.bodyAsText()}")
         }
 
         val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())

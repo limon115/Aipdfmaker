@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.datastore.AiSettings
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.domain.models.AiProvider
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -48,16 +50,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
 
-    fun testConnection(isAi1: Boolean, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun testConnection(
+        provider: String,
+        model: String,
+        apiKey: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
-                val currentSettings = settings.value
-                val provider = if (isAi1) currentSettings.ai1Provider else currentSettings.ai2Provider
-                val model = if (isAi1) currentSettings.ai1Model else currentSettings.ai2Model
-                val apiKey = if (isAi1) currentSettings.ai1ApiKey else currentSettings.ai2ApiKey
-                
                 val client = com.example.data.network.AiNetworkClient(
-                    provider = provider.name,
+                    provider = provider,
                     apiKey = apiKey,
                     model = model,
                     temperature = 0f
@@ -70,7 +73,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     onError("Unknown error")
                 }
             } catch (e: Exception) {
-                onError(e.message ?: "Connection failed")
+                if (e is HttpRequestTimeoutException) {
+                    onError("Request timed out")
+                } else if (e is ClientRequestException) {
+                    onError("${e.response.status.value}: Invalid API Key or Unauthorized")
+                } else {
+                    onError(e.message ?: "Connection failed")
+                }
             }
         }
     }

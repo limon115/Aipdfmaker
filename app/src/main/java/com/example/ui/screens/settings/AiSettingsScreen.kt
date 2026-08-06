@@ -63,9 +63,11 @@ fun AiSettingsScreen(
                 onProviderClick = { onNavigateToProviderSelection(true) },
                 onModelChange = viewModel::updateAi1Model,
                 onApiKeyChange = viewModel::updateAi1ApiKey,
-                onTestConnection = {
+                onTestConnection = { provider, model, apiKey ->
                     viewModel.testConnection(
-                        isAi1 = true,
+                        provider = provider,
+                        model = model,
+                        apiKey = apiKey,
                         onSuccess = { android.widget.Toast.makeText(context, "Connection Successful", android.widget.Toast.LENGTH_SHORT).show() },
                         onError = { android.widget.Toast.makeText(context, "Connection Failed: $it", android.widget.Toast.LENGTH_LONG).show() }
                     )
@@ -80,9 +82,11 @@ fun AiSettingsScreen(
                 onProviderClick = { onNavigateToProviderSelection(false) },
                 onModelChange = viewModel::updateAi2Model,
                 onApiKeyChange = viewModel::updateAi2ApiKey,
-                onTestConnection = {
+                onTestConnection = { provider, model, apiKey ->
                     viewModel.testConnection(
-                        isAi1 = false,
+                        provider = provider,
+                        model = model,
+                        apiKey = apiKey,
                         onSuccess = { android.widget.Toast.makeText(context, "Connection Successful", android.widget.Toast.LENGTH_SHORT).show() },
                         onError = { android.widget.Toast.makeText(context, "Connection Failed: $it", android.widget.Toast.LENGTH_LONG).show() }
                     )
@@ -112,36 +116,38 @@ fun AiConfigCard(
     onProviderClick: () -> Unit,
     onModelChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
-    onTestConnection: () -> Unit,
+    onTestConnection: (provider: String, model: String, apiKey: String) -> Unit,
     advancedSettings: @Composable (() -> Unit)? = null
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     var modelDropdownExpanded by remember { mutableStateOf(false) }
 
-    val recommendedModels = when (provider) {
-        AiProvider.GOOGLE_GEMINI -> listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro")
-        AiProvider.OPENAI -> listOf("gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo")
-        AiProvider.OLLAMA -> listOf("llama3", "mistral", "gemma")
-        else -> listOf("gemini-1.5-pro", "gemini-1.5-flash")
+    val recommendedModels = when (provider.name.lowercase()) {
+        "gemini", "google gemini" -> listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash")
+        "openai" -> listOf("gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo")
+        "openrouter" -> listOf("google/gemini-2.5-flash", "anthropic/claude-3.5-sonnet", "meta-llama/llama-3.1-8b-instruct")
+        "lm studio" -> listOf("llama-3.2-3b", "qwen-2.5-coder-7b", "deepseek-coder-v2")
+        "ollama" -> listOf("llama3.2", "qwen2.5", "mistral")
+        else -> listOf("default-model")
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
 
             // Provider Selection
@@ -198,6 +204,7 @@ fun AiConfigCard(
                     },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                 )
+                
                 ExposedDropdownMenu(
                     expanded = modelDropdownExpanded,
                     onDismissRequest = { modelDropdownExpanded = false }
@@ -240,7 +247,7 @@ fun AiConfigCard(
             TextButton(
                 onClick = { 
                     isTesting = true
-                    onTestConnection()
+                    onTestConnection(provider.name, model, apiKey)
                 },
                 modifier = Modifier.align(Alignment.End),
                 enabled = !isTesting
@@ -254,8 +261,6 @@ fun AiConfigCard(
                 }
             }
 
-            // Reset isTesting after test logic resolves (since we passed it down, we can reset it inside the callback or using a side effect)
-            // But we can keep it simple: the caller will show a toast. We can reset isTesting after a delay.
             LaunchedEffect(isTesting) {
                 if (isTesting) {
                     kotlinx.coroutines.delay(2000)
@@ -324,7 +329,7 @@ fun AdvancedSettingsSection(
                         valueRange = 0f..2f
                     )
                 }
-
+                
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
