@@ -78,11 +78,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 } else {
                     onError("Unknown error")
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 if (e is HttpRequestTimeoutException) {
                     onError("Request timed out")
                 } else {
-                    onError(e.message ?: "Unknown Error")
+                    onError("CRASH: " + e.toString())
                 }
             }
         }
