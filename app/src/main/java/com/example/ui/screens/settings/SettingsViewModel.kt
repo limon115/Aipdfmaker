@@ -50,7 +50,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
 
-    fun testConnection(
+        fun testConnection(
         provider: String,
         model: String,
         apiKey: String,
@@ -58,10 +58,30 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         onError: (String) -> Unit
     ) {
         val cleanKey = apiKey.trim()
-        val p = provider.lowercase(); if (cleanKey.isEmpty() if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio")if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") !p.contains("ollama") if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio")if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") !p.contains("lm studio")) {
+        val lowerProvider = provider.lowercase()
+        if (cleanKey.isEmpty() && !lowerProvider.contains("ollama") && !lowerProvider.contains("lm studio")) {
             onError("Please enter an API Key first.")
             return
         }
+
+        viewModelScope.launch {
+            try {
+                val client = AiNetworkClient(provider, apiKey, model, 0.7f)
+                val isSuccess = client.testConnection()
+                if (isSuccess) {
+                    onSuccess()
+                } else {
+                    onError("Unknown error")
+                }
+            } catch (e: Throwable) {
+                if (e is io.ktor.client.plugins.ClientRequestException) {
+                    onError("API Error \${e.response.status.value}")
+                } else {
+                    onError("NET: " + (e.message ?: "").takeLast(35))
+                }
+            }
+        }
+    }
 
         viewModelScope.launch {
             try {
