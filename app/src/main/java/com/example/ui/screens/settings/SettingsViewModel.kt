@@ -57,11 +57,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
+        val cleanKey = apiKey.trim()
+        if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") {
+            onError("Please enter an API Key first.")
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val client = com.example.data.network.AiNetworkClient(
                     provider = provider,
-                    apiKey = apiKey,
+                    apiKey = cleanKey,
                     model = model,
                     temperature = 0f
                 )
@@ -75,10 +81,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 if (e is HttpRequestTimeoutException) {
                     onError("Request timed out")
-                } else if (e is ClientRequestException) {
-                    onError("${e.response.status.value}: Invalid API Key or Unauthorized")
                 } else {
-                    onError(e.message ?: "Connection failed")
+                    onError(e.message ?: "Unknown Error")
                 }
             }
         }

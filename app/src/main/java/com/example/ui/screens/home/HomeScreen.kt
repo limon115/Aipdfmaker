@@ -1,11 +1,19 @@
 package com.example.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -14,7 +22,6 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +37,8 @@ import com.example.data.database.ProjectEntity
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onNavigateToNewProject: () -> Unit = {}
+    onNavigateToNewProject: () -> Unit = {},
+    onNavigateToProject: (Int, String) -> Unit = { _, _ -> }
 ) {
     val projects by viewModel.projects.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -118,7 +126,11 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredProjects, key = { it.id }) { project ->
-                    ProjectCard(project = project)
+                    ProjectCard(
+                        project = project, 
+                        onDelete = { viewModel.deleteProject(it) },
+                        onClick = { onNavigateToProject(project.id, project.status) }
+                    )
                 }
             }
         }
@@ -126,9 +138,13 @@ fun HomeScreen(
 }
 
 @Composable
-fun ProjectCard(project: ProjectEntity) {
+fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onClick: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -207,12 +223,26 @@ fun ProjectCard(project: ProjectEntity) {
             }
 
             // More Options
-            IconButton(onClick = { /* TODO */ }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More Options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More Options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = { 
+                            expanded = false
+                            onDelete(project)
+                        }
+                    )
+                }
             }
         }
     }

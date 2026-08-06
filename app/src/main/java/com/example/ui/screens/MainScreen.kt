@@ -3,29 +3,26 @@ package com.example.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.data.database.AppDatabase
 import com.example.ui.navigation.BottomNavItem
 import com.example.ui.screens.blueprint.BlueprintSummaryScreen
+import com.example.ui.screens.blueprint.BlueprintViewModel
 import com.example.ui.screens.home.HomeScreen
+import com.example.ui.screens.home.HomeViewModel
 import com.example.ui.screens.processing.ProcessingScreen
+import com.example.ui.screens.processing.ProcessingViewModel
 import com.example.ui.screens.processing.TopicsDetectedScreen
 import com.example.ui.screens.project.InputSourceScreen
 import com.example.ui.screens.project.NewProjectViewModel
@@ -34,17 +31,13 @@ import com.example.ui.screens.project.ProjectDetailsScreen
 import com.example.ui.screens.settings.AiSettingsScreen
 import com.example.ui.screens.settings.ProviderSelectionScreen
 import com.example.ui.screens.settings.SettingsViewModel
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.data.database.AppDatabase
-import com.example.ui.screens.home.HomeViewModel
-
-import com.example.ui.screens.processing.ProcessingViewModel
 
 @Composable
-fun MainScreen(navController: NavHostController = rememberNavController()) {
+fun MainScreen() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Bookmarks,
@@ -54,59 +47,53 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
     val db = AppDatabase.getDatabase(context)
     val projectDao = db.projectDao()
-
+    
     val homeViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
             return HomeViewModel(projectDao) as T
         }
     }
     val homeViewModel: HomeViewModel = viewModel(factory = homeViewModelFactory)
-
+    
     val newProjectViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
             return NewProjectViewModel(projectDao) as T
         }
     }
     val newProjectViewModel: NewProjectViewModel = viewModel(factory = newProjectViewModelFactory)
-
-    val blueprintViewModel: com.example.ui.screens.blueprint.BlueprintViewModel = viewModel()
+    
+    val blueprintViewModel: BlueprintViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                items.forEach { item ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.title
-                            )
-                        },
-                        label = { Text(text = item.title) },
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (currentRoute in items.map { it.route }) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ) {
+                    items.forEach { item ->
+                        NavigationBarItem(
+                            icon = { Icon(if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) },
+                            label = { Text(item.title) },
+                            selected = currentRoute == item.route,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -119,6 +106,13 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
             composable(BottomNavItem.Home.route) {
                 HomeScreen(
                     viewModel = homeViewModel,
+                    onNavigateToProject = { projectId, status ->
+                        if (status == "Processing") {
+                            navController.navigate("processing/$projectId")
+                        } else {
+                            navController.navigate("notes_viewer/$projectId")
+                        }
+                    },
                     onNavigateToNewProject = {
                         navController.navigate("input_source")
                     }

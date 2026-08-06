@@ -7,13 +7,19 @@ import com.example.data.database.ProjectEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class HomeViewModel(private val projectDao: ProjectDao) : ViewModel() {
-    
     val projects: StateFlow<List<ProjectEntity>> = projectDao.getAllProjects()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun deleteProject(project: ProjectEntity) {
+        viewModelScope.launch {
+            projectDao.deleteProject(project)
+        }
+    }
 }

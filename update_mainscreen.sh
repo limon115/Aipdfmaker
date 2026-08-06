@@ -1,0 +1,1 @@
+sed -i 's/Icon(item.icon, contentDescription = item.title)/Icon(if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon, contentDescription = item.title)/g' app/src/main/java/com/example/ui/screens/MainScreen.kt

@@ -72,18 +72,28 @@ class AiNetworkClient(
     """.trimIndent()
 
     suspend fun generateBlueprint(extractedText: String): String {
+        val cleanKey = apiKey.trim()
+        if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") {
+            throw IllegalArgumentException("API Key is empty!")
+        }
+
         return if (provider.equals("Gemini", ignoreCase = true) || provider.equals("Google Gemini", ignoreCase = true)) {
-            generateWithGemini(extractedText)
+            generateWithGemini(extractedText, cleanKey)
         } else {
-            generateWithOpenAiCompatible(extractedText)
+            generateWithOpenAiCompatible(extractedText, cleanKey)
         }
     }
 
     suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null): String {
+        val cleanKey = apiKey.trim()
+        if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") {
+            throw IllegalArgumentException("API Key is empty!")
+        }
+
         return if (provider.equals("Gemini", ignoreCase = true) || provider.equals("Google Gemini", ignoreCase = true)) {
             val generativeModel = GenerativeModel(
                 modelName = model,
-                apiKey = apiKey,
+                apiKey = cleanKey,
                 generationConfig = generationConfig {
                     this.temperature = this@AiNetworkClient.temperature
                     if (mimeType != null) {
@@ -115,25 +125,34 @@ class AiNetworkClient(
                 temperature = temperature
             )
 
-            val response: HttpResponse = ktorClient.post(baseUrl) {
-                contentType(ContentType.Application.Json)
-                if (apiKey.isNotBlank() && provider.lowercase() != "ollama") {
-                    header(HttpHeaders.Authorization, "Bearer $apiKey")
+            try {
+                val response: HttpResponse = ktorClient.post(baseUrl) {
+                    contentType(ContentType.Application.Json)
+                    if (cleanKey.isNotEmpty() && provider.lowercase() != "ollama") {
+                        header(HttpHeaders.Authorization, "Bearer $cleanKey")
+                    }
+                    setBody(requestPayload)
                 }
-                setBody(requestPayload)
-            }
 
-            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
-            jsonResponse.choices.firstOrNull()?.message?.content
-                ?: throw IllegalStateException("Empty response from AI Provider")
+                val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
+                jsonResponse.choices.firstOrNull()?.message?.content
+                    ?: throw IllegalStateException("Empty response from AI Provider")
+            } catch (e: ClientRequestException) {
+                throw Exception("${e.response.status.value}: ${e.response.bodyAsText()}")
+            }
         }
     }
 
     suspend fun testConnection(): Boolean {
+        val cleanKey = apiKey.trim()
+        if (cleanKey.isEmpty() && provider.lowercase() != "ollama" && provider.lowercase() != "lm studio") {
+            throw IllegalArgumentException("API Key is empty!")
+        }
+
         val response = if (provider.equals("Gemini", ignoreCase = true) || provider.equals("Google Gemini", ignoreCase = true)) {
             val generativeModel = GenerativeModel(
                 modelName = model.ifBlank { "gemini-1.5-flash" },
-                apiKey = apiKey,
+                apiKey = cleanKey,
                 generationConfig = generationConfig {
                     this.temperature = 0f
                 }
@@ -155,24 +174,29 @@ class AiNetworkClient(
                 temperature = 0f,
                 max_tokens = 5
             )
-            val resp: HttpResponse = ktorClient.post(baseUrl) {
-                contentType(ContentType.Application.Json)
-                if (apiKey.isNotBlank() && provider.lowercase() != "ollama") {
-                    header(HttpHeaders.Authorization, "Bearer $apiKey")
+
+            try {
+                val resp: HttpResponse = ktorClient.post(baseUrl) {
+                    contentType(ContentType.Application.Json)
+                    if (cleanKey.isNotEmpty() && provider.lowercase() != "ollama") {
+                        header(HttpHeaders.Authorization, "Bearer $cleanKey")
+                    }
+                    setBody(requestPayload)
                 }
-                setBody(requestPayload)
+                
+                val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(resp.bodyAsText())
+                jsonResponse.choices.firstOrNull()?.message?.content
+            } catch (e: ClientRequestException) {
+                throw Exception("${e.response.status.value}: ${e.response.bodyAsText()}")
             }
-            
-            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(resp.bodyAsText())
-            jsonResponse.choices.firstOrNull()?.message?.content
         }
         return response != null
     }
 
-    private suspend fun generateWithGemini(extractedText: String): String {
+    private suspend fun generateWithGemini(extractedText: String, cleanKey: String): String {
         val generativeModel = GenerativeModel(
-            modelName = model,
-            apiKey = apiKey,
+            modelName = model.ifBlank { "gemini-1.5-flash" },
+            apiKey = cleanKey,
             generationConfig = generationConfig {
                 this.temperature = this@AiNetworkClient.temperature
                 this.responseMimeType = "application/json"
@@ -184,7 +208,7 @@ class AiNetworkClient(
         return response.text ?: throw IllegalStateException("Empty response from Gemini")
     }
 
-    private suspend fun generateWithOpenAiCompatible(extractedText: String): String {
+    private suspend fun generateWithOpenAiCompatible(extractedText: String, cleanKey: String): String {
         val baseUrl = when (provider.lowercase()) {
             "openai" -> "https://api.openai.com/v1/chat/completions"
             "openrouter" -> "https://openrouter.ai/api/v1/chat/completions"
@@ -202,16 +226,20 @@ class AiNetworkClient(
             temperature = temperature
         )
 
-        val response: HttpResponse = ktorClient.post(baseUrl) {
-            contentType(ContentType.Application.Json)
-            if (apiKey.isNotBlank() && provider.lowercase() != "ollama") {
-                header(HttpHeaders.Authorization, "Bearer $apiKey")
+        try {
+            val response: HttpResponse = ktorClient.post(baseUrl) {
+                contentType(ContentType.Application.Json)
+                if (cleanKey.isNotEmpty() && provider.lowercase() != "ollama") {
+                    header(HttpHeaders.Authorization, "Bearer $cleanKey")
+                }
+                setBody(requestPayload)
             }
-            setBody(requestPayload)
-        }
 
-        val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
-        return jsonResponse.choices.firstOrNull()?.message?.content 
-            ?: throw IllegalStateException("Empty response from AI Provider")
+            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
+            return jsonResponse.choices.firstOrNull()?.message?.content 
+                ?: throw IllegalStateException("Empty response from AI Provider")
+        } catch (e: ClientRequestException) {
+            throw Exception("${e.response.status.value}: ${e.response.bodyAsText()}")
+        }
     }
 }
