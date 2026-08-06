@@ -1,8 +1,5 @@
 package com.example.data.network
 
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.generationConfig
-import com.google.ai.client.generativeai.type.content
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
@@ -20,34 +17,26 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.ClientRequestException
 
-@Serializable
-data class OpenAiMessage(val role: String, val content: String)
-
-@Serializable
-data class OpenAiRequest(val model: String, val messages: List<OpenAiMessage>, val temperature: Float, val max_tokens: Int? = null)
-
-@Serializable
-data class OpenAiResponse(val choices: List<Choice>) {
-    @Serializable
-    data class Choice(val message: OpenAiMessage)
+@Serializable data class OpenAiMessage(val role: String, val content: String)
+@Serializable data class OpenAiRequest(val model: String, val messages: List<OpenAiMessage>, val temperature: Float, val max_tokens: Int? = null)
+@Serializable data class OpenAiResponse(val choices: List<Choice>) {
+    @Serializable data class Choice(val message: OpenAiMessage)
 }
 
-class AiNetworkClient(
-    private val provider: String,
-    private val apiKey: String,
-    private val model: String,
-    private val temperature: Float
-) {
+@Serializable data class GeminiPart(val text: String)
+@Serializable data class GeminiContent(val role: String = "user", val parts: List<GeminiPart>)
+@Serializable data class GeminiSystemInstruction(val parts: List<GeminiPart>)
+@Serializable data class GeminiGenConfig(val temperature: Float, val responseMimeType: String? = null)
+@Serializable data class GeminiRequest(val contents: List<GeminiContent>, val systemInstruction: GeminiSystemInstruction? = null, val generationConfig: GeminiGenConfig? = null)
+@Serializable data class GeminiResponse(val candidates: List<Candidate>? = null) {
+    @Serializable data class Candidate(val content: GeminiContent)
+}
+
+class AiNetworkClient(private val provider: String, private val apiKey: String, private val model: String, private val temperature: Float) {
     private val ktorClient = HttpClient(Android) {
         expectSuccess = true
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true; isLenient = true })
-        }
-        install(HttpTimeout) {
-            requestTimeoutMillis = 120_000
-            connectTimeoutMillis = 15_000
-            socketTimeoutMillis = 120_000
-        }
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
+        install(HttpTimeout) { requestTimeoutMillis = 120_000; connectTimeoutMillis = 15_000; socketTimeoutMillis = 120_000 }
     }
 
     private val isGemini = provider.lowercase().contains("gemini") || provider.lowercase().contains("google")
@@ -58,111 +47,86 @@ class AiNetworkClient(
 
     suspend fun generateBlueprint(extractedText: String): String {
         val cleanKey = apiKey.trim()
-        if (cleanKey.isEmpty() && !provider.lowercase().contains("ollama") && !provider.lowercase().contains("lm studio")) {
-            throw IllegalArgumentException("API Key is empty!")
-        }
+        requireKey(cleanKey)
         return if (isGemini) generateWithGemini(extractedText, cleanKey) else generateWithOpenAiCompatible(extractedText, cleanKey)
     }
 
     suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null): String {
         val cleanKey = apiKey.trim()
-        if (cleanKey.isEmpty() && !provider.lowercase().contains("ollama") && !provider.lowercase().contains("lm studio")) {
-            throw IllegalArgumentException("API Key is empty!")
-        }
-
+        requireKey(cleanKey)
         if (isGemini) {
-            return try {
-                val generativeModel = GenerativeModel(
-                    modelName = getSafeGeminiModel(model),
-                    apiKey = cleanKey,
-                    generationConfig = generationConfig {
-                        this.temperature = this@AiNetworkClient.temperature
-                        if (mimeType != null) { this.responseMimeType = mimeType }
-                    },
-                    systemInstruction = customSystemPrompt?.let { content { text(it) } }
-                )
-                val response = generativeModel.generateContent(prompt)
-                response.text ?: throw IllegalStateException("Empty response from Gemini")
-            } catch (e: Exception) {
-                throw Exception("Gemini Error: ${e.message}")
-            }
+            return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType)
         } else {
-            val baseUrl = getOpenAiBaseUrl()
             val messages = mutableListOf<OpenAiMessage>()
-            if (customSystemPrompt != null) messages.add(OpenAiMessage(role = "system", content = customSystemPrompt))
-            messages.add(OpenAiMessage(role = "user", content = prompt))
-
-            return sendKtorRequest(baseUrl, cleanKey, model.ifBlank { "gpt-4o-mini" }, messages, temperature)
+            if (customSystemPrompt != null) messages.add(OpenAiMessage("system", customSystemPrompt))
+            messages.add(OpenAiMessage("user", prompt))
+            return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, messages, temperature)
         }
     }
 
     suspend fun testConnection(): Boolean {
         val cleanKey = apiKey.trim()
-        if (cleanKey.isEmpty() && !provider.lowercase().contains("ollama") && !provider.lowercase().contains("lm studio")) {
-            throw IllegalArgumentException("API Key is empty!")
-        }
-
+        requireKey(cleanKey)
         if (isGemini) {
-            try {
-                val generativeModel = GenerativeModel(
-                    modelName = getSafeGeminiModel(model),
-                    apiKey = cleanKey,
-                    generationConfig = generationConfig { this.temperature = 0f }
-                )
-                val response = generativeModel.generateContent("Reply with the word 'Test'")
-                return response.text != null
-            } catch (e: Exception) {
-                throw Exception("Gemini Error: ${e.message}")
-            }
+            sendGeminiRequest(cleanKey, "Reply with 'Test'")
+            return true
         } else {
-            val baseUrl = getOpenAiBaseUrl()
-            val messages = listOf(OpenAiMessage(role = "user", content = "Reply with 'Test'"))
-            sendKtorRequest(baseUrl, cleanKey, model.ifBlank { "gpt-4o-mini" }, messages, 0f, 5)
+            sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, listOf(OpenAiMessage("user", "Reply with 'Test'")), 0f, 5)
             return true
         }
     }
 
-    private suspend fun generateWithGemini(extractedText: String, cleanKey: String): String {
-        return try {
-            val generativeModel = GenerativeModel(
-                modelName = getSafeGeminiModel(model),
-                apiKey = cleanKey,
-                generationConfig = generationConfig {
-                    this.temperature = this@AiNetworkClient.temperature
-                    this.responseMimeType = "application/json"
-                },
-                systemInstruction = content { text(systemPrompt) }
-            )
-            val response = generativeModel.generateContent(extractedText)
-            response.text ?: throw IllegalStateException("Empty response from Gemini")
-        } catch (e: Exception) {
-            throw Exception("Gemini Error: ${e.message}")
+    private fun requireKey(cleanKey: String) {
+        if (cleanKey.isEmpty() && !provider.lowercase().contains("ollama") && !provider.lowercase().contains("lm studio")) {
+            throw IllegalArgumentException("API Key is empty!")
         }
     }
 
+    private suspend fun generateWithGemini(extractedText: String, cleanKey: String): String {
+        return sendGeminiRequest(cleanKey, extractedText, systemPrompt, "application/json")
+    }
+
     private suspend fun generateWithOpenAiCompatible(extractedText: String, cleanKey: String): String {
-        val baseUrl = getOpenAiBaseUrl()
-        val messages = listOf(
-            OpenAiMessage(role = "system", content = systemPrompt),
-            OpenAiMessage(role = "user", content = extractedText)
+        val messages = listOf(OpenAiMessage("system", systemPrompt), OpenAiMessage("user", extractedText))
+        return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model, messages, temperature)
+    }
+
+    private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null): String {
+        val targetModel = model.ifBlank { "gemini-1.5-flash" }
+        val url = "[https://generativelanguage.googleapis.com/v1beta/models/$](https://generativelanguage.googleapis.com/v1beta/models/$){targetModel}:generateContent?key=$cleanKey"
+        
+        val requestPayload = GeminiRequest(
+            contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
+            systemInstruction = sysPrompt?.let { GeminiSystemInstruction(listOf(GeminiPart(it))) },
+            generationConfig = GeminiGenConfig(temperature, mimeType)
         )
-        return sendKtorRequest(baseUrl, cleanKey, model, messages, temperature)
+
+        try {
+            val response: HttpResponse = ktorClient.post(url) {
+                contentType(ContentType.Application.Json)
+                setBody(requestPayload)
+            }
+            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<GeminiResponse>(response.bodyAsText())
+            return jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
+        } catch (e: ClientRequestException) {
+            throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText()}")
+        } catch (e: Exception) {
+            throw Exception("Network Error: ${e.message}")
+        }
     }
 
     private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null): String {
-        val requestPayload = OpenAiRequest(model = reqModel, messages = messages, temperature = temp, max_tokens = maxTokens)
+        val requestPayload = OpenAiRequest(reqModel, messages, temp, maxTokens)
         try {
             val response: HttpResponse = ktorClient.post(baseUrl) {
                 contentType(ContentType.Application.Json)
-                if (cleanKey.isNotEmpty() && !provider.lowercase().contains("ollama")) {
-                    header(HttpHeaders.Authorization, "Bearer $cleanKey")
-                }
+                if (cleanKey.isNotEmpty() && !provider.lowercase().contains("ollama")) header(HttpHeaders.Authorization, "Bearer $cleanKey")
                 setBody(requestPayload)
             }
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
             return jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
         } catch (e: ClientRequestException) {
-            throw Exception("${e.response.status.value}: ${e.response.bodyAsText()}")
+            throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText()}")
         } catch (e: Exception) {
             throw Exception("Network Error: ${e.message}")
         }
@@ -176,13 +140,5 @@ class AiNetworkClient(
             provider.lowercase().contains("lm studio") -> "[http://10.0.2.2:1234/v1/chat/completions](http://10.0.2.2:1234/v1/chat/completions)"
             else -> "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)"
         }
-    }
-    
-    private fun getSafeGeminiModel(inputModel: String): String {
-        // If the user typed "gemini-1.5-flash", upgrade it because Google disabled it in 2026.
-        if (inputModel.contains("1.5-flash") || inputModel.isBlank()) {
-            return "gemini-1.5-flash" 
-        }
-        return inputModel
     }
 }

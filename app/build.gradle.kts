@@ -122,7 +122,6 @@ dependencies {
   implementation(libs.retrofit)
   implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-  implementation("com.google.ai.client.generativeai:generativeai:0.8.0")
   implementation("io.ktor:ktor-client-core:3.0.3")
   implementation("io.ktor:ktor-client-android:3.0.3")
   implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
