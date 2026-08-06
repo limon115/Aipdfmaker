@@ -25,14 +25,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun ProcessingScreen(
     viewModel: ProcessingViewModel = viewModel(),
-    extractedText: String,
+    projectId: Int,
     onProcessingFinished: (com.example.domain.models.BlueprintSummary?) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.startProcessing(context, extractedText)
+        viewModel.startProcessing(context, projectId)
     }
 
     LaunchedEffect(state.isFinished) {
@@ -153,6 +153,17 @@ fun ChecklistRow(item: ChecklistItem) {
                             .border(2.dp, Color.LightGray, CircleShape)
                     )
                 }
+                StepState.FAILED -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Color.Red), // Error Red
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("!", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
 
@@ -161,8 +172,8 @@ fun ChecklistRow(item: ChecklistItem) {
         Text(
             text = item.title,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (item.state == StepState.PENDING) Color.Gray else Color.Black,
-            fontWeight = if (item.state == StepState.IN_PROGRESS) FontWeight.Bold else FontWeight.Normal
+            color = if (item.state == StepState.PENDING) Color.Gray else if (item.state == StepState.FAILED) Color.Red else Color.Black,
+            fontWeight = if (item.state == StepState.IN_PROGRESS || item.state == StepState.FAILED) FontWeight.Bold else FontWeight.Normal
         )
     }
 }

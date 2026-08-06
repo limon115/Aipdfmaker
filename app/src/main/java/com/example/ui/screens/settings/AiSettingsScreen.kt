@@ -33,6 +33,7 @@ fun AiSettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         topBar = {
@@ -61,7 +62,14 @@ fun AiSettingsScreen(
                 apiKey = settings.ai1ApiKey,
                 onProviderClick = { onNavigateToProviderSelection(true) },
                 onModelChange = viewModel::updateAi1Model,
-                onApiKeyChange = viewModel::updateAi1ApiKey
+                onApiKeyChange = viewModel::updateAi1ApiKey,
+                onTestConnection = {
+                    viewModel.testConnection(
+                        isAi1 = true,
+                        onSuccess = { android.widget.Toast.makeText(context, "Connection Successful", android.widget.Toast.LENGTH_SHORT).show() },
+                        onError = { android.widget.Toast.makeText(context, "Connection Failed: $it", android.widget.Toast.LENGTH_LONG).show() }
+                    )
+                }
             )
 
             AiConfigCard(
@@ -72,6 +80,13 @@ fun AiSettingsScreen(
                 onProviderClick = { onNavigateToProviderSelection(false) },
                 onModelChange = viewModel::updateAi2Model,
                 onApiKeyChange = viewModel::updateAi2ApiKey,
+                onTestConnection = {
+                    viewModel.testConnection(
+                        isAi1 = false,
+                        onSuccess = { android.widget.Toast.makeText(context, "Connection Successful", android.widget.Toast.LENGTH_SHORT).show() },
+                        onError = { android.widget.Toast.makeText(context, "Connection Failed: $it", android.widget.Toast.LENGTH_LONG).show() }
+                    )
+                },
                 advancedSettings = {
                     AdvancedSettingsSection(
                         temperature = settings.ai2Temperature,
@@ -87,6 +102,7 @@ fun AiSettingsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiConfigCard(
     title: String,
@@ -96,9 +112,18 @@ fun AiConfigCard(
     onProviderClick: () -> Unit,
     onModelChange: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onTestConnection: () -> Unit,
     advancedSettings: @Composable (() -> Unit)? = null
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    var modelDropdownExpanded by remember { mutableStateOf(false) }
+
+    val recommendedModels = when (provider) {
+        AiProvider.GOOGLE_GEMINI -> listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro")
+        AiProvider.OPENAI -> listOf("gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo")
+        AiProvider.OLLAMA -> listOf("llama3", "mistral", "gemma")
+        else -> listOf("gemini-1.5-pro", "gemini-1.5-flash")
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -155,14 +180,39 @@ fun AiConfigCard(
             }
 
             // Model Selection
-            OutlinedTextField(
-                value = model,
-                onValueChange = onModelChange,
-                label = { Text("Model (e.g. gemini-1.5-pro)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(8.dp)
-            )
+            ExposedDropdownMenuBox(
+                expanded = modelDropdownExpanded,
+                onExpandedChange = { modelDropdownExpanded = !modelDropdownExpanded }
+            ) {
+                OutlinedTextField(
+                    value = model,
+                    onValueChange = onModelChange,
+                    label = { Text("Model (e.g. ${recommendedModels.first()})") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelDropdownExpanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                )
+                ExposedDropdownMenu(
+                    expanded = modelDropdownExpanded,
+                    onDismissRequest = { modelDropdownExpanded = false }
+                ) {
+                    recommendedModels.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                onModelChange(option)
+                                modelDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             // API Key
             OutlinedTextField(
@@ -175,9 +225,6 @@ fun AiConfigCard(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     Row {
-                        IconButton(onClick = { /* TODO Paste */ }) {
-                            Icon(Icons.Default.ContentPaste, contentDescription = "Paste API Key")
-                        }
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
@@ -188,11 +235,32 @@ fun AiConfigCard(
                 }
             )
 
+            var isTesting by remember { mutableStateOf(false) }
+
             TextButton(
-                onClick = { /* TODO */ },
-                modifier = Modifier.align(Alignment.End)
+                onClick = { 
+                    isTesting = true
+                    onTestConnection()
+                },
+                modifier = Modifier.align(Alignment.End),
+                enabled = !isTesting
             ) {
-                Text("Test Connection", color = MaterialTheme.colorScheme.primary)
+                if (isTesting) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Testing...", color = MaterialTheme.colorScheme.primary)
+                } else {
+                    Text("Test Connection", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            // Reset isTesting after test logic resolves (since we passed it down, we can reset it inside the callback or using a side effect)
+            // But we can keep it simple: the caller will show a toast. We can reset isTesting after a delay.
+            LaunchedEffect(isTesting) {
+                if (isTesting) {
+                    kotlinx.coroutines.delay(2000)
+                    isTesting = false
+                }
             }
 
             if (advancedSettings != null) {

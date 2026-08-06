@@ -47,4 +47,31 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateAi2Advanced(temperature: Float, maxTokens: Int, topP: Float) {
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
+
+    fun testConnection(isAi1: Boolean, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val currentSettings = settings.value
+                val provider = if (isAi1) currentSettings.ai1Provider else currentSettings.ai2Provider
+                val model = if (isAi1) currentSettings.ai1Model else currentSettings.ai2Model
+                val apiKey = if (isAi1) currentSettings.ai1ApiKey else currentSettings.ai2ApiKey
+                
+                val client = com.example.data.network.AiNetworkClient(
+                    provider = provider.name,
+                    apiKey = apiKey,
+                    model = model,
+                    temperature = 0f
+                )
+                
+                val isSuccess = client.testConnection()
+                if (isSuccess) {
+                    onSuccess()
+                } else {
+                    onError("Unknown error")
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Connection failed")
+            }
+        }
+    }
 }

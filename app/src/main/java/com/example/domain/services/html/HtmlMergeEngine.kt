@@ -1,13 +1,14 @@
 package com.example.domain.services.html
 
-import com.example.data.database.ProjectDao
+import com.example.data.database.HtmlSnippetDao
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import kotlinx.coroutines.flow.first
 
-class HtmlMergeEngine(private val projectDao: ProjectDao) {
+class HtmlMergeEngine(private val htmlSnippetDao: HtmlSnippetDao) {
 
     suspend fun generateMasterHtml(projectId: Int): String {
-        val snippets = projectDao.getHtmlSnippetsForProject(projectId)
+        val snippets = htmlSnippetDao.getSnippetsForProject(projectId).first()
         
         val doc: Document = Jsoup.parse("<html><head></head><body></body></html>")
         

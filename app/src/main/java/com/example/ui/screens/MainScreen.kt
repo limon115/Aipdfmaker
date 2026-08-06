@@ -137,7 +137,9 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
             }
             composable("input_source") {
                 InputSourceScreen(
+                    viewModel = newProjectViewModel,
                     onNavigate = { route -> navController.navigate(route) },
+                    onNavigateNext = { navController.navigate("project_details") },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -156,7 +158,11 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
                 )
             }
             composable("paste_input") {
-                CenteredText("Paste Transcript (Placeholder)")
+                com.example.ui.screens.project.PasteTranscriptScreen(
+                    viewModel = newProjectViewModel,
+                    onNavigateNext = { navController.navigate("project_details") },
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable("file_input") {
                 CenteredText("Import from File (Placeholder)")
@@ -172,11 +178,10 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
             }
             composable("processing/{projectId}") { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
-                val state by newProjectViewModel.state.collectAsStateWithLifecycle()
                 val processingViewModel: ProcessingViewModel = viewModel()
                 ProcessingScreen(
                     viewModel = processingViewModel,
-                    extractedText = state.extractedText,
+                    projectId = projectId,
                     onProcessingFinished = { summary ->
                         if (summary != null) {
                             blueprintViewModel.setBlueprintSummary(summary)
@@ -190,6 +195,7 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
             composable("topics_detected/{projectId}") { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 TopicsDetectedScreen(
+                    blueprintViewModel = blueprintViewModel,
                     onNavigateNext = {
                         navController.navigate("blueprint_summary/$projectId")
                     },
@@ -201,19 +207,26 @@ fun MainScreen(navController: NavHostController = rememberNavController()) {
                 BlueprintSummaryScreen(
                     viewModel = blueprintViewModel,
                     onNavigateNext = {
-                        navController.navigate("notes_viewer/$projectId")
+                        navController.navigate("note_generation/$projectId")
                     },
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable("note_generation/{projectId}") { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
+                com.example.ui.screens.processing.NoteGenerationScreen(
+                    projectId = projectId,
+                    blueprintViewModel = blueprintViewModel,
+                    onNavigateNext = {
+                        navController.navigate("notes_viewer/$projectId")
+                    }
                 )
             }
             composable("notes_viewer/{projectId}") { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val db = androidx.room.Room.databaseBuilder(
-                    context,
-                    com.example.data.database.AppDatabase::class.java, "docmorph-db"
-                ).build()
-                val htmlMergeEngine = com.example.domain.services.html.HtmlMergeEngine(db.projectDao())
+                val db = com.example.data.database.AppDatabase.getDatabase(context)
+                val htmlMergeEngine = com.example.domain.services.html.HtmlMergeEngine(db.htmlSnippetDao())
                 val exportEngine = com.example.domain.services.export.ExportEngine(context)
                 
                 val factory = object : androidx.lifecycle.ViewModelProvider.Factory {

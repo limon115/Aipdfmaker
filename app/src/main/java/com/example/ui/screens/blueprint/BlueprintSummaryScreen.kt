@@ -122,7 +122,7 @@ fun BlueprintSummaryScreen(
                     item {
                         MetricCard(
                             title = "Topics",
-                            subtitle = "${safeState.topicCount} topics found",
+                            subtitle = "${safeState.topics.size} topics found",
                             icon = Icons.AutoMirrored.Filled.List,
                             iconTint = MaterialTheme.colorScheme.primary,
                             iconBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)

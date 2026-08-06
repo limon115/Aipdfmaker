@@ -32,9 +32,28 @@ data class InputSourceItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputSourceScreen(
+    viewModel: NewProjectViewModel,
     onNavigate: (String) -> Unit,
+    onNavigateNext: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val text = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+                viewModel.updateExtractedText(text)
+                onNavigateNext()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.widget.Toast.makeText(context, "Failed to read file", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     val sources = listOf(
         InputSourceItem(
             title = "YouTube Link",
@@ -99,7 +118,13 @@ fun InputSourceScreen(
                 items(sources) { source ->
                     SourceCard(
                         item = source,
-                        onClick = { onNavigate(source.route) }
+                        onClick = { 
+                            if (source.route == "file_input") {
+                                filePickerLauncher.launch("text/*")
+                            } else {
+                                onNavigate(source.route)
+                            }
+                        }
                     )
                 }
             }

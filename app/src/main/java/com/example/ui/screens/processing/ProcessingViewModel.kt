@@ -13,12 +13,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 enum class StepState {
     PENDING,
     IN_PROGRESS,
-    COMPLETED
+    COMPLETED,
+    FAILED
 }
 
 data class ChecklistItem(
@@ -45,13 +47,19 @@ class ProcessingViewModel : ViewModel() {
 
     private var hasStarted = false
 
-    fun startProcessing(context: Context, extractedText: String) {
+    fun startProcessing(context: Context, projectId: Int) {
         if (hasStarted) return
         hasStarted = true
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // Step 1: OCR Processing (simulated wait since text is already extracted in NewProjectViewModel)
             updateStepState(0, StepState.IN_PROGRESS, 25)
+            
+            // Fetch project from DB
+            val projectDao = com.example.data.database.AppDatabase.getDatabase(context).projectDao()
+            val project = projectDao.getProjectById(projectId)
+            val extractedText = project?.sourceText ?: ""
+            
             delay(1500) // pretend we are extracting
             updateStepState(0, StepState.COMPLETED, 50)
 

@@ -6,10 +6,16 @@ import kotlinx.serialization.Serializable
 data class BlueprintSummary(
     val courseName: String,
     val chapterName: String,
-    val topicCount: Int,
-    val formulaCount: Int,
-    val definitionCount: Int,
-    val exampleCount: Int,
-    val diagramCount: Int,
-    val examTipCount: Int
+    val topics: List<Topic> = emptyList(),
+    val formulaCount: Int = 0,
+    val definitionCount: Int = 0,
+    val exampleCount: Int = 0,
+    val diagramCount: Int = 0,
+    val examTipCount: Int = 0
+)
+
+@Serializable
+data class Topic(
+    val title: String,
+    val durationMinutes: Int = 0
 )

@@ -12,15 +12,12 @@ interface ProjectDao {
     @Query("SELECT * FROM projects ORDER BY lastUpdated DESC")
     fun getAllProjects(): Flow<List<ProjectEntity>>
 
+    @Query("SELECT * FROM projects WHERE id = :id LIMIT 1")
+    suspend fun getProjectById(id: Int): ProjectEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProject(project: ProjectEntity): Long
 
     @Delete
     suspend fun deleteProject(project: ProjectEntity)
-
-    @Query("SELECT * FROM html_snippets WHERE projectId = :projectId ORDER BY displayOrder ASC")
-    suspend fun getHtmlSnippetsForProject(projectId: Int): List<HtmlSnippetEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertHtmlSnippet(snippet: HtmlSnippetEntity)
 }

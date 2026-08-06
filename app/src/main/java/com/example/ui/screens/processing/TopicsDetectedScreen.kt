@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,22 +21,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-data class DetectedTopic(
-    val title: String,
-    val duration: String
-)
+import com.example.ui.screens.blueprint.BlueprintViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopicsDetectedScreen(
+    blueprintViewModel: BlueprintViewModel,
     onNavigateNext: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    val topics = listOf(
-        DetectedTopic("Introduction to Machine Learning", "5 min"),
-        DetectedTopic("Supervised vs Unsupervised", "12 min"),
-        DetectedTopic("Neural Networks Architecture", "20 min")
-    )
+    val blueprintState by blueprintViewModel.state.collectAsState()
+    val topics = blueprintState?.topics ?: emptyList()
 
     Scaffold(
         topBar = {
@@ -67,7 +64,8 @@ fun TopicsDetectedScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
-                    )
+                    ),
+                    enabled = blueprintState != null
                 ) {
                     Text("Continue", style = MaterialTheme.typography.titleMedium)
                 }
@@ -80,46 +78,51 @@ fun TopicsDetectedScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                ),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(0.dp)
-            ) {
-                Text(
-                    text = "We found ${topics.size} topics in this lecture. You can review and edit them.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                itemsIndexed(topics) { index, topic ->
-                    TopicRow(index = index + 1, topic = topic)
+            if (blueprintState == null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Text(
+                        text = "We found ${topics.size} topics in this lecture. You can review and edit them.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedButton(
-                        onClick = { /* TODO */ },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Topic")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add Topic")
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    itemsIndexed(topics) { index, topic ->
+                        TopicRow(index = index + 1, topic = topic)
                     }
-                    Spacer(modifier = Modifier.height(32.dp))
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { /* TODO */ },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Topic")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add Topic")
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
                 }
             }
         }
@@ -127,7 +130,7 @@ fun TopicsDetectedScreen(
 }
 
 @Composable
-fun TopicRow(index: Int, topic: DetectedTopic) {
+fun TopicRow(index: Int, topic: com.example.domain.models.Topic) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -164,7 +167,7 @@ fun TopicRow(index: Int, topic: DetectedTopic) {
                     color = Color.Black
                 )
                 Text(
-                    text = "Est. duration: ${topic.duration}",
+                    text = "Est. duration: ${topic.durationMinutes} min",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray
                 )

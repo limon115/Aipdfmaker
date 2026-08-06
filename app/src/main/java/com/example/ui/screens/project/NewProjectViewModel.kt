@@ -47,10 +47,13 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
                 outputFormat = currentState.outputFormat,
                 status = "Processing",
                 pageCount = 0,
-                lastUpdated = System.currentTimeMillis()
+                lastUpdated = System.currentTimeMillis(),
+                sourceText = currentState.extractedText
             )
             val id = projectDao.insertProject(project).toInt()
-            onProjectCreated(id)
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                onProjectCreated(id)
+            }
         }
     }
 
@@ -74,6 +77,10 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
 
     fun updatePdfUri(uri: String?, fileName: String?) {
         _state.update { it.copy(pdfUri = uri, pdfFileName = fileName) }
+    }
+
+    fun updateExtractedText(text: String) {
+        _state.update { it.copy(extractedText = text) }
     }
 
     fun updateYoutubeUrl(url: String) {

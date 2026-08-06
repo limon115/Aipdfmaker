@@ -13,5 +13,6 @@ data class ProjectEntity(
     val outputFormat: String,
     val status: String,
     val pageCount: Int,
-    val lastUpdated: Long
+    val lastUpdated: Long,
+    val sourceText: String = ""
 )

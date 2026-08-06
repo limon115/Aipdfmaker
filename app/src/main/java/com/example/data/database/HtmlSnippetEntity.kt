@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class HtmlSnippetEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val projectId: Int,
+    val topicTitle: String,
     val htmlContent: String,
-    val displayOrder: Int
+    val orderIndex: Int
 )
