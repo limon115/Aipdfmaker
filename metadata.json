@@ -1,0 +1,6 @@
+{
+  "name": "DocMorph Notes AI",
+  "description": "Premium Note-taking AI app.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
