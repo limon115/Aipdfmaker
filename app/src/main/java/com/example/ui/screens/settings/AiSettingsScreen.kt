@@ -125,10 +125,8 @@ fun AiConfigCard(
     
     // Decouple UI state from DataStore to prevent async cursor jumps
     var localApiKey by remember { mutableStateOf(apiKey) }
-    LaunchedEffect(apiKey) { if (apiKey != localApiKey) localApiKey = apiKey }
     
     var localModel by remember { mutableStateOf(model) }
-    LaunchedEffect(model) { if (model != localModel) localModel = model }
     var modelDropdownExpanded by remember { mutableStateOf(false) }
 
     val recommendedModels = when (provider.name.lowercase()) {

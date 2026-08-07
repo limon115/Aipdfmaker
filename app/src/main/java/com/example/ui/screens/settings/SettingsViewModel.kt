@@ -58,7 +58,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val cleanKey = apiKey.trim()
+        val cleanKey = apiKey.replace(" ", "")
         val lowerProvider = provider.lowercase()
         
         if (cleanKey.isEmpty() && !lowerProvider.contains("ollama") && !lowerProvider.contains("lm studio")) {
