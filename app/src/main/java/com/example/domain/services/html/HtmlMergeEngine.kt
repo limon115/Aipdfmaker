@@ -10,7 +10,7 @@ class HtmlMergeEngine(private val htmlSnippetDao: HtmlSnippetDao) {
     suspend fun generateMasterHtml(projectId: Int): String {
         val snippets = htmlSnippetDao.getSnippetsForProject(projectId).first()
         
-        val doc: Document = Jsoup.parse("<html><head></head><body></body></html>")
+        val doc: Document = Jsoup.parse("<html><head><meta charset=\"UTF-8\"></head><body></body></html>")
         
         doc.head().append("""
             <style>

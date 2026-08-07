@@ -79,7 +79,7 @@ class ExportEngine(private val context: Context) {
 
                     webView.webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView, url: String) {
-                            view.postDelayed({ finishExport() }, 400)
+                            Handler(Looper.getMainLooper()).postDelayed({ finishExport() }, 400)
                         }
                     }
 
@@ -89,7 +89,7 @@ class ExportEngine(private val context: Context) {
                     webView.layout(0, 0, 800, 1200)
 
                     webView.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
-                    webView.handler.postDelayed({ finishExport() }, 2000)
+                    Handler(Looper.getMainLooper()).postDelayed({ finishExport() }, 2000)
 
                 } catch (e: Exception) {
                     e.printStackTrace()
