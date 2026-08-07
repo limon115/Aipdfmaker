@@ -57,7 +57,6 @@ fun NotesViewerScreen(
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                    // 🔥 Automatically return to home page after export!
                     onNavigateBack()
                 }
             },
@@ -167,7 +166,8 @@ fun ExportPreviewModal(
                             }
                         },
                         update = { view ->
-                            view.loadDataWithBaseURL(null, state.htmlContent, "text/HTML", "UTF-8", null)
+                            // Use htmlContent parameter instead of undefined state.htmlContent
+                            view.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
                         }
                     )
                 }
