@@ -1,10 +1,6 @@
 package com.example.ui.screens.viewer
 
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.Settings
 import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -43,26 +39,21 @@ fun NotesViewerScreen(
             htmlContent = state.htmlContent,
             onConfirm = {
                 showPreviewModal = false
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                        data = Uri.parse("package:${context.packageName}")
+                // 🔥 NUKE THE PERMISSION HIJACK: Go directly to FileProvider export!
+                viewModel.exportDocument { pdfFile, htmlFile ->
+                    val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
+                    val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        selectedFile
+                    )
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/html"
+                        setDataAndType(uri, mimeType)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(intent)
-                } else {
-                    viewModel.exportDocument { pdfFile, htmlFile ->
-                        val selectedFile = if (state.outputFormat.equals("pdf", ignoreCase = true)) pdfFile else htmlFile
-                        val uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            selectedFile
-                        )
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            val mimeType = if (state.outputFormat.equals("pdf", ignoreCase = true)) "application/pdf" else "text/html"
-                            setDataAndType(uri, mimeType)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(intent)
-                    }
+                    context.startActivity(Intent.createChooser(intent, "Open Document..."))
                 }
             },
             onDismiss = { showPreviewModal = false }
@@ -156,7 +147,7 @@ fun ExportPreviewModal(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(16.dp)
                 )
-                
+
                 Box(
                     modifier = Modifier
                         .weight(1f)

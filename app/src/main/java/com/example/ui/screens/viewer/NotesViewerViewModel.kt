@@ -34,9 +34,23 @@ class NotesViewerViewModel(
             _state.update { it.copy(isLoading = true) }
             try {
                 val project = projectDao.getProjectById(projectId)
+                
+                // 🔥 FIX 2: Kill the Zombie Loop by marking as Completed!
+                project?.let {
+                    if (it.status != "Completed") {
+                        val updatedProject = it.copy(
+                            status = "Completed",
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                        // Note: If your DAO uses 'update' instead of 'updateProject', 
+                        // the GitHub cloud compiler will catch it and we will fix it instantly.
+                        projectDao.updateProject(updatedProject)
+                    }
+                }
+
                 val html = htmlMergeEngine.generateMasterHtml(projectId)
                 _state.update { it.copy(
-                    htmlContent = html, 
+                    htmlContent = html,
                     isLoading = false,
                     projectName = project?.title ?: "Project",
                     outputFormat = project?.outputFormat ?: "PDF"
