@@ -39,21 +39,26 @@ fun NotesViewerScreen(
             htmlContent = state.htmlContent,
             onConfirm = {
                 showPreviewModal = false
-                // 🔥 NUKE THE PERMISSION HIJACK: Go directly to FileProvider export!
                 viewModel.exportDocument { pdfFile, htmlFile ->
-                    val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
-                    val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        selectedFile
-                    )
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/html"
-                        setDataAndType(uri, mimeType)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    try {
+                        val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
+                        val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            selectedFile
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/html"
+                            setDataAndType(uri, mimeType)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Open Document..."))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                    context.startActivity(Intent.createChooser(intent, "Open Document..."))
+                    // 🔥 Automatically return to home page after export!
+                    onNavigateBack()
                 }
             },
             onDismiss = { showPreviewModal = false }
@@ -162,7 +167,7 @@ fun ExportPreviewModal(
                             }
                         },
                         update = { view ->
-                            view.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
+                            view.loadDataWithBaseURL(null, state.htmlContent, "text/HTML", "UTF-8", null)
                         }
                     )
                 }
