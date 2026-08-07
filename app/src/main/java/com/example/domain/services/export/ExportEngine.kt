@@ -16,38 +16,50 @@ class ExportEngine(private val context: Context) {
         htmlContent: String,
         onComplete: (pdfFile: File, htmlFile: File) -> Unit
     ) {
-        // 🔥 FIX 1: Save to App-Specific Directory (Zero Permissions Required!)
         val rootDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "aipdfs")
         rootDir.mkdirs()
 
         val safeName = projectName.replace(Regex("[^a-zA-Z0-9.-]"), "_")
         val htmlFile = File(rootDir, "${safeName}_notes.html")
-        htmlFile.writeText(htmlContent)
+        
+        try {
+            htmlFile.writeText(htmlContent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val pdfFile = File(rootDir, "${safeName}_notes.pdf")
 
         CoroutineScope(Dispatchers.Main).launch {
             val webView = WebView(context)
+            webView.settings.loadsImagesAutomatically = true
+            webView.settings.javaScriptEnabled = false
+            
             webView.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) {
+                    // Give it a brief moment to settle layout, then draw to PDF
                     view.postDelayed({
                         try {
                             val pdfDocument = android.graphics.pdf.PdfDocument()
-                            val width = view.measuredWidth.takeIf { it > 0 } ?: 800
-                            val height = view.measuredHeight.takeIf { it > 0 } ?: 1200
+                            val width = 800
+                            val height = 1200
+                            
                             val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(width, height, 1).create()
                             val page = pdfDocument.startPage(pageInfo)
+                            
                             view.draw(page.canvas)
                             pdfDocument.finishPage(page)
 
-                            pdfDocument.writeTo(FileOutputStream(pdfFile))
+                            val fos = FileOutputStream(pdfFile)
+                            pdfDocument.writeTo(fos)
                             pdfDocument.close()
+                            fos.close()
                         } catch (e: Exception) {
                             e.printStackTrace()
                         } finally {
                             onComplete(pdfFile, htmlFile)
                         }
-                    }, 500)
+                    }, 800)
                 }
             }
 
