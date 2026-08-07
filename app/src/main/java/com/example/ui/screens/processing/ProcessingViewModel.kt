@@ -73,7 +73,7 @@ class ProcessingViewModel : ViewModel() {
                 val aiClient = AiNetworkClient(
                     provider = settings.ai1Provider.name,
                     apiKey = settings.ai1ApiKey,
-                    model = settings.ai1Model.ifBlank { "gemini-1.5-flash" },
+                    model = settings.ai1Model.ifBlank { "gemini-2.5-flash" },
                     temperature = settings.ai2Temperature
                 )
                 

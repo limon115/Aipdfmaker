@@ -1,0 +1,3 @@
+apply plugin: 'java'
+repositories { google(); mavenCentral() }
+dependencies { implementation 'io.ktor:ktor-client-core:3.0.3' }

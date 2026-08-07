@@ -233,7 +233,8 @@ fun MainScreen() {
                 com.example.ui.screens.viewer.NotesViewerScreen(
                     viewModel = notesViewerViewModel,
                     projectId = projectId,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateHome = { navController.navigate(BottomNavItem.Home.route) { popUpTo(BottomNavItem.Home.route) { inclusive = false } } }
                 )
             }
             composable("provider_selection/{isAi1}") { backStackEntry ->
@@ -242,7 +243,7 @@ fun MainScreen() {
                 val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
                 
                 ProviderSelectionScreen(
-                    currentProvider = if (isAi1) settings.ai1Provider else settings.ai2Provider,
+                    currentProvider = if (isAi1) settings?.ai1Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI else settings?.ai2Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI,
                     onProviderSelected = { provider ->
                         if (isAi1) {
                             settingsViewModel.updateAi1Provider(provider)

@@ -70,7 +70,7 @@ class NoteGenerationViewModel : ViewModel() {
                             blueprintContext = blueprintContext,
                             sourceText = sourceText,
                             ai2Provider = settings.ai2Provider.name,
-                            ai2Model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
+                            ai2Model = settings.ai2Model.ifBlank { "gemini-2.5-flash" },
                             ai2ApiKey = settings.ai2ApiKey,
                             ai2Temperature = settings.ai2Temperature
                         )

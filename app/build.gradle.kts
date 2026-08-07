@@ -120,7 +120,7 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
-  implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
+  implementation("com.google.mlkit:text-recognition:16.0.1")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
   implementation("io.ktor:ktor-client-core:3.0.3")
   implementation("io.ktor:ktor-client-android:3.0.3")

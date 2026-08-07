@@ -1,7 +1,16 @@
 package com.example.ui.screens.viewer
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.webkit.WebView
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +33,8 @@ import androidx.core.content.FileProvider
 fun NotesViewerScreen(
     viewModel: NotesViewerViewModel,
     projectId: Int,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateHome: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -34,31 +44,81 @@ fun NotesViewerScreen(
         viewModel.loadData(projectId)
     }
 
+    val performExport = {
+        showPreviewModal = false
+        viewModel.exportDocument { pdfFile, htmlFile ->
+            try {
+                val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
+                val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    selectedFile
+                )
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/html"
+                    setDataAndType(uri, mimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, "Open Document..."))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            onNavigateHome()
+        }
+    }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            performExport()
+        } else {
+            // Still try, might fallback to app specific dir
+            performExport() 
+        }
+    }
+    
+    val manageStorageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
+                performExport()
+            } else {
+                performExport() 
+            }
+        }
+    }
+
+    val checkAndPerformExport = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
+                performExport()
+            } else {
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.data = Uri.parse("package:${context.packageName}")
+                    manageStorageLauncher.launch(intent)
+                } catch (e: Exception) {
+                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                    manageStorageLauncher.launch(intent)
+                }
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                performExport()
+            } else {
+                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }
+    }
+
     if (showPreviewModal) {
         ExportPreviewModal(
             htmlContent = state.htmlContent,
             onConfirm = {
-                showPreviewModal = false
-                viewModel.exportDocument { pdfFile, htmlFile ->
-                    try {
-                        val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
-                        val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
-                        val uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            selectedFile
-                        )
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/html"
-                            setDataAndType(uri, mimeType)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Open Document..."))
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    onNavigateBack()
-                }
+                checkAndPerformExport()
             },
             onDismiss = { showPreviewModal = false }
         )

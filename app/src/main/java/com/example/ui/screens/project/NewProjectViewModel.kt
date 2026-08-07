@@ -63,9 +63,8 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
         viewModelScope.launch {
             try {
                 val pdfRenderer = PdfRendererService(context)
-                val bitmaps = pdfRenderer.renderPdfToBitmaps(uri)
                 val ocrEngine = LocalOcrEngine()
-                val text = ocrEngine.extractTextFromBitmaps(bitmaps)
+                val text = pdfRenderer.extractTextFromPdf(uri, ocrEngine)
                 _state.update { it.copy(extractedText = text) }
             } catch (e: Exception) {
                 e.printStackTrace()

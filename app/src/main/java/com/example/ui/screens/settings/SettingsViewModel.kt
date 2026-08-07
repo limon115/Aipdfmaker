@@ -17,10 +17,10 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStore = AiSettingsDataStore(application)
 
-    val settings: StateFlow<AiSettings> = dataStore.aiSettingsFlow.stateIn(
+    val settings: StateFlow<AiSettings?> = dataStore.aiSettingsFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = AiSettings()
+        initialValue = null
     )
 
     fun updateAi1Provider(provider: AiProvider) {
@@ -83,11 +83,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 }
             } catch (e: Throwable) {
                 if (e is ClientRequestException) {
-                    onError("API Error " + e.response.status.value)
+                    onError("API Error " + e.response.status.value + ": " + e.message)
                 } else if (e is HttpRequestTimeoutException) {
-                    onError("Request timed out")
+                    onError("Request timed out: " + e.message)
                 } else {
-                    onError("NET: " + (e.message ?: "").takeLast(35))
+                    onError("NET Error: " + (e.message ?: "Unknown"))
                 }
             }
         }

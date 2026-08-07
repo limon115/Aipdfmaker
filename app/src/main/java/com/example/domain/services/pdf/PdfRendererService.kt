@@ -2,6 +2,8 @@ package com.example.domain.services.pdf
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
@@ -11,8 +13,8 @@ import java.io.FileOutputStream
 
 class PdfRendererService(private val context: Context) {
     
-    suspend fun renderPdfToBitmaps(uri: Uri): List<Bitmap> = withContext(Dispatchers.IO) {
-        val bitmaps = mutableListOf<Bitmap>()
+    suspend fun extractTextFromPdf(uri: Uri, ocrEngine: com.example.domain.services.ocr.LocalOcrEngine): String = withContext(Dispatchers.IO) {
+        val textBuilder = StringBuilder()
         
         // We need to copy the content of the URI to a local cache file because 
         // PdfRenderer requires a FileDescriptor which is easier to get from a local file.
@@ -36,18 +38,31 @@ class PdfRendererService(private val context: Context) {
                     val pageCount = pdfRenderer.pageCount
                     for (i in 0 until pageCount) {
                         pdfRenderer.openPage(i).use { page ->
+                            // Scale up the PDF page for better OCR accuracy (default is only 72 DPI)
+                            val scale = 2.5f
+                            val scaledWidth = (page.width * scale).toInt()
+                            val scaledHeight = (page.height * scale).toInt()
+                            
                             val bitmap = Bitmap.createBitmap(
-                                page.width, 
-                                page.height, 
+                                scaledWidth, 
+                                scaledHeight, 
                                 Bitmap.Config.ARGB_8888
                             )
+                            // PDFs often have transparent backgrounds, which can ruin OCR. Fill with white.
+                            bitmap.eraseColor(Color.WHITE)
+                            
+                            val matrix = Matrix().apply { postScale(scale, scale) }
+                            
                             page.render(
                                 bitmap, 
                                 null, 
-                                null, 
+                                matrix, 
                                 PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
                             )
-                            bitmaps.add(bitmap)
+                            
+                            val text = ocrEngine.extractTextFromBitmap(bitmap)
+                            textBuilder.append(text).append("\n")
+                            bitmap.recycle()
                         }
                     }
                 } finally {
@@ -60,6 +75,6 @@ class PdfRendererService(private val context: Context) {
             }
         }
         
-        return@withContext bitmaps
+        return@withContext textBuilder.toString()
     }
 }

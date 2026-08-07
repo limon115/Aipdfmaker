@@ -21,10 +21,18 @@ class ExportEngine(private val context: Context) {
             val safeName = projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
             
             // Map safely to /storage/emulated/0/Documents/aipdfs/(project)/
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val baseDir = File(documentsDir, "aipdfs/$safeName")
-            val pdfDir = File(baseDir, "pdf")
-            val htmlDir = File(baseDir, "html")
+            var documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            var baseDir = File(documentsDir, "aipdfs/$safeName")
+            var pdfDir = File(baseDir, "pdf")
+            var htmlDir = File(baseDir, "html")
+            
+            if (!pdfDir.exists() && !pdfDir.mkdirs()) {
+                // Fallback to app-specific external or internal directory if permissions fail
+                documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.filesDir
+                baseDir = File(documentsDir, "aipdfs/$safeName")
+                pdfDir = File(baseDir, "pdf")
+                htmlDir = File(baseDir, "html")
+            }
             
             pdfDir.mkdirs()
             htmlDir.mkdirs()
@@ -55,7 +63,12 @@ class ExportEngine(private val context: Context) {
                                 pdfDocument.writeTo(fos)
                                 pdfDocument.close()
                                 fos.close()
-                                Toast.makeText(context, "Saved to Documents/aipdfs/$safeName/", Toast.LENGTH_LONG).show()
+                                val displayPath = if (documentsDir.absolutePath.contains("Android/data")) {
+                                    "Saved to App Files/Documents/aipdfs/$safeName/"
+                                } else {
+                                    "Saved to Documents/aipdfs/$safeName/"
+                                }
+                                Toast.makeText(context, displayPath, Toast.LENGTH_LONG).show()
                             } catch (e: Exception) {
                                 e.printStackTrace()
                                 Toast.makeText(context, "PDF Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
