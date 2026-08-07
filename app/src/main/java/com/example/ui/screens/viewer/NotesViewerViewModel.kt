@@ -44,7 +44,7 @@ class NotesViewerViewModel(
                         )
                         // Note: If your DAO uses 'update' instead of 'updateProject', 
                         // the GitHub cloud compiler will catch it and we will fix it instantly.
-                        projectDao.updateProject(updatedProject)
+                        projectDao.update(updatedProject)
                     }
                 }
 
