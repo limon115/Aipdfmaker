@@ -14,7 +14,6 @@ class NoteGenerationService(
         ai2ApiKey: String,
         ai2Temperature: Float
     ): String {
-        // Create an AiNetworkClient specifically for AI #2
         val clientForGeneration = AiNetworkClient(
             provider = ai2Provider,
             apiKey = ai2ApiKey,
@@ -23,7 +22,9 @@ class NoteGenerationService(
         )
 
         val systemPrompt = """
-            You are an expert educational writer. Write detailed study notes for the topic: '$topicTitle'. Use the provided source text. You MUST return ONLY valid, semantic HTML5 code (using <section>, <h2>, <h3>, <p>, <ul>, <strong>, <table>). Do NOT wrap the response in markdown blocks (like ```html). Do NOT include <html> or <body> tags, only the inner content.
+            You are an expert educational writer. Write detailed study notes for the topic: '$topicTitle'. Use the provided source text. 
+            CRITICAL LANGUAGE RULE: You MUST write the entire output, headings, explanations, and terms in the EXACT SAME LANGUAGE as the provided source text (e.g., if the source text is in Bangla, write the notes entirely in fluent, academic Bangla).
+            You MUST return ONLY valid, semantic HTML5 code (using <section>, <h2>, <h3>, <p>, <ul>, <strong>, <table>). Do NOT wrap the response in markdown blocks (like ```html). Do NOT include <html> or <body> tags, only the inner content.
         """.trimIndent()
 
         val prompt = """
@@ -35,7 +36,6 @@ class NoteGenerationService(
         """.trimIndent()
 
         val rawResponse = clientForGeneration.generateContent(prompt, systemPrompt)
-        
         return rawResponse.trim()
             .removePrefix("```html")
             .removePrefix("```")
