@@ -17,12 +17,15 @@ class ExportEngine(private val context: Context) {
         onComplete: (pdfFile: File, htmlFile: File) -> Unit
     ) {
         try {
-            val safeName = projectName.replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
+            // 🔥 Strictly trim and sanitize project name to eliminate rogue spaces and special characters
+            val safeName = projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
             
-            // 🔥 Target: storage/emulated/0/aipdfs/(project name)/pdf and html
-            val baseDir = File(Environment.getExternalStorageDirectory(), "aipdfs/$safeName")
+            // Map safely to /storage/emulated/0/Documents/aipdfs/(project)/
+            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val baseDir = File(documentsDir, "aipdfs/$safeName")
             val pdfDir = File(baseDir, "pdf")
             val htmlDir = File(baseDir, "html")
+            
             pdfDir.mkdirs()
             htmlDir.mkdirs()
 
@@ -52,10 +55,11 @@ class ExportEngine(private val context: Context) {
                                 pdfDocument.writeTo(fos)
                                 pdfDocument.close()
                                 fos.close()
+                                Toast.makeText(context, "Saved to Documents/aipdfs/$safeName/", Toast.LENGTH_LONG).show()
                             } catch (e: Exception) {
                                 e.printStackTrace()
+                                Toast.makeText(context, "PDF Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                             }
-                            Toast.makeText(context, "Saved to /storage/emulated/0/aipdfs/$safeName/", Toast.LENGTH_LONG).show()
                             onComplete(pdfFile, htmlFile)
                         }
                     }
@@ -72,12 +76,11 @@ class ExportEngine(private val context: Context) {
                     webView.layout(0, 0, 800, 1200)
 
                     webView.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
-
                     webView.handler.postDelayed({ finishExport() }, 2000)
 
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Render Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     onComplete(pdfFile, htmlFile)
                 }
             }
