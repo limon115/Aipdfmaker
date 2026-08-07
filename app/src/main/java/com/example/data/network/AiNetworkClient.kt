@@ -46,13 +46,13 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     """.trimIndent()
 
     suspend fun generateBlueprint(extractedText: String): String {
-        val cleanKey = apiKey.trim()
+        val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
         return if (isGemini) generateWithGemini(extractedText, cleanKey) else generateWithOpenAiCompatible(extractedText, cleanKey)
     }
 
     suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null): String {
-        val cleanKey = apiKey.trim()
+        val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
         if (isGemini) {
             return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType)
@@ -65,7 +65,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     suspend fun testConnection(): Boolean {
-        val cleanKey = apiKey.trim()
+        val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
         if (isGemini) {
             sendGeminiRequest(cleanKey, "Reply with 'Test'")
@@ -92,9 +92,9 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null): String {
-        val targetModel = model.ifBlank { "gemini-1.5-flash" }
+        val targetModel = model.ifBlank { "gemini-2.5-flash" }
         val url = "[https://generativelanguage.googleapis.com/v1beta/models/$](https://generativelanguage.googleapis.com/v1beta/models/$){targetModel}:generateContent?key=$cleanKey"
-        
+
         val requestPayload = GeminiRequest(
             contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
             systemInstruction = sysPrompt?.let { GeminiSystemInstruction(listOf(GeminiPart(it))) },
@@ -109,9 +109,9 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<GeminiResponse>(response.bodyAsText())
             return jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
         } catch (e: ClientRequestException) {
-            throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText()}")
+            throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}")
         } catch (e: Exception) {
-            throw Exception("Network Error: ${e.message}")
+            throw Exception("Network Error: ${e.message?.take(50)}")
         }
     }
 
@@ -126,7 +126,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
             return jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
         } catch (e: ClientRequestException) {
-            throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText()}")
+            throw Exception("API Error ${e.response.status.value}")
         } catch (e: Exception) {
             throw Exception("Network Error: ${e.message}")
         }
