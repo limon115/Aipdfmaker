@@ -1,5 +1,7 @@
 package com.example.ui.screens.settings
 
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -120,6 +122,13 @@ fun AiConfigCard(
     advancedSettings: @Composable (() -> Unit)? = null
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    
+    // Decouple UI state from DataStore to prevent async cursor jumps
+    var localApiKey by remember { mutableStateOf(apiKey) }
+    LaunchedEffect(apiKey) { if (apiKey != localApiKey) localApiKey = apiKey }
+    
+    var localModel by remember { mutableStateOf(model) }
+    LaunchedEffect(model) { if (model != localModel) localModel = model }
     var modelDropdownExpanded by remember { mutableStateOf(false) }
 
     val recommendedModels = when (provider.name.lowercase()) {
@@ -191,8 +200,8 @@ fun AiConfigCard(
                 onExpandedChange = { modelDropdownExpanded = !modelDropdownExpanded }
             ) {
                 OutlinedTextField(
-                    value = model,
-                    onValueChange = onModelChange,
+                    value = localModel,
+                    onValueChange = { localModel = it; onModelChange(it) },
                     label = { Text("Model (e.g. ${recommendedModels.first()})") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -223,8 +232,8 @@ fun AiConfigCard(
 
             // API Key
             OutlinedTextField(
-                value = apiKey,
-                onValueChange = onApiKeyChange,
+                value = localApiKey,
+                onValueChange = { localApiKey = it; onApiKeyChange(it) },
                 label = { Text("API Key") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -247,7 +256,7 @@ fun AiConfigCard(
             TextButton(
                 onClick = { 
                     isTesting = true
-                    onTestConnection(provider.name, model, apiKey)
+                    onTestConnection(provider.name, localModel, localApiKey)
                 },
                 modifier = Modifier.align(Alignment.End),
                 enabled = !isTesting
