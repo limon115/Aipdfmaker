@@ -1,4 +1,3 @@
-import com.example.data.network.AiNetworkClient
 package com.example.ui.screens.settings
 
 import android.app.Application
@@ -7,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.datastore.AiSettings
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.domain.models.AiProvider
+import com.example.data.network.AiNetworkClient
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,44 +51,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
 
-         else {
-                    onError("Unknown error")
-                }
-            } catch (e: Throwable) {
-                if (e is io.ktor.client.plugins.ClientRequestException) {
-                    onError("API Error \${e.response.status.value}")
-                } else {
-                    onError("NET: " + (e.message ?: "").takeLast(35))
-                }
-            }
-        }
-    }
-
-        viewModelScope.launch {
-            try {
-                val client = com.example.data.network.AiNetworkClient(
-                    provider = provider,
-                    apiKey = cleanKey,
-                    model = model,
-                    temperature = 0f
-                )
-                
-                val isSuccess = client.testConnection()
-                if (isSuccess) {
-                    onSuccess()
-                } else {
-                    onError("Unknown error")
-                }
-            } catch (e: Throwable) {
-                if (e is HttpRequestTimeoutException) {
-                    onError("Request timed out")
-                } else {
-                    onError("CRASH: " + e.toString())
-                }
-            }
-        }
-    }
-
     fun testConnection(
         provider: String,
         model: String,
@@ -98,6 +60,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     ) {
         val cleanKey = apiKey.trim()
         val lowerProvider = provider.lowercase()
+        
         if (cleanKey.isEmpty() && !lowerProvider.contains("ollama") && !lowerProvider.contains("lm studio")) {
             onError("Please enter an API Key first.")
             return
@@ -105,7 +68,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             try {
-                val client = AiNetworkClient(provider, apiKey, model, 0.7f)
+                val client = AiNetworkClient(
+                    provider = provider,
+                    apiKey = cleanKey,
+                    model = model,
+                    temperature = 0.7f
+                )
+                
                 val isSuccess = client.testConnection()
                 if (isSuccess) {
                     onSuccess()
@@ -113,13 +82,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     onError("Unknown error")
                 }
             } catch (e: Throwable) {
-                if (e is io.ktor.client.plugins.ClientRequestException) {
+                if (e is ClientRequestException) {
                     onError("API Error " + e.response.status.value)
+                } else if (e is HttpRequestTimeoutException) {
+                    onError("Request timed out")
                 } else {
                     onError("NET: " + (e.message ?: "").takeLast(35))
                 }
             }
         }
     }
-
 }
