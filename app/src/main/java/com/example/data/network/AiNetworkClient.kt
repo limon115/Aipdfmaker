@@ -93,7 +93,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
 
     private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null): String {
         val targetModel = model.ifBlank { "gemini-2.5-flash" }
-        val url = "[https://generativelanguage.googleapis.com/v1beta/models/$](https://generativelanguage.googleapis.com/v1beta/models/$){targetModel}:generateContent?key=$cleanKey"
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
 
         val requestPayload = GeminiRequest(
             contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
@@ -134,11 +134,11 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
 
     private fun getOpenAiBaseUrl(): String {
         return when {
-            provider.lowercase().contains("openai") -> "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)"
-            provider.lowercase().contains("openrouter") -> "[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)"
-            provider.lowercase().contains("ollama") -> "[http://10.0.2.2:11434/v1/chat/completions](http://10.0.2.2:11434/v1/chat/completions)"
-            provider.lowercase().contains("lm studio") -> "[http://10.0.2.2:1234/v1/chat/completions](http://10.0.2.2:1234/v1/chat/completions)"
-            else -> "[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)"
+            provider.lowercase().contains("openai") -> "https://api.openai.com/v1/chat/completions"
+            provider.lowercase().contains("openrouter") -> "https://openrouter.ai/api/v1/chat/completions"
+            provider.lowercase().contains("ollama") -> "http://10.0.2.2:11434/v1/chat/completions"
+            provider.lowercase().contains("lm studio") -> "http://10.0.2.2:1234/v1/chat/completions"
+            else -> "https://api.openai.com/v1/chat/completions"
         }
     }
 }
