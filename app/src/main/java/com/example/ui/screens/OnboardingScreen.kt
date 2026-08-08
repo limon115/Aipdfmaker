@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +25,31 @@ fun OnboardingScreen(
     onGetStartedClick: () -> Unit,
     onSignInClick: () -> Unit
 ) {
+    val permissionsToRequest = mutableListOf<String>().apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+            add(Manifest.permission.READ_MEDIA_IMAGES)
+            add(Manifest.permission.READ_MEDIA_VIDEO)
+        } else {
+            add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }.toTypedArray()
+
+    val getStartedLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { _ ->
+            onGetStartedClick()
+        }
+    )
+
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { _ ->
+            onSignInClick()
+        }
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -68,7 +97,7 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.weight(1f))
         
         Button(
-            onClick = onGetStartedClick,
+            onClick = { getStartedLauncher.launch(permissionsToRequest) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -84,7 +113,7 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         OutlinedButton(
-            onClick = onSignInClick,
+            onClick = { signInLauncher.launch(permissionsToRequest) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

@@ -127,6 +127,7 @@ dependencies {
   implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
   implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
   implementation("org.jsoup:jsoup:1.17.2")
+  implementation("androidx.work:work-runtime-ktx:2.9.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

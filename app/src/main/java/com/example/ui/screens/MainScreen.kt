@@ -212,6 +212,11 @@ fun MainScreen() {
                     blueprintViewModel = blueprintViewModel,
                     onNavigateNext = {
                         navController.navigate("notes_viewer/$projectId")
+                    },
+                    onNavigateHome = {
+                        navController.navigate(BottomNavItem.Home.route) {
+                            popUpTo(BottomNavItem.Home.route) { inclusive = false }
+                        }
                     }
                 )
             }

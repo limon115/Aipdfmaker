@@ -1,0 +1,156 @@
+package com.example.domain.services.worker
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
+import com.example.data.database.AppDatabase
+import com.example.data.database.HtmlSnippetEntity
+import com.example.data.datastore.AiSettingsDataStore
+import com.example.data.network.AiNetworkClient
+import com.example.domain.models.BlueprintSummary
+import com.example.domain.services.ai.NoteGenerationService
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.Json
+
+class NoteGenerationWorker(
+    private val context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+
+    companion object {
+        const val PROGRESS = "Progress"
+        const val TOTAL = "Total"
+        const val CURRENT_TOPIC = "CurrentTopic"
+        const val ERROR = "Error"
+    }
+
+    private val notificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val channelId = "NoteGenerationChannel"
+
+    init {
+        createNotificationChannel()
+    }
+
+    override suspend fun doWork(): Result {
+        val projectId = inputData.getInt("PROJECT_ID", -1)
+        val blueprintJson = inputData.getString("BLUEPRINT_JSON") ?: ""
+
+        if (projectId == -1 || blueprintJson.isEmpty()) {
+            return Result.failure(workDataOf(ERROR to "Invalid Input Data"))
+        }
+
+        val blueprint = try {
+            Json.decodeFromString<BlueprintSummary>(blueprintJson)
+        } catch (e: Exception) {
+            return Result.failure(workDataOf(ERROR to "Failed to parse blueprint"))
+        }
+
+        val db = AppDatabase.getDatabase(context)
+        val projectDao = db.projectDao()
+        val project = projectDao.getProjectById(projectId)
+        val sourceText = project?.sourceText ?: ""
+
+        if (sourceText.isEmpty()) {
+            return Result.failure(workDataOf(ERROR to "Source text is empty"))
+        }
+
+        val dataStore = AiSettingsDataStore(context)
+        val settings = dataStore.aiSettingsFlow.first()
+        val dummyClient = AiNetworkClient(
+            provider = settings.ai2Provider.name,
+            apiKey = settings.ai2ApiKey,
+            model = settings.ai2Model,
+            temperature = settings.ai2Temperature
+        )
+        val service = NoteGenerationService(dummyClient)
+        val snippetDao = db.htmlSnippetDao()
+        val totalTopics = blueprint.topics.size
+
+        try {
+            setForeground(createForegroundInfo("Starting generation...", 0, totalTopics))
+            
+            blueprint.topics.forEachIndexed { index, topic ->
+                setProgress(workDataOf(PROGRESS to index, TOTAL to totalTopics, CURRENT_TOPIC to topic.title))
+                setForeground(createForegroundInfo("Generating: ${topic.title}", index, totalTopics))
+
+                val html = service.generateHtmlForTopic(
+                    topicTitle = topic.title,
+                    blueprintContext = blueprintJson,
+                    sourceText = sourceText,
+                    ai2Provider = settings.ai2Provider.name,
+                    ai2Model = settings.ai2Model.ifBlank { "gemini-2.5-flash" },
+                    ai2ApiKey = settings.ai2ApiKey,
+                    ai2Temperature = settings.ai2Temperature
+                )
+
+                val snippet = HtmlSnippetEntity(
+                    projectId = projectId,
+                    topicTitle = topic.title,
+                    htmlContent = html,
+                    orderIndex = index
+                )
+                snippetDao.insertSnippet(snippet)
+            }
+            
+            // Mark project as Completed
+            project?.let { projectDao.updateProject(it.copy(status = "Completed", lastUpdated = System.currentTimeMillis())) }
+            
+            setProgress(workDataOf(PROGRESS to totalTopics, TOTAL to totalTopics, CURRENT_TOPIC to "Finished"))
+            showCompletedNotification("Generation completed for ${project?.title ?: "Project"}")
+            return Result.success()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Mark project as Failed
+            project?.let { projectDao.updateProject(it.copy(status = "Failed", lastUpdated = System.currentTimeMillis())) }
+            showCompletedNotification("Generation failed: ${e.message}")
+            return Result.failure(workDataOf(ERROR to (e.message ?: "Unknown error")))
+        }
+    }
+
+    private fun createForegroundInfo(progressText: String, progress: Int, total: Int): ForegroundInfo {
+        val notification = NotificationCompat.Builder(context, channelId)
+            .setContentTitle("Generating Study Notes")
+            .setContentText(progressText)
+            .setSmallIcon(android.R.drawable.ic_popup_sync)
+            .setOngoing(true)
+            .setProgress(total, progress, false)
+            .build()
+        
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(1, notification)
+        }
+    }
+
+    private fun showCompletedNotification(message: String) {
+        val notification = NotificationCompat.Builder(context, channelId)
+            .setContentTitle("DocMorph Note Generation")
+            .setContentText(message)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(2, notification)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Note Generation",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows progress of note generation"
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+}
