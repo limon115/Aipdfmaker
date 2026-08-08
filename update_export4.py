@@ -1,4 +1,9 @@
-package com.example.domain.services.export
+import sys
+
+with open('/app/applet/app/src/main/java/com/example/domain/services/export/ExportEngine.kt', 'r') as f:
+    content = f.read()
+
+new_content = """package com.example.domain.services.export
 
 import android.content.Context
 import android.os.Environment
@@ -72,3 +77,9 @@ class ExportEngine(private val context: Context) {
         }
     }
 }
+"""
+
+with open('/app/applet/app/src/main/java/com/example/domain/services/export/ExportEngine.kt', 'w') as f:
+    f.write(new_content)
+
+print("Updated ExportEngine to use PrintManager!")

@@ -1,4 +1,4 @@
-code = """package com.example.ui.screens.settings
+package com.example.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -95,6 +95,3 @@ class ApiLabViewModel : ViewModel() {
         }
     }
 }
-"""
-with open('app/src/main/java/com/example/ui/screens/settings/ApiLabViewModel.kt', 'w') as f:
-    f.write(code)

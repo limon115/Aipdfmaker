@@ -1,0 +1,3 @@
+apply plugin: 'java'
+repositories { mavenCentral() }
+dependencies { implementation 'com.patrykandpatrick.vico:compose-m3:1.16.0' }

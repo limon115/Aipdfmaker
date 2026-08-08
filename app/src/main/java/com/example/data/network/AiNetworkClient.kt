@@ -40,30 +40,50 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     companion object {
         private val requestMutex = Mutex()
         private val requestTimestamps = mutableListOf<Long>()
+        private val tokenUsageHistory = mutableListOf<Pair<Long, Int>>()
         private const val MAX_REQUESTS_PER_MINUTE = 14
+        private const val MAX_TOKENS_PER_MINUTE = 800_000
         private const val ONE_MINUTE_MS = 60_000L
         
-        suspend fun enforceRateLimit() {
+        suspend fun enforceRateLimit(estimatedTokens: Int = 1000) {
             requestMutex.withLock {
-                val now = System.currentTimeMillis()
+                var now = System.currentTimeMillis()
                 requestTimestamps.removeAll { now - it > ONE_MINUTE_MS }
+                tokenUsageHistory.removeAll { now - it.first > ONE_MINUTE_MS }
                 
+                var currentTokens = tokenUsageHistory.sumOf { it.second }
+                while (currentTokens + estimatedTokens > MAX_TOKENS_PER_MINUTE) {
+                    val oldestToken = tokenUsageHistory.firstOrNull()
+                    if (oldestToken != null) {
+                        val waitTime = ONE_MINUTE_MS - (System.currentTimeMillis() - oldestToken.first)
+                        if (waitTime > 0) kotlinx.coroutines.delay(waitTime + 100)
+                    } else {
+                        break
+                    }
+                    val newNow = System.currentTimeMillis()
+                    tokenUsageHistory.removeAll { newNow - it.first > ONE_MINUTE_MS }
+                    currentTokens = tokenUsageHistory.sumOf { it.second }
+                }
+
+                now = System.currentTimeMillis()
+                requestTimestamps.removeAll { now - it > ONE_MINUTE_MS }
                 if (requestTimestamps.size >= MAX_REQUESTS_PER_MINUTE) {
                     val oldest = requestTimestamps.first()
-                    val waitTime = ONE_MINUTE_MS - (now - oldest)
+                    val waitTime = ONE_MINUTE_MS - (System.currentTimeMillis() - oldest)
                     if (waitTime > 0) {
-                        delay(waitTime + 100)
+                        kotlinx.coroutines.delay(waitTime + 100)
                     }
                 }
                 
-                val newNow = System.currentTimeMillis()
-                val timeSinceLast = newNow - (requestTimestamps.lastOrNull() ?: 0L)
-                // Enforce minimum 4 seconds between any two requests
+                val newNow2 = System.currentTimeMillis()
+                val timeSinceLast = newNow2 - (requestTimestamps.lastOrNull() ?: 0L)
                 if (timeSinceLast < 4000L) {
-                    delay(4000L - timeSinceLast)
+                    kotlinx.coroutines.delay(4000L - timeSinceLast)
                 }
                 
-                requestTimestamps.add(System.currentTimeMillis())
+                val finalNow = System.currentTimeMillis()
+                requestTimestamps.add(finalNow)
+                tokenUsageHistory.add(Pair(finalNow, estimatedTokens))
             }
         }
     }
@@ -73,12 +93,30 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
         install(HttpTimeout) { requestTimeoutMillis = 120_000; connectTimeoutMillis = 15_000; socketTimeoutMillis = 120_000 }
         install(HttpRequestRetry) {
-            retryOnServerErrors(maxRetries = 5)
-            retryOnException(maxRetries = 5, retryOnTimeout = true)
+            maxRetries = 5
             retryIf { request, response ->
-                response.status.value == 429
+                if (response.status.value == 429) {
+                    com.example.domain.services.ai.AiUsageTracker.trackRateLimitError()
+                }
+                response.status.value == 429 || response.status.value >= 500
             }
-            exponentialDelay()
+            retryOnException(maxRetries = 5, retryOnTimeout = true)
+            delayMillis { retry ->
+                // Calculate exponential backoff with jitter (10s, 20s, 40s, 80s...)
+                val baseDelay = (10000L * Math.pow(2.0, (retry - 1).toDouble())).toLong()
+                val jitter = (Math.random() * 2000).toLong() // 0-2s jitter
+                
+                // If the server provides a Retry-After header, respect it
+                var retryAfterMs = 0L
+                try {
+                    val retryAfterStr = response?.headers?.get(io.ktor.http.HttpHeaders.RetryAfter)
+                    if (retryAfterStr != null) {
+                        retryAfterMs = retryAfterStr.toLongOrNull()?.times(1000L) ?: 0L
+                    }
+                } catch(e: Exception) {}
+                
+                if (retryAfterMs > 0) retryAfterMs + jitter else baseDelay + jitter
+            }
         }
     }
 
@@ -135,7 +173,8 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null): String {
-        enforceRateLimit()
+        val estimatedTokens = (prompt.length + (sysPrompt?.length ?: 0)) / 4
+        enforceRateLimit(estimatedTokens)
         val targetModel = model.ifBlank { "gemini-2.5-flash" }
         val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
 
@@ -160,7 +199,8 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null): String {
-        enforceRateLimit()
+        val estimatedTokens = messages.sumOf { (it.content ?: "").length } / 4
+        enforceRateLimit(estimatedTokens)
         val requestPayload = OpenAiRequest(reqModel, messages, temp, maxTokens)
         try {
             val response: HttpResponse = ktorClient.post(baseUrl) {

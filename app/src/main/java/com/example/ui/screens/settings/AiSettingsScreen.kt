@@ -1,5 +1,10 @@
 package com.example.ui.screens.settings
 
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.MenuAnchorType
+
+import androidx.compose.foundation.background
+
 import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
@@ -19,6 +24,9 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +45,8 @@ import java.util.Locale
 @Composable
 fun AiSettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
-    onNavigateToProviderSelection: (isAi1: Boolean) -> Unit
+    onNavigateToProviderSelection: (isAi1: Boolean) -> Unit,
+    onNavigateToApiLab: () -> Unit
 ) {
     val settingsNullable by viewModel.settings.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
@@ -125,6 +134,11 @@ fun AiSettingsScreen(
             )
             
             BatteryOptimizationCard()
+            
+            // Developer Tools Section
+            DeveloperToolsCard(
+                onNavigateToApiLab = onNavigateToApiLab
+            )
         }
         }
     }
@@ -225,7 +239,7 @@ fun AiConfigCard(
                     label = { Text("Model (e.g. ${recommendedModels.first()})") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(),
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
                     trailingIcon = {
@@ -464,6 +478,168 @@ fun BatteryOptimizationCard() {
                     Text("Disable Optimization")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AiUsageDashboardCard() {
+    val stats by com.example.domain.services.ai.AiUsageTracker.stats.collectAsStateWithLifecycle()
+    
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Session AI Usage",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Requests Made:", style = MaterialTheme.typography.bodyMedium)
+                    Text("${stats.requests}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Est. Tokens Used:", style = MaterialTheme.typography.bodyMedium)
+                    Text("${stats.estimatedTokens}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Cache Hits (Saved Tokens):", style = MaterialTheme.typography.bodyMedium)
+                    Text("${stats.cacheHits}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Rate Limit (429) Errors:", style = MaterialTheme.typography.bodyMedium)
+                    Text("${stats.rateLimitErrors}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = if (stats.rateLimitErrors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+        
+        UsageBarChartCard(stats.requests, stats.cacheHits, stats.rateLimitErrors)
+    }
+}
+
+@Composable
+fun UsageBarChartCard(requests: Int, cacheHits: Int, rateLimits: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Usage Breakdown",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            
+            val maxVal = maxOf(requests, cacheHits, rateLimits, 1) // Avoid div by zero
+            
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val successColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+            val errorColor = MaterialTheme.colorScheme.error
+            
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ChartBarRow("Requests", requests, maxVal, primaryColor)
+                ChartBarRow("Cache Hits", cacheHits, maxVal, successColor)
+                ChartBarRow("Rate Limits", rateLimits, maxVal, errorColor)
+            }
+        }
+    }
+}
+
+@Composable
+fun ChartBarRow(label: String, value: Int, maxVal: Int, color: androidx.compose.ui.graphics.Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.width(80.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(24.dp)
+                .background(color.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(fraction = (value.toFloat() / maxVal.toFloat()).coerceIn(0f, 1f))
+                    .background(color, RoundedCornerShape(4.dp))
+            )
+            Text(
+                text = value.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (value > 0) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp).align(Alignment.CenterStart)
+            )
+        }
+    }
+}
+
+@Composable
+fun DeveloperToolsCard(
+    onNavigateToApiLab: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Developer Tools",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            
+            ListItem(
+                headlineContent = { Text("API Lab") },
+                supportingContent = { Text("Test and diagnose your AI connection") },
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Build,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToApiLab() },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
         }
     }
 }

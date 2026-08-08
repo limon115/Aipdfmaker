@@ -62,8 +62,8 @@ class NotesViewerViewModel(
         }
     }
 
-    fun exportDocument(onComplete: (File, File) -> Unit) {
-        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.htmlContent) { pdfFile, htmlFile ->
+    fun exportDocument(onComplete: (File?, File) -> Unit) {
+        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.htmlContent) { pdfFile: File?, htmlFile: File ->
             _state.update { it.copy(generatedPdfFile = pdfFile, generatedHtmlFile = htmlFile) }
             onComplete(pdfFile, htmlFile)
         }

@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.unit.dp
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -29,6 +32,7 @@ import com.example.ui.screens.project.NewProjectViewModel
 import com.example.ui.screens.project.PdfUploadScreen
 import com.example.ui.screens.project.ProjectDetailsScreen
 import com.example.ui.screens.settings.AiSettingsScreen
+import com.example.ui.screens.settings.ApiLabScreen
 import com.example.ui.screens.settings.ProviderSelectionScreen
 import com.example.ui.screens.settings.SettingsViewModel
 
@@ -40,7 +44,7 @@ fun MainScreen() {
 
     val items = listOf(
         BottomNavItem.Home,
-        BottomNavItem.Bookmarks,
+        BottomNavItem.Dashboard,
         BottomNavItem.Settings
     )
 
@@ -118,14 +122,26 @@ fun MainScreen() {
                     }
                 )
             }
-            composable(BottomNavItem.Bookmarks.route) {
-                CenteredText("Bookmarks Screen")
+            composable(BottomNavItem.Dashboard.route) {
+                
+                Column(modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp).padding(top = 48.dp)) {
+                    com.example.ui.screens.settings.AiUsageDashboardCard()
+                }
             }
             composable(BottomNavItem.Settings.route) {
                 AiSettingsScreen(
                     onNavigateToProviderSelection = { isAi1 ->
                         navController.navigate("provider_selection/$isAi1")
+                    },
+                    onNavigateToApiLab = {
+                        navController.navigate("api_lab")
                     }
+                )
+            }
+            
+            composable("api_lab") {
+                ApiLabScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable("input_source") {

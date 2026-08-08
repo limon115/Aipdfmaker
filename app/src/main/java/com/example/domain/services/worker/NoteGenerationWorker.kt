@@ -16,6 +16,9 @@ import com.example.data.datastore.AiSettingsDataStore
 import com.example.data.network.AiNetworkClient
 import com.example.domain.models.BlueprintSummary
 import com.example.domain.services.ai.NoteGenerationService
+import com.example.domain.services.ai.TextChunker
+import com.example.domain.services.ai.TopicContextRetriever
+import com.example.data.cache.AiResponseCache
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 
@@ -70,21 +73,38 @@ class NoteGenerationWorker(
             model = settings.ai2Model,
             temperature = settings.ai2Temperature
         )
-        val service = NoteGenerationService(dummyClient)
+        val cache = AiResponseCache(context)
+        val service = NoteGenerationService(dummyClient, cache)
         val snippetDao = db.htmlSnippetDao()
         val totalTopics = blueprint.topics.size
 
         try {
             setForeground(createForegroundInfo("Starting generation...", 0, totalTopics))
             
+            val chunker = TextChunker()
+            val retriever = TopicContextRetriever()
+            val chunks = chunker.chunkText(sourceText, 3000, 300)
+            
+            val existingSnippets = snippetDao.getSnippetsForProject(projectId).first()
+            val completedTopics = existingSnippets.map { it.topicTitle }.toSet()
+            
             blueprint.topics.forEachIndexed { index, topic ->
+                if (completedTopics.contains(topic.title)) {
+                    // Skip already generated topic (Resumability)
+                    setProgress(workDataOf(PROGRESS to index, TOTAL to totalTopics, CURRENT_TOPIC to "${topic.title} (Cached)"))
+                    return@forEachIndexed
+                }
+
                 setProgress(workDataOf(PROGRESS to index, TOTAL to totalTopics, CURRENT_TOPIC to topic.title))
                 setForeground(createForegroundInfo("Generating: ${topic.title}", index, totalTopics))
 
+                // Retrieve only relevant chunks for this topic
+                val relevantContextForTopic = retriever.retrieveContext(topic.title, chunks, 8000)
+                
                 val html = service.generateHtmlForTopic(
                     topicTitle = topic.title,
                     blueprintContext = blueprintJson,
-                    sourceText = sourceText,
+                    relevantContext = relevantContextForTopic,
                     ai2Provider = settings.ai2Provider.name,
                     ai2Model = settings.ai2Model.ifBlank { "gemini-2.5-flash" },
                     ai2ApiKey = settings.ai2ApiKey,

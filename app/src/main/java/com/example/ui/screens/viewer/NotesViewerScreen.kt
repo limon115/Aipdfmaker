@@ -49,6 +49,10 @@ fun NotesViewerScreen(
         viewModel.exportDocument { pdfFile, htmlFile ->
             try {
                 val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
+                if (isPdf && pdfFile == null) {
+                    // Handled by PrintManager
+                    return@exportDocument
+                }
                 val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
                 val uri = FileProvider.getUriForFile(
                     context,
