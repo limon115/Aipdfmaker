@@ -36,6 +36,25 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
     private val _state = MutableStateFlow(NewProjectState())
     val state: StateFlow<NewProjectState> = _state.asStateFlow()
 
+    
+    fun loadProject(projectId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val project = projectDao.getProjectById(projectId)
+            if (project != null) {
+                _state.update {
+                    it.copy(
+                        projectTitle = project.title,
+                        course = project.course,
+                        chapter = project.chapter,
+                        noteStyle = project.noteStyle,
+                        outputFormat = project.outputFormat,
+                        extractedText = project.sourceText
+                    )
+                }
+            }
+        }
+    }
+
     fun createProject(onProjectCreated: (Int) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _state.value

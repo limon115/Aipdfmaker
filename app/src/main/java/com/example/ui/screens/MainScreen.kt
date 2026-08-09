@@ -1,4 +1,5 @@
 package com.example.ui.screens
+import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.unit.dp
@@ -108,11 +109,24 @@ fun MainScreen() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomNavItem.Home.route) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
                 HomeScreen(
                     viewModel = homeViewModel,
                     onNavigateToProject = { projectId, status ->
                         if (status == "Processing") {
-                            navController.navigate("processing/$projectId")
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val workManager = androidx.work.WorkManager.getInstance(context)
+                                val workInfos = workManager.getWorkInfosForUniqueWork("NoteGen_${projectId}").get()
+                                val isGenerating = workInfos.isNotEmpty()
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    if (isGenerating) {
+                                        navController.navigate("note_generation/$projectId")
+                                    } else {
+                                        navController.navigate("processing/$projectId")
+                                    }
+                                }
+                            }
                         } else {
                             navController.navigate("notes_viewer/$projectId")
                         }
@@ -176,13 +190,29 @@ fun MainScreen() {
             composable("file_input") {
                 CenteredText("Import from File (Placeholder)")
             }
-            composable("project_details") {
+            composable(
+                route = "project_details?projectId={projectId}",
+                arguments = listOf(androidx.navigation.navArgument("projectId") { 
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                })
+            ) { backStackEntry ->
+                val projectIdStr = backStackEntry.arguments?.getString("projectId")
+                val projectId = projectIdStr?.toIntOrNull()
+                
                 ProjectDetailsScreen(
                     viewModel = newProjectViewModel,
-                    onCreateProject = { projectId ->
-                        navController.navigate("processing/$projectId")
+                    projectId = projectId,
+                    onCreateProject = { newId ->
+                        navController.navigate("processing/$newId")
                     },
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToProgress = { id -> 
+                        navController.navigate("note_generation/$id")
+                    },
+                    onNavigateToViewer = { id -> 
+                        navController.navigate("notes_viewer/$id")
+                    }
                 )
             }
             composable("processing/{projectId}") { backStackEntry ->

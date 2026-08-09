@@ -79,6 +79,8 @@ fun NoteGenerationScreen(
         val blueprint = blueprintState
         if (blueprint != null && sourceText.isNotEmpty()) {
             viewModel.startGenerationLoop(context, projectId, blueprint, sourceText)
+        } else if (blueprint == null) {
+            viewModel.resumeObservation(context, projectId)
         }
     }
 

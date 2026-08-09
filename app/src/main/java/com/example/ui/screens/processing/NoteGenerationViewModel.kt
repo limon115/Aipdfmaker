@@ -36,15 +36,72 @@ class NoteGenerationViewModel : ViewModel() {
     
     private var hasStarted = false
 
-    fun startGenerationLoop(context: Context, projectId: Int, blueprint: BlueprintSummary, sourceText: String) {
+    fun resumeObservation(context: Context, projectId: Int) {
         if (hasStarted) return
         hasStarted = true
+        
+        val workManager = WorkManager.getInstance(context)
+        
+        viewModelScope.launch {
+            workManager.getWorkInfosForUniqueWorkLiveData("NoteGen_${projectId}").asFlow().collect { workInfos ->
+                val workInfo = workInfos.firstOrNull()
+                if (workInfo != null) {
+                    val progress = workInfo.progress.getInt(NoteGenerationWorker.PROGRESS, -1)
+                    val total = workInfo.progress.getInt(NoteGenerationWorker.TOTAL, 0)
+                    val currentTopic = workInfo.progress.getString(NoteGenerationWorker.CURRENT_TOPIC) ?: "Unknown Topic"
+                    
+                    if (progress != -1 && total > 0) {
+                        _state.update { currentState ->
+                            if (currentState.checklist.isEmpty() || currentState.checklist.size != total) {
+                                val updatedChecklist = mutableListOf<ChecklistItem>()
+                                for (i in 0 until total) {
+                                    if (i < progress) {
+                                        updatedChecklist.add(ChecklistItem("Topic ${i+1}", StepState.COMPLETED))
+                                    } else if (i == progress) {
+                                        updatedChecklist.add(ChecklistItem(currentTopic, StepState.IN_PROGRESS))
+                                    } else {
+                                        updatedChecklist.add(ChecklistItem("Pending Topic ${i+1}", StepState.PENDING))
+                                    }
+                                }
+                                currentState.copy(checklist = updatedChecklist)
+                            } else {
+                                val mergedChecklist = currentState.checklist.toMutableList()
+                                for (i in 0 until total) {
+                                    if (i < progress) {
+                                        mergedChecklist[i] = mergedChecklist[i].copy(state = StepState.COMPLETED)
+                                    } else if (i == progress) {
+                                        mergedChecklist[i] = mergedChecklist[i].copy(title = "Generating: $currentTopic", state = StepState.IN_PROGRESS)
+                                    } else {
+                                        mergedChecklist[i] = mergedChecklist[i].copy(state = StepState.PENDING)
+                                    }
+                                }
+                                currentState.copy(checklist = mergedChecklist)
+                            }
+                        }
+                    }
+                    
+                    if (workInfo.state == WorkInfo.State.SUCCEEDED) {
+                        _state.update { currentState ->
+                            val finalChecklist = currentState.checklist.map { it.copy(state = StepState.COMPLETED) }
+                            currentState.copy(checklist = finalChecklist, isFinished = true)
+                        }
+                    } else if (workInfo.state == WorkInfo.State.FAILED) {
+                        val error = workInfo.outputData.getString(NoteGenerationWorker.ERROR) ?: "Unknown Error"
+                        _state.update { it.copy(hasError = true, errorMessage = error) }
+                    }
+                }
+            }
+        }
+    }
+
+    fun startGenerationLoop(context: Context, projectId: Int, blueprint: BlueprintSummary, sourceText: String) {
+        if (hasStarted) return
         
         val initialChecklist = blueprint.topics.map { topic ->
             ChecklistItem("Generating: ${topic.title}", StepState.PENDING)
         }
         _state.update { it.copy(checklist = initialChecklist) }
-
+        
         val blueprintJson = Json.encodeToString(blueprint)
         
         val inputData = Data.Builder()
@@ -70,40 +127,7 @@ class NoteGenerationViewModel : ViewModel() {
         
         _state.update { it.copy(workId = workRequest.id) }
         
-        viewModelScope.launch {
-            workManager.getWorkInfosForUniqueWorkLiveData("NoteGen_${projectId}").asFlow().collect { workInfos ->
-                val workInfo = workInfos.firstOrNull()
-                if (workInfo != null) {
-                    val progress = workInfo.progress.getInt(NoteGenerationWorker.PROGRESS, -1)
-                    val total = workInfo.progress.getInt(NoteGenerationWorker.TOTAL, blueprint.topics.size)
-                    
-                    if (progress != -1) {
-                        _state.update { currentState ->
-                            val updatedChecklist = currentState.checklist.toMutableList()
-                            for (i in 0 until total) {
-                                if (i < progress) {
-                                    updatedChecklist[i] = updatedChecklist[i].copy(state = StepState.COMPLETED)
-                                } else if (i == progress) {
-                                    updatedChecklist[i] = updatedChecklist[i].copy(state = StepState.IN_PROGRESS)
-                                } else {
-                                    updatedChecklist[i] = updatedChecklist[i].copy(state = StepState.PENDING)
-                                }
-                            }
-                            currentState.copy(checklist = updatedChecklist)
-                        }
-                    }
-                    
-                    if (workInfo.state == WorkInfo.State.SUCCEEDED) {
-                        _state.update { currentState ->
-                            val finalChecklist = currentState.checklist.map { it.copy(state = StepState.COMPLETED) }
-                            currentState.copy(checklist = finalChecklist, isFinished = true)
-                        }
-                    } else if (workInfo.state == WorkInfo.State.FAILED) {
-                        val error = workInfo.outputData.getString(NoteGenerationWorker.ERROR) ?: "Unknown Error"
-                        _state.update { it.copy(hasError = true, errorMessage = error) }
-                    }
-                }
-            }
-        }
+        // Start observing
+        resumeObservation(context, projectId)
     }
 }
