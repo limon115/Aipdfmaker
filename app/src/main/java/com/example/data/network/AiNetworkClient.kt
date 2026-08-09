@@ -16,6 +16,10 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import io.ktor.client.plugins.ClientRequestException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -30,7 +34,7 @@ import kotlinx.coroutines.delay
 @Serializable data class GeminiPart(val text: String)
 @Serializable data class GeminiContent(val role: String = "user", val parts: List<GeminiPart>)
 @Serializable data class GeminiSystemInstruction(val parts: List<GeminiPart>)
-@Serializable data class GeminiGenConfig(val temperature: Float, val responseMimeType: String? = null)
+@Serializable data class GeminiGenConfig(val temperature: Float, val responseMimeType: String? = null, val responseSchema: JsonObject? = null)
 @Serializable data class GeminiRequest(val contents: List<GeminiContent>, val systemInstruction: GeminiSystemInstruction? = null, val generationConfig: GeminiGenConfig? = null)
 @Serializable data class GeminiResponse(val candidates: List<Candidate>? = null) {
     @Serializable data class Candidate(val content: GeminiContent)
@@ -122,6 +126,104 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
 
     private val isGemini = provider.lowercase().contains("gemini") || provider.lowercase().contains("google")
 
+
+    private val blueprintSchema = kotlinx.serialization.json.buildJsonObject {
+        put("type", kotlinx.serialization.json.JsonPrimitive("OBJECT"))
+        put("properties", kotlinx.serialization.json.buildJsonObject {
+            put("courseName", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+            put("chapterName", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+            put("topics", kotlinx.serialization.json.buildJsonObject {
+                put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                put("items", kotlinx.serialization.json.buildJsonObject {
+                    put("type", kotlinx.serialization.json.JsonPrimitive("OBJECT"))
+                    put("properties", kotlinx.serialization.json.buildJsonObject {
+                        put("title", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                        put("durationMinutes", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+                    })
+                })
+            })
+            put("formulaCount", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+            put("definitionCount", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+            put("exampleCount", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+            put("diagramCount", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+            put("examTipCount", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+        })
+        put("required", kotlinx.serialization.json.buildJsonArray {
+            add(kotlinx.serialization.json.JsonPrimitive("courseName"))
+            add(kotlinx.serialization.json.JsonPrimitive("chapterName"))
+            add(kotlinx.serialization.json.JsonPrimitive("topics"))
+            add(kotlinx.serialization.json.JsonPrimitive("formulaCount"))
+            add(kotlinx.serialization.json.JsonPrimitive("definitionCount"))
+            add(kotlinx.serialization.json.JsonPrimitive("exampleCount"))
+            add(kotlinx.serialization.json.JsonPrimitive("diagramCount"))
+            add(kotlinx.serialization.json.JsonPrimitive("examTipCount"))
+        })
+    }
+
+    private val documentSchema = kotlinx.serialization.json.buildJsonObject {
+        put("type", kotlinx.serialization.json.JsonPrimitive("OBJECT"))
+        put("properties", kotlinx.serialization.json.buildJsonObject {
+            put("schemaVersion", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+            put("title", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+            put("author", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+            put("language", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+            put("blocks", kotlinx.serialization.json.buildJsonObject {
+                put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                put("items", kotlinx.serialization.json.buildJsonObject {
+                    put("type", kotlinx.serialization.json.JsonPrimitive("OBJECT"))
+                    put("properties", kotlinx.serialization.json.buildJsonObject {
+                        put("type", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                        put("level", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("INTEGER")) })
+                        put("text", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                        put("latex", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                        put("display", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("BOOLEAN")) })
+                        put("items", kotlinx.serialization.json.buildJsonObject {
+                            put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                            put("items", kotlinx.serialization.json.buildJsonObject {
+                                put("type", kotlinx.serialization.json.JsonPrimitive("STRING"))
+                            })
+                        })
+                        put("path", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                        put("columns", kotlinx.serialization.json.buildJsonObject {
+                            put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                            put("items", kotlinx.serialization.json.buildJsonObject {
+                                put("type", kotlinx.serialization.json.JsonPrimitive("STRING"))
+                            })
+                        })
+                        put("rows", kotlinx.serialization.json.buildJsonObject {
+                            put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                            put("items", kotlinx.serialization.json.buildJsonObject {
+                                put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                                put("items", kotlinx.serialization.json.buildJsonObject {
+                                    put("type", kotlinx.serialization.json.JsonPrimitive("STRING"))
+                                })
+                            })
+                        })
+                        put("content", kotlinx.serialization.json.buildJsonObject {
+                            put("type", kotlinx.serialization.json.JsonPrimitive("ARRAY"))
+                            put("items", kotlinx.serialization.json.buildJsonObject {
+                                put("type", kotlinx.serialization.json.JsonPrimitive("OBJECT"))
+                                put("properties", kotlinx.serialization.json.buildJsonObject {
+                                    put("type", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                                    put("value", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                                    put("latex", kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("STRING")) })
+                                })
+                            })
+                        })
+                    })
+                    put("required", kotlinx.serialization.json.buildJsonArray {
+                        add(kotlinx.serialization.json.JsonPrimitive("type"))
+                    })
+                })
+            })
+        })
+        put("required", kotlinx.serialization.json.buildJsonArray {
+            add(kotlinx.serialization.json.JsonPrimitive("schemaVersion"))
+            add(kotlinx.serialization.json.JsonPrimitive("title"))
+            add(kotlinx.serialization.json.JsonPrimitive("blocks"))
+        })
+    }
+
     private val systemPrompt = """
         You are an AI assistant. Read the provided educational text and extract a structured Blueprint. You MUST return ONLY a raw JSON object matching this structure exactly: { "courseName": "String", "chapterName": "String", "topics": [ { "title": "String", "durationMinutes": Int } ], "formulaCount": Int, "definitionCount": Int, "exampleCount": Int }. Do not include markdown code blocks like ```json.
     """.trimIndent()
@@ -132,11 +234,12 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         return if (isGemini) generateWithGemini(extractedText, cleanKey) else generateWithOpenAiCompatible(extractedText, cleanKey)
     }
 
-    suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null): String {
+    suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null, useDocumentSchema: Boolean = false): String {
         val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
         if (isGemini) {
-            return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType)
+            val schema = if (useDocumentSchema) documentSchema else null
+            return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType, schema)
         } else {
             val messages = mutableListOf<OpenAiMessage>()
             if (customSystemPrompt != null) messages.add(OpenAiMessage("system", customSystemPrompt))
@@ -164,7 +267,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     private suspend fun generateWithGemini(extractedText: String, cleanKey: String): String {
-        return sendGeminiRequest(cleanKey, extractedText, systemPrompt, "application/json")
+        return sendGeminiRequest(cleanKey, extractedText, systemPrompt, "application/json", blueprintSchema)
     }
 
     private suspend fun generateWithOpenAiCompatible(extractedText: String, cleanKey: String): String {
@@ -172,7 +275,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model, messages, temperature)
     }
 
-    private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null): String {
+    private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null, schema: JsonObject? = null): String {
         val estimatedTokens = (prompt.length + (sysPrompt?.length ?: 0)) / 4
         enforceRateLimit(estimatedTokens)
         val targetModel = model.ifBlank { "gemini-2.5-flash" }
@@ -181,7 +284,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         val requestPayload = GeminiRequest(
             contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
             systemInstruction = sysPrompt?.let { GeminiSystemInstruction(listOf(GeminiPart(it))) },
-            generationConfig = GeminiGenConfig(temperature, mimeType)
+            generationConfig = GeminiGenConfig(temperature, mimeType, schema)
         )
 
         try {

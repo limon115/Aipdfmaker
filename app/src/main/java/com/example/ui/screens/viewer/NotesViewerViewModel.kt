@@ -63,7 +63,7 @@ class NotesViewerViewModel(
     }
 
     fun exportDocument(onComplete: (File?, File) -> Unit) {
-        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.jsonContent) { pdfFile: File?, jsonFile: File ->
+        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.jsonContent, _state.value.outputFormat.equals("pdf", ignoreCase = true)) { pdfFile: File?, jsonFile: File ->
             _state.update { it.copy(generatedPdfFile = pdfFile, generatedJsonFile = jsonFile) }
             onComplete(pdfFile, jsonFile)
         }

@@ -82,7 +82,7 @@ class NoteGenerationService(
         }
         
         com.example.domain.services.ai.AiUsageTracker.trackRequest((prompt.length + systemPrompt.length) / 4)
-        val rawResponse = clientForGeneration.generateContent(prompt, systemPrompt)
+        val rawResponse = clientForGeneration.generateContent(prompt, systemPrompt, "application/json", true)
         cache.put(prompt, systemPrompt, ai2Model, rawResponse)
         
         return cleanJson(rawResponse)
