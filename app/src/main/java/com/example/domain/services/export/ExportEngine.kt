@@ -10,7 +10,6 @@ import android.widget.Toast
 import java.io.File
 
 class ExportEngine(private val context: Context) {
-
     fun exportProjectFiles(
         projectName: String,
         htmlContent: String,
@@ -37,17 +36,56 @@ class ExportEngine(private val context: Context) {
                 try {
                     val webView = WebView(context)
                     webView.settings.loadsImagesAutomatically = true
-                    webView.settings.javaScriptEnabled = false
+                    webView.settings.javaScriptEnabled = true
                     
                     webView.webViewClient = object : WebViewClient() {
+                        private var maxPolls = 10
+                        private var lastHeight = -1
+                        private var currentPoll = 0
+                        
                         override fun onPageFinished(view: WebView, url: String) {
-                            Handler(Looper.getMainLooper()).postDelayed({
+                            checkHeightAndPrint(view)
+                        }
+                        
+                        private fun checkHeightAndPrint(view: WebView) {
+                            view.evaluateJavascript("Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)") { result ->
+                                val height = result?.replace("\"", "")?.toIntOrNull() ?: 0
+                                if (height > 0 && height == lastHeight) {
+                                    doPrint(view)
+                                } else if (currentPoll >= maxPolls) {
+                                    doPrint(view)
+                                } else {
+                                    lastHeight = height
+                                    currentPoll++
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        checkHeightAndPrint(view)
+                                    }, 200)
+                                }
+                            }
+                        }
+                        
+                        private fun doPrint(view: WebView) {
                                 try {
+                                    // Measure and layout the WebView to prevent PDF cutoff
+                                    val dm = context.resources.displayMetrics
+                                    val width = dm.widthPixels.coerceAtLeast(1000)
+                                    val widthMeasureSpec = android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY)
+                                    val heightMeasureSpec = android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+                                    
+                                    view.measure(widthMeasureSpec, heightMeasureSpec)
+                                    view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+
                                     val printManager = context.getSystemService(Context.PRINT_SERVICE) as android.print.PrintManager
-                                    val printAdapter = webView.createPrintDocumentAdapter(safeName)
+                                    val printAdapter = view.createPrintDocumentAdapter(safeName)
                                     val jobName = "${context.getString(com.example.R.string.app_name)} Document - $safeName"
                                     
-                                    printManager.print(jobName, printAdapter, android.print.PrintAttributes.Builder().build())
+                                    val attributes = android.print.PrintAttributes.Builder()
+                                        .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
+                                        .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
+                                        .setResolution(android.print.PrintAttributes.Resolution("pdf", "pdf", 300, 300))
+                                        .build()
+                                        
+                                    printManager.print(jobName, printAdapter, attributes)
                                     
                                     onComplete(null, htmlFile)
                                 } catch (e: Exception) {
@@ -55,7 +93,6 @@ class ExportEngine(private val context: Context) {
                                     Toast.makeText(context, "Print Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                     onComplete(null, htmlFile)
                                 }
-                            }, 500)
                         }
                     }
                     

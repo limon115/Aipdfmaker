@@ -1,20 +1,29 @@
-package com.example.domain.services.html
+import sys
 
-import com.example.data.database.HtmlSnippetDao
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import kotlinx.coroutines.flow.first
+with open('app/src/main/java/com/example/domain/services/html/HtmlMergeEngine.kt', 'r') as f:
+    content = f.read()
 
-class HtmlMergeEngine(private val htmlSnippetDao: HtmlSnippetDao) {
+target_css = """                body {
+                    font-family: 'Times New Roman', serif;
+                    line-height: 1.6;
+                    margin: 40px auto;
+                    max-width: 800px;
+                    color: #333;
+                    padding: 0 20px;
+                }
+                h1, h2, h3, h4 {
+                    color: #2c3e50;
+                    margin-top: 1.5em;
+                    margin-bottom: 0.5em;
+                }
+                p {
+                    margin-bottom: 1em;
+                }
+                ul, ol {
+                    margin-bottom: 1em;
+                }"""
 
-    suspend fun generateMasterHtml(projectId: Int): String {
-        val snippets = htmlSnippetDao.getSnippetsForProject(projectId).first()
-        
-        val doc: Document = Jsoup.parse("<html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head><body></body></html>")
-        
-        doc.head().append("""
-            <style>
-                @page {
+replacement_css = """                @page {
                     size: A4;
                     margin: 0;
                 }
@@ -51,15 +60,12 @@ class HtmlMergeEngine(private val htmlSnippetDao: HtmlSnippetDao) {
                 .page-break {
                     break-before: page;
                     page-break-before: always;
-                }
-            </style>
-        """.trimIndent())
-        
-        val body = doc.body()
-        for (snippet in snippets) {
-            body.append(snippet.htmlContent)
-        }
-        
-        return doc.outerHtml()
-    }
-}
+                }"""
+
+if target_css in content:
+    content = content.replace(target_css, replacement_css)
+    with open('app/src/main/java/com/example/domain/services/html/HtmlMergeEngine.kt', 'w') as f:
+        f.write(content)
+    print("HtmlMergeEngine updated successfully")
+else:
+    print("CSS Target not found in HtmlMergeEngine")

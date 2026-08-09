@@ -1,2 +1,1 @@
-import urllib.request
-print("Just testing")
+print("Testing...")
