@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
-import android.webkit.WebView
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -120,7 +119,7 @@ fun NotesViewerScreen(
 
     if (showPreviewModal) {
         ExportPreviewModal(
-            htmlContent = state.htmlContent,
+            jsonContent = state.jsonContent,
             onConfirm = {
                 checkAndPerformExport()
             },
@@ -174,17 +173,17 @@ fun NotesViewerScreen(
             if (state.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
             } else {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            loadDataWithBaseURL(null, state.htmlContent, "text/HTML", "UTF-8", null)
-                        }
-                    },
-                    update = { view ->
-                        view.loadDataWithBaseURL(null, state.htmlContent, "text/HTML", "UTF-8", null)
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                ) {
+                    item {
+                        Text(
+                            text = state.jsonContent,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
                     }
-                )
+                }
             }
         }
     }
@@ -192,7 +191,7 @@ fun NotesViewerScreen(
 
 @Composable
 fun ExportPreviewModal(
-    htmlContent: String,
+    jsonContent: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -222,18 +221,17 @@ fun ExportPreviewModal(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                 ) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
-                            }
-                        },
-                        update = { view ->
-                            // Use htmlContent parameter instead of undefined state.htmlContent
-                            view.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        item {
+                            Text(
+                                text = jsonContent,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            )
                         }
-                    )
+                    }
                 }
 
                 Row(

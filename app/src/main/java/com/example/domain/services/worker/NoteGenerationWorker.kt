@@ -11,7 +11,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.data.database.AppDatabase
-import com.example.data.database.HtmlSnippetEntity
+import com.example.data.database.DocumentSnippetEntity
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.data.network.AiNetworkClient
 import com.example.domain.models.BlueprintSummary
@@ -75,7 +75,7 @@ class NoteGenerationWorker(
         )
         val cache = AiResponseCache(context)
         val service = NoteGenerationService(dummyClient, cache)
-        val snippetDao = db.htmlSnippetDao()
+        val snippetDao = db.documentSnippetDao()
         val totalTopics = blueprint.topics.size
 
         try {
@@ -101,7 +101,7 @@ class NoteGenerationWorker(
                 // Retrieve only relevant chunks for this topic
                 val relevantContextForTopic = retriever.retrieveContext(topic.title, chunks, 8000)
                 
-                val html = service.generateHtmlForTopic(
+                val html = service.generateDocumentForTopic(
                     topicTitle = topic.title,
                     blueprintContext = blueprintJson,
                     relevantContext = relevantContextForTopic,
@@ -111,10 +111,10 @@ class NoteGenerationWorker(
                     ai2Temperature = settings.ai2Temperature
                 )
 
-                val snippet = HtmlSnippetEntity(
+                val snippet = DocumentSnippetEntity(
                     projectId = projectId,
                     topicTitle = topic.title,
-                    htmlContent = html,
+                    jsonContent = html,
                     orderIndex = index
                 )
                 snippetDao.insertSnippet(snippet)

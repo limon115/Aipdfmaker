@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.ProjectDao
 import com.example.domain.services.export.ExportEngine
-import com.example.domain.services.html.HtmlMergeEngine
+import com.example.domain.services.html.DocumentMergeEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,16 +13,16 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 data class NotesViewerState(
-    val htmlContent: String = "",
+    val jsonContent: String = "",
     val isLoading: Boolean = true,
     val generatedPdfFile: File? = null,
-    val generatedHtmlFile: File? = null,
+    val generatedJsonFile: File? = null,
     val projectName: String = "Project",
     val outputFormat: String = "PDF"
 )
 
 class NotesViewerViewModel(
-    private val htmlMergeEngine: HtmlMergeEngine,
+    private val documentMergeEngine: DocumentMergeEngine,
     private val exportEngine: ExportEngine,
     private val projectDao: ProjectDao
 ) : ViewModel() {
@@ -48,24 +48,24 @@ class NotesViewerViewModel(
                     }
                 }
 
-                val html = htmlMergeEngine.generateMasterHtml(projectId)
+                val html = documentMergeEngine.generateMasterJson(projectId, project?.title ?: "Project")
                 _state.update { it.copy(
-                    htmlContent = html,
+                    jsonContent = html,
                     isLoading = false,
                     projectName = project?.title ?: "Project",
                     outputFormat = project?.outputFormat ?: "PDF"
                 ) }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.update { it.copy(isLoading = false, htmlContent = "<p>Error loading content.</p>") }
+                _state.update { it.copy(isLoading = false, jsonContent = "<p>Error loading content.</p>") }
             }
         }
     }
 
     fun exportDocument(onComplete: (File?, File) -> Unit) {
-        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.htmlContent) { pdfFile: File?, htmlFile: File ->
-            _state.update { it.copy(generatedPdfFile = pdfFile, generatedHtmlFile = htmlFile) }
-            onComplete(pdfFile, htmlFile)
+        exportEngine.exportProjectFiles(_state.value.projectName, _state.value.jsonContent) { pdfFile: File?, jsonFile: File ->
+            _state.update { it.copy(generatedPdfFile = pdfFile, generatedJsonFile = jsonFile) }
+            onComplete(pdfFile, jsonFile)
         }
     }
 }

@@ -240,7 +240,7 @@ fun MainScreen() {
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val db = com.example.data.database.AppDatabase.getDatabase(context)
-                val htmlMergeEngine = com.example.domain.services.html.HtmlMergeEngine(db.htmlSnippetDao())
+                val htmlMergeEngine = com.example.domain.services.html.DocumentMergeEngine(db.documentSnippetDao())
                 val exportEngine = com.example.domain.services.export.ExportEngine(context)
                 
                 val factory = object : androidx.lifecycle.ViewModelProvider.Factory {

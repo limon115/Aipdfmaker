@@ -1,1 +1,0 @@
-sed -i 's/initialValue = emptyList()/initialValue = emptyList()\n        )\n\n    fun deleteProject(project: ProjectEntity) {\n        viewModelScope.launch {\n            projectDao.deleteProject(project)\n        }\n    }/g' app/src/main/java/com/example/ui/screens/home/HomeViewModel.kt
