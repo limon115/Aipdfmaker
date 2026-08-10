@@ -55,6 +55,7 @@ fun MainScreen() {
     
     val homeViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
             return HomeViewModel(projectDao) as T
         }
     }
@@ -62,6 +63,7 @@ fun MainScreen() {
     
     val newProjectViewModelFactory = object : ViewModelProvider.Factory {
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
             return NewProjectViewModel(projectDao) as T
         }
     }
@@ -230,6 +232,7 @@ fun MainScreen() {
                 ProcessingScreen(
                     viewModel = processingViewModel,
                     projectId = projectId,
+                    onNavigateBack = { navController.popBackStack() },
                     onProcessingFinished = { summary ->
                         if (summary != null) {
                             blueprintViewModel.setBlueprintSummary(summary)
@@ -284,6 +287,7 @@ fun MainScreen() {
                 
                 val factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
                         return com.example.ui.screens.viewer.NotesViewerViewModel(htmlMergeEngine, exportEngine, db.projectDao()) as T
                     }
                 }

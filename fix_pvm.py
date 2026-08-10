@@ -1,4 +1,6 @@
-package com.example.ui.screens.processing
+import os
+
+content = """package com.example.ui.screens.processing
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -130,3 +132,6 @@ class ProcessingViewModel : ViewModel() {
         }
     }
 }
+"""
+with open("app/src/main/java/com/example/ui/screens/processing/ProcessingViewModel.kt", "w") as f:
+    f.write(content)

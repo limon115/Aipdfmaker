@@ -1,4 +1,6 @@
-package com.example.ui.screens.processing
+import os
+
+content = """package com.example.ui.screens.processing
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -14,8 +16,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -186,68 +186,6 @@ fun ProcessingScreen(
         }
     }
 }
-
-@Composable
-fun ChecklistRow(item: ChecklistItem) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier.size(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            when (item.state) {
-                StepState.COMPLETED -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(Color(0xFF22C55E)), // Success Green
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Completed",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                StepState.IN_PROGRESS -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.dp
-                    )
-                }
-                StepState.PENDING -> {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, Color.LightGray, CircleShape)
-                    )
-                }
-                StepState.FAILED -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(Color.Red), // Error Red
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("!", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (item.state == StepState.PENDING) Color.Gray else if (item.state == StepState.FAILED) Color.Red else Color.Black,
-            fontWeight = if (item.state == StepState.IN_PROGRESS || item.state == StepState.FAILED) FontWeight.Bold else FontWeight.Normal
-        )
-    }
-}
+"""
+with open("app/src/main/java/com/example/ui/screens/processing/ProcessingScreen.kt", "w") as f:
+    f.write(content)

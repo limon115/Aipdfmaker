@@ -41,6 +41,7 @@ import kotlinx.coroutines.delay
 }
 
 class AiNetworkClient(private val provider: String, private val apiKey: String, private val model: String, private val temperature: Float) {
+    private val jsonFormat = Json { ignoreUnknownKeys = true }
     companion object {
         private val requestMutex = Mutex()
         private val requestTimestamps = mutableListOf<Long>()
@@ -95,7 +96,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     private val ktorClient = HttpClient(Android) {
         expectSuccess = true
         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
-        install(HttpTimeout) { requestTimeoutMillis = 120_000; connectTimeoutMillis = 15_000; socketTimeoutMillis = 120_000 }
+        install(HttpTimeout) { requestTimeoutMillis = 300_000; connectTimeoutMillis = 30_000; socketTimeoutMillis = 300_000 }
         install(HttpRequestRetry) {
             maxRetries = 5
             retryIf { request, response ->
@@ -293,7 +294,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
                 contentType(ContentType.Application.Json)
                 setBody(requestPayload)
             }
-            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<GeminiResponse>(response.bodyAsText())
+            val jsonResponse = jsonFormat.decodeFromString<GeminiResponse>(response.bodyAsText())
             com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
             val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
             return extractJson(rawText)
@@ -319,7 +320,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
                 if (cleanKey.isNotEmpty() && !provider.lowercase().contains("ollama")) header(HttpHeaders.Authorization, "Bearer $cleanKey")
                 setBody(requestPayload)
             }
-            val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
+            val jsonResponse = jsonFormat.decodeFromString<OpenAiResponse>(response.bodyAsText())
             com.example.utils.AppLogger.d("AiNetwork", "OpenAI request successful")
             val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
             return extractJson(rawText)

@@ -13,6 +13,15 @@ import com.example.ui.screens.OnboardingScreen
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
+
+  override fun onTrimMemory(level: Int) {
+      super.onTrimMemory(level)
+      if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+          // System recommends trimming memory; clear caches here if any
+          System.gc()
+      }
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
