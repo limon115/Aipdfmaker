@@ -149,7 +149,16 @@ fun MainScreen() {
                     },
                     onNavigateToApiLab = {
                         navController.navigate("api_lab")
+                    },
+                    onNavigateToLogs = {
+                        navController.navigate("app_logs")
                     }
+                )
+            }
+            
+            composable("app_logs") {
+                com.example.ui.screens.settings.AppLogsScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             

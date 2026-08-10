@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,6 +37,7 @@ fun NotesViewerScreen(
     onNavigateHome: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
+    val exportProgress by viewModel.exportProgress.collectAsState()
     val context = LocalContext.current
     var showPreviewModal by remember { mutableStateOf(false) }
 
@@ -127,6 +129,7 @@ fun NotesViewerScreen(
         )
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -186,6 +189,35 @@ fun NotesViewerScreen(
                 }
             }
         }
+    }
+    if (state.isExporting) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) {},
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .background(Color.White, RoundedCornerShape(16.dp))
+                    .padding(32.dp)
+            ) {
+                Text("Generating PDF...", color = Color.Black, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                LinearProgressIndicator(
+                    progress = { exportProgress },
+                    modifier = Modifier.fillMaxWidth(0.8f).height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primaryContainer,
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("${(exportProgress * 100).toInt()}%", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
     }
 }
 

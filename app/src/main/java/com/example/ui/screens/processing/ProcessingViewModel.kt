@@ -52,6 +52,7 @@ class ProcessingViewModel : ViewModel() {
         hasStarted = true
 
         viewModelScope.launch(Dispatchers.IO) {
+            com.example.utils.AppLogger.i("ProcessingVM", "Starting processing for project $projectId")
             // Step 1: OCR Processing (simulated wait since text is already extracted in NewProjectViewModel)
             updateStepState(0, StepState.IN_PROGRESS, 25)
 
@@ -90,6 +91,7 @@ class ProcessingViewModel : ViewModel() {
                     updateStepState(1, StepState.FAILED, 75)
                 }
             } catch (e: Exception) {
+                com.example.utils.AppLogger.e("ProcessingVM", "Failed to generate blueprint", e)
                 e.printStackTrace()
                 // Stop spinning and show error on the UI
                 updateStepState(1, StepState.FAILED, 75)

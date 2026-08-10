@@ -18,7 +18,8 @@ data class NotesViewerState(
     val generatedPdfFile: File? = null,
     val generatedJsonFile: File? = null,
     val projectName: String = "Project",
-    val outputFormat: String = "PDF"
+    val outputFormat: String = "PDF",
+    val isExporting: Boolean = false
 )
 
 class NotesViewerViewModel(
@@ -28,6 +29,8 @@ class NotesViewerViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(NotesViewerState())
     val state: StateFlow<NotesViewerState> = _state.asStateFlow()
+
+    val exportProgress: StateFlow<Float> = exportEngine.exportProgress
 
     fun loadData(projectId: Int) {
         viewModelScope.launch {
@@ -63,8 +66,9 @@ class NotesViewerViewModel(
     }
 
     fun exportDocument(onComplete: (File?, File) -> Unit) {
+        _state.update { it.copy(isExporting = true) }
         exportEngine.exportProjectFiles(_state.value.projectName, _state.value.jsonContent, _state.value.outputFormat.equals("pdf", ignoreCase = true)) { pdfFile: File?, jsonFile: File ->
-            _state.update { it.copy(generatedPdfFile = pdfFile, generatedJsonFile = jsonFile) }
+            _state.update { it.copy(generatedPdfFile = pdfFile, generatedJsonFile = jsonFile, isExporting = false) }
             onComplete(pdfFile, jsonFile)
         }
     }

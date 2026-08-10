@@ -287,18 +287,24 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
             generationConfig = GeminiGenConfig(temperature, mimeType, schema)
         )
 
+        com.example.utils.AppLogger.d("AiNetwork", "Sending Gemini request to $targetModel (${prompt.length} chars)")
         try {
             val response: HttpResponse = ktorClient.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(requestPayload)
             }
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<GeminiResponse>(response.bodyAsText())
+            com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
             val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
             return extractJson(rawText)
         } catch (e: ClientRequestException) {
-            throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}")
+            val err = "API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}"
+            com.example.utils.AppLogger.e("AiNetwork", err, e)
+            throw Exception(err)
         } catch (e: Exception) {
-            throw Exception("Network Error: ${e.message?.take(50)}")
+            val err = "Network Error: ${e.message?.take(50)}"
+            com.example.utils.AppLogger.e("AiNetwork", err, e)
+            throw Exception(err)
         }
     }
 
@@ -306,6 +312,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         val estimatedTokens = messages.sumOf { (it.content ?: "").length } / 4
         enforceRateLimit(estimatedTokens)
         val requestPayload = OpenAiRequest(reqModel, messages, temp, maxTokens)
+        com.example.utils.AppLogger.d("AiNetwork", "Sending OpenAI request to $reqModel (${messages.size} messages)")
         try {
             val response: HttpResponse = ktorClient.post(baseUrl) {
                 contentType(ContentType.Application.Json)
@@ -313,12 +320,17 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
                 setBody(requestPayload)
             }
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
+            com.example.utils.AppLogger.d("AiNetwork", "OpenAI request successful")
             val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
             return extractJson(rawText)
         } catch (e: ClientRequestException) {
-            throw Exception("API Error ${e.response.status.value}")
+            val err = "API Error ${e.response.status.value}"
+            com.example.utils.AppLogger.e("AiNetwork", err, e)
+            throw Exception(err)
         } catch (e: Exception) {
-            throw Exception("Network Error: ${e.message}")
+            val err = "Network Error: ${e.message}"
+            com.example.utils.AppLogger.e("AiNetwork", err, e)
+            throw Exception(err)
         }
     }
 

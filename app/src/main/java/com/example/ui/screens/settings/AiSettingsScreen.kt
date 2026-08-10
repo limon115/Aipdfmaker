@@ -46,7 +46,8 @@ import java.util.Locale
 fun AiSettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
     onNavigateToProviderSelection: (isAi1: Boolean) -> Unit,
-    onNavigateToApiLab: () -> Unit
+    onNavigateToApiLab: () -> Unit,
+    onNavigateToLogs: () -> Unit = {}
 ) {
     val settingsNullable by viewModel.settings.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
@@ -137,7 +138,8 @@ fun AiSettingsScreen(
             
             // Developer Tools Section
             DeveloperToolsCard(
-                onNavigateToApiLab = onNavigateToApiLab
+                onNavigateToApiLab = onNavigateToApiLab,
+                onNavigateToLogs = onNavigateToLogs
             )
         }
         }
@@ -602,7 +604,8 @@ fun ChartBarRow(label: String, value: Int, maxVal: Int, color: androidx.compose.
 
 @Composable
 fun DeveloperToolsCard(
-    onNavigateToApiLab: () -> Unit
+    onNavigateToApiLab: () -> Unit,
+    onNavigateToLogs: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -638,6 +641,25 @@ fun DeveloperToolsCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onNavigateToApiLab() },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            ListItem(
+                headlineContent = { Text("App Logs") },
+                supportingContent = { Text("View internal application logs for debugging") },
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Build,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToLogs() },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
         }

@@ -1,6 +1,7 @@
 package com.example
 
 import android.app.Application
+import timber.log.Timber
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.data.datastore.AiModelConfigCache
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -12,6 +13,7 @@ class DocMorphApplication : Application() {
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
+        Timber.plant(Timber.DebugTree())
         
         // Eagerly initialize DataStore caching mechanism to eliminate startup delays
         GlobalScope.launch {

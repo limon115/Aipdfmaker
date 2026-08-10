@@ -125,8 +125,10 @@ class NoteGenerationWorker(
             
             setProgress(workDataOf(PROGRESS to totalTopics, TOTAL to totalTopics, CURRENT_TOPIC to "Finished"))
             showCompletedNotification("Generation completed for ${project?.title ?: "Project"}")
+            com.example.utils.AppLogger.i("NoteGenWorker", "Finished generation for project $projectId")
             return Result.success()
         } catch (e: Exception) {
+            com.example.utils.AppLogger.e("NoteGenWorker", "Fatal error in worker", e)
             e.printStackTrace()
             // Mark project as Failed
             project?.let { projectDao.updateProject(it.copy(status = "Failed", lastUpdated = System.currentTimeMillis())) }
