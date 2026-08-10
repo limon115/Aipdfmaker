@@ -293,7 +293,8 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
                 setBody(requestPayload)
             }
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<GeminiResponse>(response.bodyAsText())
-            return jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
+            val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
+            return extractJson(rawText)
         } catch (e: ClientRequestException) {
             throw Exception("API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}")
         } catch (e: Exception) {
@@ -312,12 +313,23 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
                 setBody(requestPayload)
             }
             val jsonResponse = Json { ignoreUnknownKeys = true }.decodeFromString<OpenAiResponse>(response.bodyAsText())
-            return jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
+            val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
+            return extractJson(rawText)
         } catch (e: ClientRequestException) {
             throw Exception("API Error ${e.response.status.value}")
         } catch (e: Exception) {
             throw Exception("Network Error: ${e.message}")
         }
+    }
+
+    
+    private fun extractJson(rawText: String): String {
+        val startIndex = rawText.indexOfFirst { it == '{' || it == '[' }
+        val endIndex = rawText.indexOfLast { it == '}' || it == ']' }
+        if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
+            return rawText.substring(startIndex..endIndex)
+        }
+        return rawText.trim()
     }
 
     private fun getOpenAiBaseUrl(): String {
