@@ -27,6 +27,9 @@ class NoteGenerationService(
             You are an expert educational writer. Write detailed study notes for the topic: '$topicTitle'. Use the provided source text. 
             CRITICAL LANGUAGE RULE: You MUST write the entire output, headings, explanations, and terms in the EXACT SAME LANGUAGE as the provided source text (e.g., if the source text is in Bangla, write the notes entirely in fluent, academic Bangla).
             You MUST return ONLY valid JSON matching the following schema. Do not use Markdown. Do not use HTML. Do not wrap the JSON in ```json fences.
+            CRITICAL JSON RULES:
+            1. For "inline_math", you MUST use the key "latex", NEVER "value".
+            2. You MUST double-escape ALL backslashes in LaTeX equations so the JSON does not crash (e.g., write \\frac instead of \frac).
 
             {
               "schemaVersion": 1,
@@ -43,7 +46,7 @@ class NoteGenerationService(
                   "type": "paragraph",
                   "content": [
                     { "type": "text", "value": "Regular text " },
-                    { "type": "inline_math", "latex": "n = \frac{w}{M}" }
+                    { "type": "inline_math", "latex": "n = \\frac{w}{M}" }
                   ]
                 },
                 {
