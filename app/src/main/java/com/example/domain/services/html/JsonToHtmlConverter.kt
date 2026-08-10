@@ -30,6 +30,13 @@ class JsonToHtmlConverter {
         // Basic CSS
         htmlBuilder.append("""
             <style>
+            @font-face {
+                font-family: 'Kalpurush';
+                src: url('fonts/kalpurush.ttf') format('truetype');
+            }
+            body {
+                font-family: 'Kalpurush', serif !important;
+            }
                 body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
                 h1, h2, h3, h4, h5, h6 { color: #222; }
                 h1 { border-bottom: 2px solid #eaecef; padding-bottom: .3em; }
