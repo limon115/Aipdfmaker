@@ -35,8 +35,18 @@ class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
                     val blockList = jsonFormat.decodeFromString<List<DocumentBlock>>(safeJson)
                     mergedBlocks.addAll(blockList)
                 } catch (e2: Exception) {
-                    // 🛡️ Fallback 2: If parsing completely fails, clean the JSON symbols out!
-                    val cleanText = safeJson.replace(Regex("[{}\"\\[\\]]"), "").trim()
+                    // 🛡️ SURGICAL FIX 3: Intelligent Regex Extraction
+                    // Do not dump raw schema text. Extract only the readable content.
+                    val contentRegex = Regex("\"(?:text|latex|value)\"\s*:\s*\"(.*?)\"")
+                    val matches = contentRegex.findAll(safeJson)
+                    
+                    if (matches.any()) {
+                        val extracted = matches.joinToString(" ") { it.groupValues[1] }
+                        mergedBlocks.add(ParagraphBlock(text = extracted))
+                    } else {
+                        mergedBlocks.add(ParagraphBlock(text = "⚠️ [Data Extraction Error] The AI generated invalid mathematical JSON that could not be parsed."))
+                    }
+                }\"\\[\\]]"), "").trim()
                     mergedBlocks.add(ParagraphBlock(text = "Recovered Text: $cleanText"))
                 }
             }

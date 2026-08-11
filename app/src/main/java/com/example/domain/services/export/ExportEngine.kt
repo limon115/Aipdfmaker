@@ -79,12 +79,8 @@ class ExportEngine(private val context: Context) {
                         webView.webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView, url: String) {
                                 Timber.d("WebView onPageFinished triggered for URL: %s", url)
-                                // Give KaTeX a moment to render
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    printWebView(webView, safeName)
-                                    // We return null for pdfFile because PrintManager handles the PDF generation and saving UI
-                                    onComplete(null, htmlFile)
-                                }, 1000)
+                                // 🛡️ Smart Polling: Wait for KaTeX 'data-render-complete'
+                                pollForKaTeX(webView, safeName, htmlFile, onComplete, 0)
                             }
                         }
                         // Load the HTML string with a dummy base URL to allow KaTeX CDN to load
@@ -116,4 +112,25 @@ class ExportEngine(private val context: Context) {
         Timber.d("Initiating PrintManager.print for job: %s", jobName)
         printManager.print(jobName, printAdapter, builder.build())
     }
+    private fun pollForKaTeX(webView: WebView, jobName: String, htmlFile: File, onComplete: (File?, File) -> Unit, attempts: Int) {
+        if (attempts > 30) { // Timeout after 4.5 seconds
+            Timber.e("KaTeX rendering timed out. Printing anyway.")
+            printWebView(webView, jobName)
+            onComplete(null, htmlFile)
+            return
+        }
+        
+        webView.evaluateJavascript("document.body.getAttribute('data-render-complete');") { result ->
+            if (result != null && result.contains("true")) {
+                Timber.d("KaTeX rendering verified complete. Triggering print.")
+                printWebView(webView, jobName)
+                onComplete(null, htmlFile)
+            } else {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    pollForKaTeX(webView, jobName, htmlFile, onComplete, attempts + 1)
+                }, 150)
+            }
+        }
+    }
+
 }
