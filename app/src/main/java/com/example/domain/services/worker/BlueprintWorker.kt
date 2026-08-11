@@ -41,8 +41,8 @@ class BlueprintWorker(
             val settings = dataStore.aiSettingsFlow.first()
             val aiClient = AiNetworkClient(
                 provider = settings.ai1Provider.name,
-                apiKey = settings.ai1ApiKey.ifBlank { com.example.BuildConfig.GEMINI_API_KEY },
-                model = settings.ai1Model.ifBlank { "gemini-1.5-flash" },
+                apiKey = settings.ai1ApiKey, // Must use the actual saved key
+                model = settings.ai1Model.ifBlank { "gemini-2.5-flash" },
                 temperature = settings.ai2Temperature
             )
             val blueprintService = BlueprintService(aiClient)

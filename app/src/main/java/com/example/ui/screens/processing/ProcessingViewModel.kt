@@ -68,10 +68,10 @@ class ProcessingViewModel : ViewModel() {
 
             // Step 2: Building Knowledge Blueprint (WorkManager)
             updateStepState(1, StepState.IN_PROGRESS, 50)
-            
+
             val workManager = WorkManager.getInstance(context)
             val workName = "BlueprintGen_$projectId"
-            
+
             val inputData = Data.Builder()
                 .putInt("project_id", projectId)
                 .build()
@@ -86,34 +86,44 @@ class ProcessingViewModel : ViewModel() {
                 workRequest
             )
 
+            // 🛡️ CRITICAL FIX: Safe observer without memory leaks
             launch(Dispatchers.Main) {
-                workManager.getWorkInfoByIdLiveData(workRequest.id).observeForever { workInfo ->
-                    if (workInfo != null) {
-                        _state.update { it.copy(workState = workInfo.state) }
-                        
-                        when (workInfo.state) {
-                            WorkInfo.State.SUCCEEDED -> {
-                                val summaryJson = workInfo.outputData.getString("blueprint_summary")
-                                if (!summaryJson.isNullOrEmpty()) {
-                                    try {
-                                        val summary = jsonFormat.decodeFromString<BlueprintSummary>(summaryJson)
-                                        _state.update { it.copy(blueprintSummary = summary) }
-                                    } catch (e: Exception) {
-                                        Timber.e(e, "Failed to parse BlueprintSummary")
+                workManager.getWorkInfoByIdLiveData(workRequest.id).observeForever(object : androidx.lifecycle.Observer<WorkInfo> {
+                    override fun onChanged(workInfo: WorkInfo) {
+                        if (workInfo != null) {
+                            _state.update { it.copy(workState = workInfo.state) }
+
+                            when (workInfo.state) {
+                                WorkInfo.State.SUCCEEDED -> {
+                                    val summaryJson = workInfo.outputData.getString("blueprint_summary")
+                                    if (!summaryJson.isNullOrEmpty()) {
+                                        try {
+                                            val summary = jsonFormat.decodeFromString<BlueprintSummary>(summaryJson)
+                                            _state.update { it.copy(blueprintSummary = summary) }
+                                            updateStepState(1, StepState.COMPLETED, 100)
+                                            _state.update { it.copy(isFinished = true) }
+                                        } catch (e: Exception) {
+                                            Timber.e(e, "Failed to parse BlueprintSummary")
+                                            updateStepState(1, StepState.FAILED, 75)
+                                        }
+                                    } else {
+                                         updateStepState(1, StepState.FAILED, 75)
                                     }
+                                    // Remove observer when done!
+                                    workManager.getWorkInfoByIdLiveData(workRequest.id).removeObserver(this)
                                 }
-                                updateStepState(1, StepState.COMPLETED, 100)
-                                _state.update { it.copy(isFinished = true) }
-                            }
-                            WorkInfo.State.FAILED -> {
-                                updateStepState(1, StepState.FAILED, 75)
-                            }
-                            else -> {
-                                // Running or enqueued
+                                WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
+                                    updateStepState(1, StepState.FAILED, 75)
+                                    // Remove observer when done!
+                                    workManager.getWorkInfoByIdLiveData(workRequest.id).removeObserver(this)
+                                }
+                                else -> {
+                                    // Running or enqueued
+                                }
                             }
                         }
                     }
-                }
+                })
             }
         }
     }
