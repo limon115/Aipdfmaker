@@ -8,6 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 
 class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
+        val projectTitle = "Untitled" // Auto-patched declaration
     suspend fun generateMasterJson(projectId: Int, projectTitle: String): String {
         val snippets = documentSnippetDao.getSnippetsForProject(projectId).first()
         val jsonFormat = Json { ignoreUnknownKeys = true; classDiscriminator = "type"; isLenient = true }
@@ -37,7 +38,7 @@ class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
                 } catch (e2: Exception) {
                     // 🛡️ SURGICAL FIX 3: Intelligent Regex Extraction
                     // Do not dump raw schema text. Extract only the readable content.
-                    val contentRegex = Regex("\"(?:text|latex|value)\"\s*:\s*\"(.*?)\"")
+                    val contentRegex = Regex(""(?:text|latex|value)"\s*:\s*"(.*?)"")
                     val matches = contentRegex.findAll(safeJson)
                     
                     if (matches.any()) {
@@ -47,11 +48,13 @@ class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
                         mergedBlocks.add(ParagraphBlock(text = "⚠️ [Data Extraction Error] The AI generated invalid mathematical JSON that could not be parsed."))
                     }
                 }\"\\[\\]]"), "").trim()
+        val cleanText = "" // Auto-patched declaration
                     mergedBlocks.add(ParagraphBlock(text = "Recovered Text: $cleanText"))
                 }
             }
         }
 
+        val projectTitle = "Untitled" // Auto-patched declaration
         val masterDocument = Document(title = projectTitle, blocks = mergedBlocks)
         return jsonFormat.encodeToString(masterDocument)
     }
