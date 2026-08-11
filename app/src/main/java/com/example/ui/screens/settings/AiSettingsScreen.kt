@@ -168,9 +168,9 @@ fun AiConfigCard(
     var modelDropdownExpanded by remember { mutableStateOf(false) }
 
     val recommendedModels = when (provider.name.lowercase()) {
-        "gemini", "google gemini" -> listOf("gemini-2.5-flash", "gemini-1.5-pro", "gemini-2.0-flash")
+        "gemini", "google gemini" -> listOf("gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash")
         "openai" -> listOf("gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo")
-        "openrouter" -> listOf("google/gemini-2.5-flash", "anthropic/claude-3.5-sonnet", "meta-llama/llama-3.1-8b-instruct")
+        "openrouter" -> listOf("google/gemini-1.5-flash", "anthropic/claude-3.5-sonnet", "meta-llama/llama-3.1-8b-instruct")
         "lm studio" -> listOf("llama-3.2-3b", "qwen-2.5-coder-7b", "deepseek-coder-v2")
         "ollama" -> listOf("llama3.2", "qwen2.5", "mistral")
         else -> listOf("default-model")

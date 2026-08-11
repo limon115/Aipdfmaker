@@ -1,23 +1,22 @@
 package com.example.domain.services.pdf
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 
 class PdfRendererService(private val context: Context) {
     
+    init {
+        PDFBoxResourceLoader.init(context)
+    }
+
     suspend fun extractTextFromPdf(uri: Uri, ocrEngine: com.example.domain.services.ocr.LocalOcrEngine): String = withContext(Dispatchers.IO) {
-        val textBuilder = StringBuilder()
-        
-        // We need to copy the content of the URI to a local cache file because 
-        // PdfRenderer requires a FileDescriptor which is easier to get from a local file.
         val cacheFile = File(context.cacheDir, "temp_pdf_${System.currentTimeMillis()}.pdf")
         
         try {
@@ -27,68 +26,19 @@ class PdfRendererService(private val context: Context) {
                 }
             }
             
-            val fileDescriptor = android.os.ParcelFileDescriptor.open(
-                cacheFile, 
-                android.os.ParcelFileDescriptor.MODE_READ_ONLY
-            )
+            val document = PDDocument.load(cacheFile)
+            val textStripper = PDFTextStripper()
+            val text = textStripper.getText(document)
+            document.close()
             
-            fileDescriptor.use { fd ->
-                val pdfRenderer = PdfRenderer(fd)
-                try {
-                    val pageCount = pdfRenderer.pageCount
-                    var reusableBitmap: Bitmap? = null
-                    var currentWidth = -1
-                    var currentHeight = -1
-
-                    for (i in 0 until pageCount) {
-                        pdfRenderer.openPage(i).use { page ->
-                            // Scale up the PDF page for better OCR accuracy (default is only 72 DPI)
-                            // Reduced scale slightly to save memory and avoid Ashmem warnings on long PDFs
-                            val scale = 2.0f
-                            val scaledWidth = (page.width * scale).toInt()
-                            val scaledHeight = (page.height * scale).toInt()
-                            
-                            val bitmap = if (reusableBitmap != null && currentWidth == scaledWidth && currentHeight == scaledHeight) {
-                                reusableBitmap!!
-                            } else {
-                                reusableBitmap?.recycle()
-                                currentWidth = scaledWidth
-                                currentHeight = scaledHeight
-                                val newBitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
-                                reusableBitmap = newBitmap
-                                newBitmap
-                            }
-                            
-                            // PDFs often have transparent backgrounds, which can ruin OCR. Fill with white.
-                            bitmap.eraseColor(Color.WHITE)
-                            
-                            val matrix = Matrix().apply { postScale(scale, scale) }
-                            
-                            page.render(
-                                bitmap, 
-                                null, 
-                                matrix, 
-                                PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
-                            )
-                            
-                            val text = ocrEngine.extractTextFromBitmap(bitmap)
-                            textBuilder.append(text).append("\n")
-                            
-                            // Yield to avoid blocking for too long on large PDFs
-                            kotlinx.coroutines.yield()
-                        }
-                    }
-                    reusableBitmap?.recycle()
-                } finally {
-                    pdfRenderer.close()
-                }
-            }
+            return@withContext text
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext "Error extracting text: ${e.message}"
         } finally {
             if (cacheFile.exists()) {
                 cacheFile.delete()
             }
         }
-        
-        return@withContext textBuilder.toString()
     }
 }

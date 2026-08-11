@@ -69,8 +69,8 @@ class NoteGenerationWorker(
         val settings = dataStore.aiSettingsFlow.first()
         val dummyClient = AiNetworkClient(
             provider = settings.ai2Provider.name,
-            apiKey = settings.ai2ApiKey,
-            model = settings.ai2Model,
+            apiKey = settings.ai2ApiKey.ifBlank { com.example.BuildConfig.GEMINI_API_KEY },
+            model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
             temperature = settings.ai2Temperature
         )
         val cache = AiResponseCache(context)
@@ -106,8 +106,8 @@ class NoteGenerationWorker(
                     blueprintContext = blueprintJson,
                     relevantContext = relevantContextForTopic,
                     ai2Provider = settings.ai2Provider.name,
-                    ai2Model = settings.ai2Model.ifBlank { "gemini-2.5-flash" },
-                    ai2ApiKey = settings.ai2ApiKey,
+                    ai2Model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
+                    ai2ApiKey = settings.ai2ApiKey.ifBlank { com.example.BuildConfig.GEMINI_API_KEY },
                     ai2Temperature = settings.ai2Temperature
                 )
 

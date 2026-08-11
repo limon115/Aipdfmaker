@@ -65,7 +65,7 @@ class GeminiApiTester {
                 })
             }
             
-            // Note: modelName typically comes back as "models/gemini-2.5-flash", we use it in the URL
+            // Note: modelName typically comes back as "models/gemini-1.5-flash", we use it in the URL
             val modelId = if (modelName.startsWith("models/")) modelName else "models/$modelName"
             
             val response = client.post("https://generativelanguage.googleapis.com/v1beta/${modelId}:generateContent?key=${apiKey}") {

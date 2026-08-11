@@ -85,7 +85,31 @@ class NoteGenerationService(
         }
         
         com.example.domain.services.ai.AiUsageTracker.trackRequest((prompt.length + systemPrompt.length) / 4)
-        val rawResponse = clientForGeneration.generateContent(prompt, systemPrompt, "application/json", true)
+        val rawResponse = try {
+            clientForGeneration.generateContent(prompt, systemPrompt, "application/json", true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            com.example.utils.AppLogger.e("NoteGenerationService", "Using mock note due to error", e)
+            """
+            {
+                "schemaVersion": 1,
+                "title": "Mock Notes for $topicTitle",
+                "author": "DocMorph",
+                "language": "en",
+                "blocks": [
+                    {
+                        "type": "heading",
+                        "level": 1,
+                        "text": "Introduction"
+                    },
+                    {
+                        "type": "paragraph",
+                        "text": "This is a mock note generated because the AI API call failed or the API key was invalid."
+                    }
+                ]
+            }
+            """.trimIndent()
+        }
         cache.put(prompt, systemPrompt, ai2Model, rawResponse)
         
         return cleanJson(rawResponse)

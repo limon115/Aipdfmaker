@@ -239,7 +239,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
         if (isGemini) {
-            val schema = if (useDocumentSchema) documentSchema else null
+            val schema = null // if (useDocumentSchema) documentSchema else null
             return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType, schema)
         } else {
             val messages = mutableListOf<OpenAiMessage>()
@@ -268,7 +268,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     private suspend fun generateWithGemini(extractedText: String, cleanKey: String): String {
-        return sendGeminiRequest(cleanKey, extractedText, systemPrompt, "application/json", blueprintSchema)
+        return sendGeminiRequest(cleanKey, extractedText, systemPrompt, "application/json", null)
     }
 
     private suspend fun generateWithOpenAiCompatible(extractedText: String, cleanKey: String): String {
@@ -279,7 +279,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null, schema: JsonObject? = null): String {
         val estimatedTokens = (prompt.length + (sysPrompt?.length ?: 0)) / 4
         enforceRateLimit(estimatedTokens)
-        val targetModel = model.ifBlank { "gemini-2.5-flash" }
+        val targetModel = model.ifBlank { "gemini-1.5-flash" }
         val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
 
         val requestPayload = GeminiRequest(
