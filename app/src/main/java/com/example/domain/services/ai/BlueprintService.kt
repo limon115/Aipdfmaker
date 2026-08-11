@@ -27,21 +27,8 @@ class BlueprintService(
             Result.success(summary)
         } catch (e: Exception) {
             e.printStackTrace()
-            com.example.utils.AppLogger.e("BlueprintService", "Using mock blueprint due to error", e)
-            Result.success(BlueprintSummary(
-                courseName = "Sample Course (Mock)",
-                chapterName = "Sample Chapter (Mock)",
-                topics = listOf(
-                    com.example.domain.models.Topic("Introduction to the topic", 15),
-                    com.example.domain.models.Topic("Core Concepts", 25),
-                    com.example.domain.models.Topic("Advanced Applications", 20)
-                ),
-                formulaCount = 3,
-                definitionCount = 5,
-                exampleCount = 4,
-                diagramCount = 2,
-                examTipCount = 1
-            ))
+            com.example.utils.AppLogger.e("BlueprintService", "Blueprint generation failed", e)
+            Result.failure(e)
         }
     }
 }
