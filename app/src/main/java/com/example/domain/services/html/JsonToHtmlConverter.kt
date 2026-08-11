@@ -26,6 +26,7 @@ class JsonToHtmlConverter {
                     ]
                 }); document.body.setAttribute('data-render-complete', 'true');"></script>
             <style>
+                @page { margin: 20mm 15mm; }
                 @font-face {
                     font-family: 'Kalpurush';
                     src: url('fonts/kalpurush.ttf') format('truetype');
