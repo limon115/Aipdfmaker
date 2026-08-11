@@ -69,6 +69,8 @@ class ExportEngine(private val context: Context) {
                     Handler(Looper.getMainLooper()).post {
                         val webView = WebView(context)
                         webView.settings.javaScriptEnabled = true
+                        webView.settings.allowFileAccess = true 
+                        webView.settings.domStorageEnabled = true
                         webView.webChromeClient = object : android.webkit.WebChromeClient() {
                             override fun onProgressChanged(view: WebView, newProgress: Int) {
                                 _exportProgress.value = newProgress / 100f
@@ -86,7 +88,7 @@ class ExportEngine(private val context: Context) {
                             }
                         }
                         // Load the HTML string with a dummy base URL to allow KaTeX CDN to load
-                        webView.loadDataWithBaseURL("https://example.com", htmlString, "text/html", "UTF-8", null)
+                        webView.loadDataWithBaseURL("file:///android_asset/", htmlString, "text/html", "UTF-8", null)
                     }
                 } else {
                     onComplete(null, htmlFile)
