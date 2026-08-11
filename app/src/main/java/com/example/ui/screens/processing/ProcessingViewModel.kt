@@ -95,15 +95,20 @@ class ProcessingViewModel : ViewModel() {
 
                             when (workInfo.state) {
                                 WorkInfo.State.SUCCEEDED -> {
-                                    val summaryJson = workInfo.outputData.getString("blueprint_summary")
-                                    if (!summaryJson.isNullOrEmpty()) {
+                                    // 🛡️ FIX 1: Read JSON from file to bypass 10KB Data limit
+                                    val fileName = workInfo.outputData.getString("blueprint_file")
+                                    if (!fileName.isNullOrEmpty()) {
                                         try {
+                                            val tempFile = java.io.File(context.cacheDir, fileName)
+                                            val summaryJson = tempFile.readText()
+                                            tempFile.delete() // Clean up!
+                                            
                                             val summary = jsonFormat.decodeFromString<BlueprintSummary>(summaryJson)
                                             _state.update { it.copy(blueprintSummary = summary) }
                                             updateStepState(1, StepState.COMPLETED, 100)
                                             _state.update { it.copy(isFinished = true) }
                                         } catch (e: Exception) {
-                                            Timber.e(e, "Failed to parse BlueprintSummary")
+                                            Timber.e(e, "Failed to parse BlueprintSummary from file")
                                             updateStepState(1, StepState.FAILED, 75)
                                         }
                                     } else {

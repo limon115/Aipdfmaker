@@ -51,44 +51,49 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         private const val ONE_MINUTE_MS = 60_000L
         
         suspend fun enforceRateLimit(estimatedTokens: Int = 1000) {
+            var delayMs = 0L
             requestMutex.withLock {
-                var now = System.currentTimeMillis()
+                val now = System.currentTimeMillis()
                 requestTimestamps.removeAll { now - it > ONE_MINUTE_MS }
                 tokenUsageHistory.removeAll { now - it.first > ONE_MINUTE_MS }
+
+                val currentTokens = tokenUsageHistory.sumOf { it.second }
                 
-                var currentTokens = tokenUsageHistory.sumOf { it.second }
-                while (currentTokens + estimatedTokens > MAX_TOKENS_PER_MINUTE) {
+                var tokensToWait = 0L
+                if (currentTokens + estimatedTokens > MAX_TOKENS_PER_MINUTE) {
                     val oldestToken = tokenUsageHistory.firstOrNull()
                     if (oldestToken != null) {
-                        val waitTime = ONE_MINUTE_MS - (System.currentTimeMillis() - oldestToken.first)
-                        if (waitTime > 0) kotlinx.coroutines.delay(waitTime + 100)
-                    } else {
-                        break
+                        tokensToWait = ONE_MINUTE_MS - (now - oldestToken.first) + 100
                     }
-                    val newNow = System.currentTimeMillis()
-                    tokenUsageHistory.removeAll { newNow - it.first > ONE_MINUTE_MS }
-                    currentTokens = tokenUsageHistory.sumOf { it.second }
                 }
 
-                now = System.currentTimeMillis()
-                requestTimestamps.removeAll { now - it > ONE_MINUTE_MS }
+                var requestsToWait = 0L
                 if (requestTimestamps.size >= MAX_REQUESTS_PER_MINUTE) {
-                    val oldest = requestTimestamps.first()
-                    val waitTime = ONE_MINUTE_MS - (System.currentTimeMillis() - oldest)
-                    if (waitTime > 0) {
-                        kotlinx.coroutines.delay(waitTime + 100)
+                    val oldest = requestTimestamps.firstOrNull()
+                    if (oldest != null) {
+                        requestsToWait = ONE_MINUTE_MS - (now - oldest) + 100
                     }
                 }
-                
-                val newNow2 = System.currentTimeMillis()
-                val timeSinceLast = newNow2 - (requestTimestamps.lastOrNull() ?: 0L)
-                if (timeSinceLast < 4000L) {
-                    kotlinx.coroutines.delay(4000L - timeSinceLast)
+
+                val timeSinceLast = now - (requestTimestamps.lastOrNull() ?: 0L)
+                var bufferWait = 0L
+                if (timeSinceLast < 4000L && requestTimestamps.isNotEmpty()) {
+                    bufferWait = 4000L - timeSinceLast
                 }
-                
-                val finalNow = System.currentTimeMillis()
-                requestTimestamps.add(finalNow)
-                tokenUsageHistory.add(Pair(finalNow, estimatedTokens))
+
+                delayMs = maxOf(tokensToWait, requestsToWait, bufferWait)
+
+                if (delayMs <= 0L) {
+                    val finalNow = System.currentTimeMillis()
+                    requestTimestamps.add(finalNow)
+                    tokenUsageHistory.add(Pair(finalNow, estimatedTokens))
+                }
+            }
+
+            // 🛡️ FIX 2: Call delay OUTSIDE the Mutex lock so we don't freeze other workers!
+            if (delayMs > 0L) {
+                kotlinx.coroutines.delay(delayMs)
+                enforceRateLimit(estimatedTokens)
             }
         }
     }

@@ -54,8 +54,12 @@ class BlueprintWorker(
                 val jsonFormat = Json { ignoreUnknownKeys = true; encodeDefaults = true }
                 val summaryJson = summary?.let { jsonFormat.encodeToString(it) } ?: ""
                 
+                // 🛡️ FIX 1: Save JSON to file to avoid 10KB WorkManager crash
+                val tempFile = java.io.File(context.cacheDir, "blueprint_${projectId}.json")
+                tempFile.writeText(summaryJson)
+
                 val outputData = Data.Builder()
-                    .putString("blueprint_summary", summaryJson)
+                    .putString("blueprint_file", tempFile.name)
                     .build()
                     
                 return Result.success(outputData)
