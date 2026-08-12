@@ -8,4 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.21.1"
-tectonic = "0.14.1" # Adjust based on the tectonic version
+tectonic = { version = "0.14.1", default-features = false } # Adjust based on the tectonic version
