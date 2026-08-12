@@ -24,16 +24,27 @@ class LatexCompilerRepository(private val context: Context) {
 
             val fullLatex = """
                 \documentclass{article}
-                \usepackage[utf8]{inputenc}
                 \usepackage{amsmath}
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
+                \usepackage{fontspec}
+                \setmainfont{kalpurush.ttf}[Path=./]
                 \title{$projectName}
                 \begin{document}
                 \maketitle
                 $latexContent
                 \end{document}
             """.trimIndent()
+
+            // Copy the Kalpurush font to the working directory so Tectonic can find it
+            val fontFile = File(baseDir, "kalpurush.ttf")
+            if (!fontFile.exists()) {
+                context.assets.open("fonts/kalpurush.ttf").use { input ->
+                    fontFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
 
             val texFile = File(baseDir, "document.tex")
             texFile.writeText(fullLatex)
