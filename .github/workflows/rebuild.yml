@@ -27,18 +27,51 @@ jobs:
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           cargo install cargo-ndk
 
-      - name: Build Tectonic JNI (Rust)
-        env:
-          PKG_CONFIG_ALLOW_CROSS: "1"
-        run: |
-          cd app/src/main/rust/tectonic-jni
-          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../libs build --release
-
       - name: Download Tectonic TeX Bundle
         run: |
           mkdir -p app/src/main/assets/tectonic-bundle
           echo "Downloading Tectonic TeX Live bundle..."
           curl -L -o app/src/main/assets/tectonic-bundle/default.ttb "https://github.com/tectonic-typesetting/tectonic-texlive-bundles/releases/download/tlextras-2021.3r1/tlextras-2021.3r1.tar"
+
+      - name: Build Static zlib and libpng for Android NDK
+        run: |
+          wget -q https://zlib.net/fossils/zlib-1.2.13.tar.gz
+          tar xf zlib-1.2.13.tar.gz
+          wget -q https://download.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.gz
+          tar xf libpng-1.6.40.tar.gz
+          
+          export NDK=$ANDROID_NDK_HOME
+          export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
+          export API=24
+          
+          for arch in aarch64-linux-android armv7a-linux-androideabi x86_64-linux-android i686-linux-android; do
+            mkdir -p zlib-build-$arch && cd zlib-build-$arch
+            export CC=$TOOLCHAIN/bin/${arch}${API}-clang
+            export AR=$TOOLCHAIN/bin/llvm-ar
+            export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
+            ../zlib-1.2.13/configure --prefix=$GITHUB_WORKSPACE/deps/$arch --static
+            make -j4 install
+            cd ..
+            
+            mkdir -p png-build-$arch && cd png-build-$arch
+            export CPPFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include"
+            export LDFLAGS="-L$GITHUB_WORKSPACE/deps/$arch/lib"
+            ../libpng-1.6.40/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static
+            make -j4 install
+            cd ..
+          done
+
+      - name: Build Tectonic JNI (Rust)
+        env:
+          CARGO_BUILD_JOBS: "2"
+          PKG_CONFIG_ALLOW_CROSS: "1"
+          PKG_CONFIG_PATH_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android/lib/pkgconfig"
+          PKG_CONFIG_PATH_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi/lib/pkgconfig"
+          PKG_CONFIG_PATH_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android/lib/pkgconfig"
+          PKG_CONFIG_PATH_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android/lib/pkgconfig"
+        run: |
+          cd app/src/main/rust/tectonic-jni
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../libs build --release
 
       - name: Generate Gradle Wrapper (Cloud Execution)
         run: gradle wrapper
@@ -51,7 +84,7 @@ jobs:
 
       - name: Assemble Debug APK with Gradle
         run: ./gradlew assembleDebug --no-daemon
-        
+
       - name: Upload DocMorph APK Artifact
         uses: actions/upload-artifact@v4
         with:

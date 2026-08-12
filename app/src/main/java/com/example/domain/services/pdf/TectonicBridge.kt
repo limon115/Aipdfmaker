@@ -17,7 +17,7 @@ object TectonicBridge {
 
     suspend fun compileLatex(context: Context, tex: String): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            val bundlePath = ensureBundleExtracted(context) 
+            val bundlePath = ensureBundleExtracted(context)
             val outDir = context.cacheDir.absolutePath
             val resultPath = compileToPdf(tex, bundlePath, outDir)
             if (resultPath == "Error") {
@@ -31,15 +31,19 @@ object TectonicBridge {
         val bundleDir = File(context.filesDir, "tectonic-bundle")
         if (!bundleDir.exists()) {
             bundleDir.mkdirs()
-            // Extract from assets to bundleDir
-            // For now, let's just make sure the directory exists
-            // To do this fully, you would need to iterate through context.assets.list("tectonic-bundle")
             try {
                 val assets = context.assets.list("tectonic-bundle") ?: emptyArray()
                 for (asset in assets) {
                     context.assets.open("tectonic-bundle/$asset").use { input ->
                         File(bundleDir, asset).outputStream().use { output ->
-                            input.copyTo(output)
+                            // Explicit 16KB chunked buffering prevents OOM crashes
+                            // when unpacking massive assets on low-RAM devices
+                            val buffer = ByteArray(16 * 1024)
+                            var read: Int
+                            while (input.read(buffer).also { read = it } != -1) {
+                                output.write(buffer, 0, read)
+                            }
+                            output.flush()
                         }
                     }
                 }
