@@ -282,13 +282,13 @@ fun MainScreen() {
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val db = com.example.data.database.AppDatabase.getDatabase(context)
-                val htmlMergeEngine = com.example.domain.services.html.DocumentMergeEngine(db.documentSnippetDao())
-                val exportEngine = com.example.domain.services.export.ExportEngine(context)
+                
+                val compilerRepository = com.example.domain.repository.LatexCompilerRepository(context)
                 
                 val factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
-                        return com.example.ui.screens.viewer.NotesViewerViewModel(htmlMergeEngine, exportEngine, db.projectDao()) as T
+                        return com.example.ui.screens.viewer.NotesViewerViewModel(db.documentSnippetDao(), compilerRepository, db.projectDao()) as T
                     }
                 }
                 val notesViewerViewModel: com.example.ui.screens.viewer.NotesViewerViewModel = 

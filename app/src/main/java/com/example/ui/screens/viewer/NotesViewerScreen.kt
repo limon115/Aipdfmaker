@@ -47,21 +47,21 @@ fun NotesViewerScreen(
 
     val performExport = {
         showPreviewModal = false
-        viewModel.exportDocument { pdfFile, htmlFile ->
+        viewModel.exportDocument { pdfFile, texFile ->
             try {
                 val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
                 if (isPdf && pdfFile == null) {
                     // Handled by PrintManager
                     return@exportDocument
                 }
-                val selectedFile = if (isPdf && pdfFile != null) pdfFile else htmlFile
+                val selectedFile = if (isPdf && pdfFile != null) pdfFile else texFile
                 val uri = FileProvider.getUriForFile(
                     context,
                     "${context.packageName}.fileprovider",
                     selectedFile
                 )
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/html"
+                    val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/plain"
                     setDataAndType(uri, mimeType)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
@@ -121,7 +121,7 @@ fun NotesViewerScreen(
 
     if (showPreviewModal) {
         ExportPreviewModal(
-            jsonContent = state.jsonContent,
+            latexContent = state.latexContent,
             onConfirm = {
                 checkAndPerformExport()
             },
@@ -174,14 +174,14 @@ fun NotesViewerScreen(
                 .padding(innerPadding)
         ) {
             if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary) // modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
             } else {
                 androidx.compose.foundation.lazy.LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(16.dp)
                 ) {
                     item {
                         Text(
-                            text = state.jsonContent,
+                            text = state.latexContent,
                             style = MaterialTheme.typography.bodySmall,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                         )
@@ -206,15 +206,8 @@ fun NotesViewerScreen(
             ) {
                 Text("Generating PDF...", color = Color.Black, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                LinearProgressIndicator(
-                    progress = { exportProgress },
-                    modifier = Modifier.fillMaxWidth(0.8f).height(8.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.primaryContainer,
-                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                )
+                CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("${(exportProgress * 100).toInt()}%", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -223,7 +216,7 @@ fun NotesViewerScreen(
 
 @Composable
 fun ExportPreviewModal(
-    jsonContent: String,
+    latexContent: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -258,7 +251,7 @@ fun ExportPreviewModal(
                     ) {
                         item {
                             Text(
-                                text = jsonContent,
+                                text = latexContent,
                                 style = MaterialTheme.typography.bodySmall,
                                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                             )

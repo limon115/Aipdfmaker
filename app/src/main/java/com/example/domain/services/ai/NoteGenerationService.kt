@@ -1,7 +1,6 @@
 package com.example.domain.services.ai
 
 import com.example.data.network.AiNetworkClient
-
 import com.example.data.cache.AiResponseCache
 
 class NoteGenerationService(
@@ -23,51 +22,15 @@ class NoteGenerationService(
             model = ai2Model,
             temperature = ai2Temperature
         )
+
         val systemPrompt = """
             You are an expert educational writer. Write detailed study notes for the topic: '$topicTitle'. Use the provided source text. 
-            CRITICAL LANGUAGE RULE: You MUST write the entire output, headings, explanations, and terms in the EXACT SAME LANGUAGE as the provided source text (e.g., if the source text is in Bangla, write the notes entirely in fluent, academic Bangla).
-            You MUST return ONLY valid JSON matching the following schema. Do not use Markdown. Do not use HTML. Do not wrap the JSON in ```json fences.
-            CRITICAL JSON RULES:
-            1. For "inline_math", you MUST use the key "latex", NEVER "value".
-            2. You MUST double-escape ALL backslashes in LaTeX equations so the JSON does not crash (e.g., write \\frac instead of \frac).
-
-            {
-              "schemaVersion": 1,
-              "title": "Document Title",
-              "author": "",
-              "language": "bn",
-              "blocks": [
-                {
-                  "type": "heading",
-                  "level": 1,
-                  "text": "Heading Text"
-                },
-                {
-                  "type": "paragraph",
-                  "content": [
-                    { "type": "text", "value": "Regular text " },
-                    { "type": "inline_math", "latex": "n = \\frac{w}{M}" }
-                  ]
-                },
-                {
-                  "type": "equation",
-                  "latex": "E = mc^2",
-                  "display": true
-                },
-                {
-                  "type": "bullet_list",
-                  "items": [
-                    "Item 1",
-                    "Item 2"
-                  ]
-                },
-                {
-                  "type": "table",
-                  "columns": [ "Col 1", "Col 2" ],
-                  "rows": [ [ "Val 1", "Val 2" ] ]
-                }
-              ]
-            }
+            CRITICAL LANGUAGE RULE: You MUST write the entire output, headings, explanations, and terms in the EXACT SAME LANGUAGE as the provided source text.
+            You MUST return ONLY valid LaTeX (.tex) code. Do not use Markdown. Do not wrap the LaTeX in ```latex fences.
+            CRITICAL LATEX RULES:
+            1. Provide ONLY the document body content, assuming it will be included in a larger LaTeX document. Do NOT include \documentclass or \begin{document}.
+            2. Use standard LaTeX commands like \section, \subsection, \textbf, \textit, \begin{itemize}, \begin{equation}, etc.
+            3. Ensure all equations are properly formatted in LaTeX math mode ($$ or \begin{equation}).
         """.trimIndent()
 
         val prompt = """
@@ -81,43 +44,30 @@ class NoteGenerationService(
         val cachedResponse = cache.get(prompt, systemPrompt, ai2Model)
         if (cachedResponse != null) {
             com.example.domain.services.ai.AiUsageTracker.trackCacheHit()
-            return cleanJson(cachedResponse)
+            return cleanLatex(cachedResponse)
         }
         
         com.example.domain.services.ai.AiUsageTracker.trackRequest((prompt.length + systemPrompt.length) / 4)
         val rawResponse = try {
-            clientForGeneration.generateContent(prompt, systemPrompt, "application/json", true)
+            clientForGeneration.generateContent(prompt, systemPrompt, "text/plain", true)
         } catch (e: Exception) {
             e.printStackTrace()
             com.example.utils.AppLogger.e("NoteGenerationService", "Using mock note due to error", e)
             """
-            {
-                "schemaVersion": 1,
-                "title": "Mock Notes for $topicTitle",
-                "author": "DocMorph",
-                "language": "en",
-                "blocks": [
-                    {
-                        "type": "heading",
-                        "level": 1,
-                        "text": "Introduction"
-                    },
-                    {
-                        "type": "paragraph",
-                        "text": "This is a mock note generated because the AI API call failed or the API key was invalid."
-                    }
-                ]
-            }
+            \section{Mock Notes for $topicTitle}
+            This is a mock note generated because the AI API call failed or the API key was invalid.
             """.trimIndent()
         }
+
         cache.put(prompt, systemPrompt, ai2Model, rawResponse)
         
-        return cleanJson(rawResponse)
+        return cleanLatex(rawResponse)
     }
 
-    private fun cleanJson(raw: String): String {
+    private fun cleanLatex(raw: String): String {
         return raw.trim()
-            .removePrefix("```json")
+            .removePrefix("```latex")
+            .removePrefix("```tex")
             .removePrefix("```")
             .removeSuffix("```")
             .trim()

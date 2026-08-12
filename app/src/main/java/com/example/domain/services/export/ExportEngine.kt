@@ -2,23 +2,17 @@ package com.example.domain.services.export
 
 import android.content.Context
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
-import android.print.PrintAttributes
-import android.print.PrintManager
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Toast
-import com.example.domain.models.document.Document
-import com.example.domain.services.html.JsonToHtmlConverter
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
+import com.example.domain.services.pdf.TectonicBridge
 import java.io.File
 import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ExportEngine(private val context: Context) {
     private val _exportProgress = MutableStateFlow(0f)
@@ -26,111 +20,88 @@ class ExportEngine(private val context: Context) {
 
     fun exportProjectFiles(
         projectName: String,
-        jsonContent: String,
+        latexContent: String,
         isPdf: Boolean = true,
-        onComplete: (pdfFile: File?, jsonFile: File) -> Unit
+        onComplete: (pdfFile: File?, texFile: File) -> Unit
     ) {
         _exportProgress.value = 0f
-        try {
-            Timber.i("Exporting project %s as %s", projectName, if (isPdf) "PDF" else "HTML")
-            com.example.utils.AppLogger.i("ExportEngine", "Exporting project $projectName as ${if (isPdf) "PDF" else "HTML"}")
-            val safeName = projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
-            
-            var documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            var baseDir = File(documentsDir, "aipdfs/$safeName")
-            Timber.d("Target base directory: %s", baseDir.absolutePath)
-            
-            if (!baseDir.exists() && !baseDir.mkdirs()) {
-                documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.filesDir
-                baseDir = File(documentsDir, "aipdfs/$safeName")
-            }
-            baseDir.mkdirs()
-            
-            val jsonFile = File(baseDir, "document.json")
-            jsonFile.writeText(jsonContent)
-            
-            val htmlFile = File(baseDir, "document.html")
-            
-            _exportProgress.value = 0f
-        try {
-                // Parse JSON to Document
-                val jsonFormat = Json { ignoreUnknownKeys = true; classDiscriminator = "type"; isLenient = true }
-                val document = jsonFormat.decodeFromString<Document>(jsonContent)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Timber.i("Exporting project %s as %s", projectName, if (isPdf) "PDF" else "LaTeX")
+                com.example.utils.AppLogger.i("ExportEngine", "Exporting project $projectName as ${if (isPdf) "PDF" else "LaTeX"}")
+                val safeName = projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
                 
-                // Convert to HTML
-                val htmlConverter = JsonToHtmlConverter()
-                Timber.d("Starting HTML conversion for document: %s", document.title)
-                val htmlString = htmlConverter.convert(document)
-                Timber.d("HTML conversion complete. Length: %d", htmlString.length)
-                htmlFile.writeText(htmlString)
+                var documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                var baseDir = File(documentsDir, "aipdfs/\$safeName")
+                Timber.d("Target base directory: %s", baseDir.absolutePath)
                 
+                if (!baseDir.exists() && !baseDir.mkdirs()) {
+                    documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.filesDir
+                    baseDir = File(documentsDir, "aipdfs/\$safeName")
+                }
+                baseDir.mkdirs()
+                
+                // Wrap in full document
+                val fullLatex = """
+                    \documentclass{article}
+                    \usepackage[utf8]{inputenc}
+                    \usepackage{amsmath}
+                    \usepackage{amsfonts}
+                    \usepackage{amssymb}
+                    \title{$projectName}
+                    \begin{document}
+                    \maketitle
+                    $latexContent
+                    \end{document}
+                """.trimIndent()
+
+                val texFile = File(baseDir, "document.tex")
+                texFile.writeText(fullLatex)
+                
+                _exportProgress.value = 0.5f
+
                 if (isPdf) {
-                    // Render PDF using WebView
-                    Handler(Looper.getMainLooper()).post {
-                        val webView = WebView(context)
-                        webView.settings.javaScriptEnabled = true
-                        webView.settings.allowFileAccess = true 
-                        webView.settings.domStorageEnabled = true
-                        webView.webChromeClient = object : android.webkit.WebChromeClient() {
-                            override fun onProgressChanged(view: WebView, newProgress: Int) {
-                                _exportProgress.value = newProgress / 100f
+                    try {
+                        val result = TectonicBridge.compileLatex(context, fullLatex)
+                        if (result.isSuccess) {
+                            val generatedPdf = result.getOrNull()
+                            if (generatedPdf != null && generatedPdf.exists()) {
+                                val targetPdf = File(baseDir, "document.pdf")
+                                generatedPdf.copyTo(targetPdf, overwrite = true)
+                                _exportProgress.value = 1f
+                                withContext(Dispatchers.Main) {
+                                    onComplete(targetPdf, texFile)
+                                }
+                                return@launch
                             }
                         }
-                        webView.webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView, url: String) {
-                                Timber.d("WebView onPageFinished triggered for URL: %s", url)
-                                // 🛡️ Smart Polling: Wait for KaTeX 'data-render-complete'
-                                pollForKaTeX(webView, safeName, htmlFile, onComplete, 0)
-                            }
+                        throw Exception("PDF compilation failed: ${result.exceptionOrNull()?.message}")
+                    } catch (e: UnsatisfiedLinkError) {
+                        Timber.e(e, "Tectonic JNI missing")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "JNI library missing. Saved as .tex only. Run `cargo ndk` to build.", Toast.LENGTH_LONG).show()
+                            onComplete(null, texFile)
                         }
-                        // Load the HTML string with a dummy base URL to allow KaTeX CDN to load
-                        webView.loadDataWithBaseURL("file:///android_asset/", htmlString, "text/html", "UTF-8", null)
+                    } catch (e: Exception) {
+                        Timber.e(e, "Render Error during export")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Render Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            onComplete(null, texFile)
+                        }
                     }
                 } else {
-                    onComplete(null, htmlFile)
+                    _exportProgress.value = 1f
+                    withContext(Dispatchers.Main) {
+                        onComplete(null, texFile)
+                    }
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Render Error during export")
-                com.example.utils.AppLogger.e("ExportEngine", "Render Error: ${e.localizedMessage}", e)
-                e.printStackTrace()
-                Toast.makeText(context, "Render Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                onComplete(null, jsonFile)
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to export project")
-            com.example.utils.AppLogger.e("ExportEngine", "Failed: ${e.localizedMessage}", e)
-            e.printStackTrace()
-            Toast.makeText(context, "Failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-        }
-    }
-    
-    private fun printWebView(webView: WebView, jobName: String) {
-        val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
-        val printAdapter = webView.createPrintDocumentAdapter(jobName)
-        val builder = PrintAttributes.Builder()
-        builder.setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-        Timber.d("Initiating PrintManager.print for job: %s", jobName)
-        printManager.print(jobName, printAdapter, builder.build())
-    }
-    private fun pollForKaTeX(webView: WebView, jobName: String, htmlFile: File, onComplete: (File?, File) -> Unit, attempts: Int) {
-        if (attempts > 30) { // Timeout after 4.5 seconds
-            Timber.e("KaTeX rendering timed out. Printing anyway.")
-            printWebView(webView, jobName)
-            onComplete(null, htmlFile)
-            return
-        }
-        
-        webView.evaluateJavascript("document.body.getAttribute('data-render-complete');") { result ->
-            if (result != null && result.contains("true")) {
-                Timber.d("KaTeX rendering verified complete. Triggering print.")
-                printWebView(webView, jobName)
-                onComplete(null, htmlFile)
-            } else {
-                Handler(Looper.getMainLooper()).postDelayed({
-                    pollForKaTeX(webView, jobName, htmlFile, onComplete, attempts + 1)
-                }, 150)
+                Timber.e(e, "Failed to export project")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    onComplete(null, File(""))
+                }
             }
         }
     }
-
 }
