@@ -33,12 +33,12 @@ jobs:
           echo "Downloading Tectonic TeX Live bundle..."
           curl -L -o app/src/main/assets/tectonic-bundle/default.ttb "https://github.com/tectonic-typesetting/tectonic-texlive-bundles/releases/download/tlextras-2021.3r1/tlextras-2021.3r1.tar"
 
-      - name: Build Tectonic JNI (Pure Rust Optimized)
+      - name: Build Tectonic JNI (Internal Backend Override)
         env:
           CARGO_BUILD_JOBS: "2"
+          TECTONIC_DEP_BACKEND: "internal"
         run: |
           cd app/src/main/rust/tectonic-jni
-          # Build using bundled fallback features to avoid external C package requirements
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../libs build --release
 
       - name: Generate Gradle Wrapper (Cloud Execution)
