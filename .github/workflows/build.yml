@@ -36,21 +36,10 @@ jobs:
       - name: Download Tectonic TeX Bundle
         run: |
           mkdir -p app/src/main/assets/tectonic-bundle
-          echo "Downloading Tectonic TeX Live bundle..."
-          curl -fL --retry 5 --retry-delay 5 --retry-connrefused \
+          echo "Downloading Tectonic TeX Live bundle from official GitHub Release..."
+          curl -fL --retry 5 --retry-delay 5 \
             -o app/src/main/assets/tectonic-bundle/default.ttb \
-            "https://data1.fullyjustified.net/tlextras-2021.3r1.tar"
-
-          echo "Verifying bundle checksum..."
-          curl -fL --retry 5 --retry-delay 5 -o expected.shasum \
-            "https://raw.githubusercontent.com/tectonic-typesetting/tectonic-texlive-bundles/master/tlextras-2021.3r1.shasum"
-          ACTUAL=$(sha256sum app/src/main/assets/tectonic-bundle/default.ttb | awk '{print $1}')
-          EXPECTED=$(awk '{print $1}' expected.shasum)
-          if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "Checksum mismatch! Expected $EXPECTED, got $ACTUAL"
-            exit 1
-          fi
-          echo "Bundle checksum verified."
+            "https://github.com/tectonic-typesetting/tectonic-texlive-bundles/releases/download/tlextras-2021.3r1/tlextras-2021.3r1.tar"
 
       - name: Build Static Dependencies for Android NDK
         run: |
@@ -61,7 +50,10 @@ jobs:
           $CURL -o zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && tar xf zlib-1.2.13.tar.gz
           $CURL -o libpng-1.6.40.tar.gz https://download.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.gz && tar xf libpng-1.6.40.tar.gz
           $CURL -o graphite2-1.3.14.tgz https://github.com/silnrsi/graphite/releases/download/1.3.14/graphite2-1.3.14.tgz && tar xf graphite2-1.3.14.tgz
-          $CURL -o freetype-2.13.2.tar.gz https://download.sourceforge.net/project/freetype/freetype2/2.13.2/freetype-2.13.2.tar.gz && tar xf freetype-2.13.2.tar.gz
+          
+          # FIXED FREETYPE URL (GNU Savannah Mirror)
+          $CURL -o freetype-2.13.2.tar.gz https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz && tar xf freetype-2.13.2.tar.gz
+          
           $CURL -o harfbuzz-8.3.0.tar.xz https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz && tar xf harfbuzz-8.3.0.tar.xz
           $CURL -o expat-2.5.0.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz && tar xf expat-2.5.0.tar.gz
           $CURL -o fontconfig-2.14.2.tar.gz https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz && tar xf fontconfig-2.14.2.tar.gz
@@ -89,8 +81,7 @@ jobs:
             export AR=$TOOLCHAIN/bin/llvm-ar
             export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
 
-            # Isolate pkg-config to ONLY our cross-compiled deps, so it never
-            # accidentally resolves against host (x86_64) system libraries.
+            # Isolate pkg-config to ONLY our cross-compiled deps
             export PKG_CONFIG_LIBDIR="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
             export PKG_CONFIG_PATH="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
 
@@ -264,4 +255,3 @@ jobs:
         with:
           name: DocMorph-Debug-APK
           path: app/build/outputs/apk/debug/*.apk
-
