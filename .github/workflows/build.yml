@@ -108,7 +108,6 @@ jobs:
               -DANDROID_ABI=$abi \
               -DANDROID_PLATFORM=android-$API \
               -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/deps/$arch \
-              -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/deps/$arch \
               -DBUILD_SHARED_LIBS=OFF \
               -DCMAKE_POSITION_INDEPENDENT_CODE=ON
             cmake --build . -j4
@@ -128,7 +127,6 @@ jobs:
               -DANDROID_ABI=$abi \
               -DANDROID_PLATFORM=android-$API \
               -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/deps/$arch \
-              -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/deps/$arch \
               -DBUILD_SHARED_LIBS=OFF \
               -Dharfbuzz_with_cairo=OFF -Dharfbuzz_with_chafa=OFF -Dharfbuzz_with_glib=OFF -Dharfbuzz_with_gobject=OFF -Dharfbuzz_with_icu=OFF -Dharfbuzz_with_tests=OFF -Dharfbuzz_with_utilities=OFF
             cmake --build . -j4
@@ -291,11 +289,14 @@ jobs:
           PKG_CONFIG_LIBDIR_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android/lib/pkgconfig"
           PKG_CONFIG_SYSROOT_DIR_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android"
         run: |
-          # THE FIX: Nuke Ubuntu's default pkg-config directories from orbit so they literally cannot be found.
           sudo rm -rf /usr/lib/pkgconfig /usr/share/pkgconfig /usr/lib/x86_64-linux-gnu/pkgconfig
-          
           export PATH="$GITHUB_WORKSPACE/bin-override:$PATH"
           cd app/src/main/rust/tectonic-jni
+
+          # THE FIX: Forcefully override the broken Tectonic crate with the last stable version!
+          cargo generate-lockfile || true
+          cargo update -p tectonic_bundles --precise 0.4.0 || true
+
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../jniLibs build --release
 
       - name: Generate Gradle Wrapper (Cloud Execution)
