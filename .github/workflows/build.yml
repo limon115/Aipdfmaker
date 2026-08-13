@@ -22,33 +22,56 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Install System Dependencies
         run: sudo apt-get update && sudo apt-get install -y gperf
+
       - name: Install Rust & cargo-ndk
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
-          cargo install cargo-ndk
+          cargo install cargo-ndk --locked
 
       - name: Download Tectonic TeX Bundle
         run: |
           mkdir -p app/src/main/assets/tectonic-bundle
           echo "Downloading Tectonic TeX Live bundle..."
-          curl -fL -o app/src/main/assets/tectonic-bundle/default.ttb "https://github.com/tectonic-typesetting/tectonic-texlive-bundles/releases/download/tlextras-2021.3r1/tlextras-2021.3r1.tar"
+          curl -fL --retry 5 --retry-delay 5 --retry-connrefused \
+            -o app/src/main/assets/tectonic-bundle/default.ttb \
+            "https://data1.fullyjustified.net/tlextras-2021.3r1.tar"
+
+          echo "Verifying bundle checksum..."
+          curl -fL --retry 5 --retry-delay 5 -o expected.shasum \
+            "https://raw.githubusercontent.com/tectonic-typesetting/tectonic-texlive-bundles/master/tlextras-2021.3r1.shasum"
+          ACTUAL=$(sha256sum app/src/main/assets/tectonic-bundle/default.ttb | awk '{print $1}')
+          EXPECTED=$(awk '{print $1}' expected.shasum)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Checksum mismatch! Expected $EXPECTED, got $ACTUAL"
+            exit 1
+          fi
+          echo "Bundle checksum verified."
 
       - name: Build Static Dependencies for Android NDK
         run: |
-          # 1. Reliable Downloads
-          curl -fL -o zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && tar xf zlib-1.2.13.tar.gz
-          curl -fL -o libpng-1.6.40.tar.gz https://download.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.gz && tar xf libpng-1.6.40.tar.gz
-          curl -fL -o graphite2-1.3.14.tgz https://github.com/silnrsi/graphite/releases/download/1.3.14/graphite2-1.3.14.tgz && tar xf graphite2-1.3.14.tgz
-          curl -fL -o freetype-2.13.2.tar.gz https://download.sourceforge.net/project/freetype/freetype2/2.13.2/freetype-2.13.2.tar.gz && tar xf freetype-2.13.2.tar.gz
-          curl -fL -o harfbuzz-8.3.0.tar.xz https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz && tar xf harfbuzz-8.3.0.tar.xz
-          
-          # NEW: Expat and Fontconfig
-          curl -fL -o expat-2.5.0.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz && tar xf expat-2.5.0.tar.gz
-          curl -fL -o fontconfig-2.14.2.tar.gz https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz && tar xf fontconfig-2.14.2.tar.gz
+          set -euo pipefail
 
-          export NDK=$ANDROID_NDK_HOME
+          # 1. Reliable Downloads (with retries for flaky mirrors)
+          CURL="curl -fL --retry 5 --retry-delay 5 --retry-connrefused"
+          $CURL -o zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && tar xf zlib-1.2.13.tar.gz
+          $CURL -o libpng-1.6.40.tar.gz https://download.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.gz && tar xf libpng-1.6.40.tar.gz
+          $CURL -o graphite2-1.3.14.tgz https://github.com/silnrsi/graphite/releases/download/1.3.14/graphite2-1.3.14.tgz && tar xf graphite2-1.3.14.tgz
+          $CURL -o freetype-2.13.2.tar.gz https://download.sourceforge.net/project/freetype/freetype2/2.13.2/freetype-2.13.2.tar.gz && tar xf freetype-2.13.2.tar.gz
+          $CURL -o harfbuzz-8.3.0.tar.xz https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz && tar xf harfbuzz-8.3.0.tar.xz
+          $CURL -o expat-2.5.0.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz && tar xf expat-2.5.0.tar.gz
+          $CURL -o fontconfig-2.14.2.tar.gz https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz && tar xf fontconfig-2.14.2.tar.gz
+
+          export NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_LATEST_HOME:-}}
+          if [ -z "$NDK" ] || [ ! -d "$NDK" ]; then
+            echo "ERROR: Could not locate the Android NDK (checked ANDROID_NDK_HOME and ANDROID_NDK_LATEST_HOME)."
+            exit 1
+          fi
+          echo "Using NDK at: $NDK"
           export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
           export API=24
 
@@ -65,7 +88,12 @@ jobs:
             export CXX=$TOOLCHAIN/bin/${arch}${API}-clang++
             export AR=$TOOLCHAIN/bin/llvm-ar
             export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
-            
+
+            # Isolate pkg-config to ONLY our cross-compiled deps, so it never
+            # accidentally resolves against host (x86_64) system libraries.
+            export PKG_CONFIG_LIBDIR="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
+            export PKG_CONFIG_PATH="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
+
             # zlib
             mkdir -p zlib-build-$arch && cd zlib-build-$arch
             ../zlib-1.2.13/configure --prefix=$GITHUB_WORKSPACE/deps/$arch --static
@@ -87,10 +115,12 @@ jobs:
               -DANDROID_ABI=$abi \
               -DANDROID_PLATFORM=android-$API \
               -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/deps/$arch \
+              -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/deps/$arch \
               -DBUILD_SHARED_LIBS=OFF \
               -DCMAKE_POSITION_INDEPENDENT_CODE=ON
             cmake --build . -j4
-            cmake --install . && cd ..
+            cmake --install .
+            cd ..
 
             # freetype
             mkdir -p freetype-build-$arch && cd freetype-build-$arch
@@ -105,17 +135,20 @@ jobs:
               -DANDROID_ABI=$abi \
               -DANDROID_PLATFORM=android-$API \
               -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/deps/$arch \
+              -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/deps/$arch \
               -DBUILD_SHARED_LIBS=OFF \
               -Dharfbuzz_with_cairo=OFF -Dharfbuzz_with_chafa=OFF -Dharfbuzz_with_glib=OFF -Dharfbuzz_with_gobject=OFF -Dharfbuzz_with_icu=OFF -Dharfbuzz_with_tests=OFF -Dharfbuzz_with_utilities=OFF
-            cmake --build . -j4 && cmake --install . && cd ..
+            cmake --build . -j4
+            cmake --install .
+            cd ..
 
-            # NEW: expat
+            # expat
             mkdir -p expat-build-$arch && cd expat-build-$arch
             ../expat-2.5.0/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared
             make -j4 install
             cd ..
 
-            # NEW: fontconfig
+            # fontconfig
             mkdir -p fontconfig-build-$arch && cd fontconfig-build-$arch
             export EXPAT_CFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include"
             export EXPAT_LIBS="-L$GITHUB_WORKSPACE/deps/$arch/lib -lexpat"
@@ -128,7 +161,7 @@ jobs:
             # --- BULLETPROOF PKG-CONFIG ECHO WRITERS ---
             PKG_DIR="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
             mkdir -p "$PKG_DIR"
-            
+
             echo "prefix=$GITHUB_WORKSPACE/deps/$arch" > "$PKG_DIR/zlib.pc"
             echo "exec_prefix=\${prefix}" >> "$PKG_DIR/zlib.pc"
             echo "libdir=\${exec_prefix}/lib" >> "$PKG_DIR/zlib.pc"
@@ -179,7 +212,6 @@ jobs:
             echo "Libs: -L\${libdir} -lharfbuzz" >> "$PKG_DIR/harfbuzz.pc"
             echo "Cflags: -I\${includedir}/harfbuzz" >> "$PKG_DIR/harfbuzz.pc"
 
-            # NEW .pc Files for Expat & Fontconfig
             echo "prefix=$GITHUB_WORKSPACE/deps/$arch" > "$PKG_DIR/expat.pc"
             echo "exec_prefix=\${prefix}" >> "$PKG_DIR/expat.pc"
             echo "libdir=\${exec_prefix}/lib" >> "$PKG_DIR/expat.pc"
@@ -222,7 +254,7 @@ jobs:
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
 
       - name: Grant Execute Permissions
-        run: chmod +x gradlew || true
+        run: chmod +x gradlew
 
       - name: Assemble Debug APK with Gradle
         run: ./gradlew assembleDebug --no-daemon
@@ -232,3 +264,4 @@ jobs:
         with:
           name: DocMorph-Debug-APK
           path: app/build/outputs/apk/debug/*.apk
+
