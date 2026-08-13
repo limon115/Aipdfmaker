@@ -7,6 +7,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-tectonic_bundles = "0.3"
+tectonic_bundles = "*"
 jni = "0.21.1"
 tectonic = { version = "*", default-features = false } # Adjust based on the tectonic version
