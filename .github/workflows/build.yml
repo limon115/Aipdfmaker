@@ -223,6 +223,8 @@ jobs:
           CARGO_BUILD_JOBS: "2"
           PKG_CONFIG_ALLOW_CROSS: "1"
           TECTONIC_DEP_BACKEND: "pkg-config"
+          # THE FIX: Tell Tectonic to vendor ICU natively, isolating the host!
+          ICU_NO_PKG_CONFIG: "1"
           PKG_CONFIG_PATH_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android/lib/pkgconfig"
           PKG_CONFIG_PATH_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi/lib/pkgconfig"
           PKG_CONFIG_PATH_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android/lib/pkgconfig"
