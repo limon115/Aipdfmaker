@@ -33,30 +33,24 @@ jobs:
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           cargo install cargo-ndk --locked
 
-      - name: Download Tectonic TeX Bundle
+      - name: Setup Tectonic TeX Bundle
         run: |
           mkdir -p app/src/main/assets/tectonic-bundle
-          echo "Downloading Tectonic TeX Live bundle from official GitHub Release..."
-          curl -fL --retry 5 --retry-delay 5 \
-            -o app/src/main/assets/tectonic-bundle/default.ttb \
-            "https://github.com/tectonic-typesetting/tectonic-texlive-bundles/releases/download/tlextras-2021.3r1/tlextras-2021.3r1.tar"
+          echo "Extracting vendored Tectonic TeX Live bundle..."
+          cp vendor_tars/tlextras-2021.3r1.tar app/src/main/assets/tectonic-bundle/default.ttb
 
       - name: Build Static Dependencies for Android NDK
         run: |
           set -euo pipefail
 
-          # 1. Reliable Downloads (with retries for flaky mirrors)
-          CURL="curl -fL --retry 5 --retry-delay 5 --retry-connrefused"
-          $CURL -o zlib-1.2.13.tar.gz https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz && tar xf zlib-1.2.13.tar.gz
-          $CURL -o libpng-1.6.40.tar.gz https://download.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.gz && tar xf libpng-1.6.40.tar.gz
-          $CURL -o graphite2-1.3.14.tgz https://github.com/silnrsi/graphite/releases/download/1.3.14/graphite2-1.3.14.tgz && tar xf graphite2-1.3.14.tgz
-          
-          # FIXED FREETYPE URL (GNU Savannah Mirror)
-          $CURL -o freetype-2.13.2.tar.gz https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz && tar xf freetype-2.13.2.tar.gz
-          
-          $CURL -o harfbuzz-8.3.0.tar.xz https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz && tar xf harfbuzz-8.3.0.tar.xz
-          $CURL -o expat-2.5.0.tar.gz https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz && tar xf expat-2.5.0.tar.gz
-          $CURL -o fontconfig-2.14.2.tar.gz https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz && tar xf fontconfig-2.14.2.tar.gz
+          echo "Extracting vendored tarballs..."
+          cp vendor_tars/zlib-1.2.13.tar.gz . && tar xf zlib-1.2.13.tar.gz
+          cp vendor_tars/libpng-1.6.40.tar.gz . && tar xf libpng-1.6.40.tar.gz
+          cp vendor_tars/graphite2-1.3.14.tgz . && tar xf graphite2-1.3.14.tgz
+          cp vendor_tars/freetype-2.13.2.tar.gz . && tar xf freetype-2.13.2.tar.gz
+          cp vendor_tars/harfbuzz-8.3.0.tar.xz . && tar xf harfbuzz-8.3.0.tar.xz
+          cp vendor_tars/expat-2.5.0.tar.gz . && tar xf expat-2.5.0.tar.gz
+          cp vendor_tars/fontconfig-2.14.2.tar.gz . && tar xf fontconfig-2.14.2.tar.gz
 
           export NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_LATEST_HOME:-}}
           if [ -z "$NDK" ] || [ ! -d "$NDK" ]; then
