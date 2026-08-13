@@ -43,6 +43,15 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Mask the host's icu-config
+          mkdir -p $GITHUB_WORKSPACE/bin-override
+          cat << 'EOSH' > $GITHUB_WORKSPACE/bin-override/icu-config
+          #!/bin/sh
+          exit 1
+          EOSH
+          chmod +x $GITHUB_WORKSPACE/bin-override/icu-config
+          export PATH="$GITHUB_WORKSPACE/bin-override:$PATH"
+
           echo "Extracting vendored tarballs..."
           cp vendor_tars/zlib-1.2.13.tar.gz . && tar xf zlib-1.2.13.tar.gz
           cp vendor_tars/libpng-1.6.40.tar.gz . && tar xf libpng-1.6.40.tar.gz
@@ -51,15 +60,18 @@ jobs:
           cp vendor_tars/harfbuzz-8.3.0.tar.xz . && tar xf harfbuzz-8.3.0.tar.xz
           cp vendor_tars/expat-2.5.0.tar.gz . && tar xf expat-2.5.0.tar.gz
           cp vendor_tars/fontconfig-2.14.2.tar.gz . && tar xf fontconfig-2.14.2.tar.gz
+          cp vendor_tars/icu4c-73_2-src.tgz . && tar xf icu4c-73_2-src.tgz
 
           export NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_LATEST_HOME:-}}
-          if [ -z "$NDK" ] || [ ! -d "$NDK" ]; then
-            echo "ERROR: Could not locate the Android NDK (checked ANDROID_NDK_HOME and ANDROID_NDK_LATEST_HOME)."
-            exit 1
-          fi
           echo "Using NDK at: $NDK"
           export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
           export API=24
+
+          echo "Building ICU Host Tools..."
+          mkdir -p icu-host && cd icu-host
+          ../icu/source/runConfigureICU Linux --enable-static --disable-shared
+          make -j4
+          cd ..
 
           declare -A ABI_MAP=(
             [aarch64-linux-android]=arm64-v8a
@@ -74,10 +86,6 @@ jobs:
             export CXX=$TOOLCHAIN/bin/${arch}${API}-clang++
             export AR=$TOOLCHAIN/bin/llvm-ar
             export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
-
-            # Isolate pkg-config to ONLY our cross-compiled deps
-            export PKG_CONFIG_LIBDIR="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
-            export PKG_CONFIG_PATH="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
 
             # zlib
             mkdir -p zlib-build-$arch && cd zlib-build-$arch
@@ -140,6 +148,15 @@ jobs:
             export FREETYPE_CFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include/freetype2"
             export FREETYPE_LIBS="-L$GITHUB_WORKSPACE/deps/$arch/lib -lfreetype"
             ../fontconfig-2.14.2/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared --disable-docs --with-expat=$GITHUB_WORKSPACE/deps/$arch
+            make -j4 install
+            cd ..
+
+            # icu
+            echo "Building Target ICU for $arch..."
+            mkdir -p icu-build-$arch && cd icu-build-$arch
+            export CFLAGS="-fPIC"
+            export CXXFLAGS="-fPIC -std=c++14"
+            ../icu/source/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared --with-data-packaging=static --with-cross-build=$GITHUB_WORKSPACE/icu-host
             make -j4 install
             cd ..
 
@@ -216,6 +233,36 @@ jobs:
             echo "Version: 2.14.2" >> "$PKG_DIR/fontconfig.pc"
             echo "Libs: -L\${libdir} -lfontconfig -lexpat -lfreetype -lpng16 -lz -lm" >> "$PKG_DIR/fontconfig.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/fontconfig.pc"
+
+            echo "prefix=$GITHUB_WORKSPACE/deps/$arch" > "$PKG_DIR/icu-uc.pc"
+            echo "exec_prefix=\${prefix}" >> "$PKG_DIR/icu-uc.pc"
+            echo "libdir=\${exec_prefix}/lib" >> "$PKG_DIR/icu-uc.pc"
+            echo "includedir=\${prefix}/include" >> "$PKG_DIR/icu-uc.pc"
+            echo "Name: icu-uc" >> "$PKG_DIR/icu-uc.pc"
+            echo "Description: ICU Unicode library" >> "$PKG_DIR/icu-uc.pc"
+            echo "Version: 73.2" >> "$PKG_DIR/icu-uc.pc"
+            echo "Libs: -L\${libdir} -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-uc.pc"
+            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-uc.pc"
+
+            echo "prefix=$GITHUB_WORKSPACE/deps/$arch" > "$PKG_DIR/icu-i18n.pc"
+            echo "exec_prefix=\${prefix}" >> "$PKG_DIR/icu-i18n.pc"
+            echo "libdir=\${exec_prefix}/lib" >> "$PKG_DIR/icu-i18n.pc"
+            echo "includedir=\${prefix}/include" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Name: icu-i18n" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Description: ICU I18N library" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Version: 73.2" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Libs: -L\${libdir} -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-i18n.pc"
+
+            echo "prefix=$GITHUB_WORKSPACE/deps/$arch" > "$PKG_DIR/icu-io.pc"
+            echo "exec_prefix=\${prefix}" >> "$PKG_DIR/icu-io.pc"
+            echo "libdir=\${exec_prefix}/lib" >> "$PKG_DIR/icu-io.pc"
+            echo "includedir=\${prefix}/include" >> "$PKG_DIR/icu-io.pc"
+            echo "Name: icu-io" >> "$PKG_DIR/icu-io.pc"
+            echo "Description: ICU IO library" >> "$PKG_DIR/icu-io.pc"
+            echo "Version: 73.2" >> "$PKG_DIR/icu-io.pc"
+            echo "Libs: -L\${libdir} -licuio -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-io.pc"
+            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-io.pc"
           done
 
       - name: Build Tectonic JNI (Rust)
@@ -223,13 +270,31 @@ jobs:
           CARGO_BUILD_JOBS: "2"
           PKG_CONFIG_ALLOW_CROSS: "1"
           TECTONIC_DEP_BACKEND: "pkg-config"
-          # THE FIX: Tell Tectonic to vendor ICU natively, isolating the host!
-          ICU_NO_PKG_CONFIG: "1"
+          
+          # AARCH64
           PKG_CONFIG_PATH_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android/lib/pkgconfig"
+          PKG_CONFIG_LIBDIR_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android/lib/pkgconfig"
+          PKG_CONFIG_SYSROOT_DIR_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android"
+
+          # ARMV7
           PKG_CONFIG_PATH_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi/lib/pkgconfig"
+          PKG_CONFIG_LIBDIR_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi/lib/pkgconfig"
+          PKG_CONFIG_SYSROOT_DIR_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi"
+
+          # X86_64
           PKG_CONFIG_PATH_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android/lib/pkgconfig"
+          PKG_CONFIG_LIBDIR_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android/lib/pkgconfig"
+          PKG_CONFIG_SYSROOT_DIR_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android"
+
+          # X86
           PKG_CONFIG_PATH_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android/lib/pkgconfig"
+          PKG_CONFIG_LIBDIR_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android/lib/pkgconfig"
+          PKG_CONFIG_SYSROOT_DIR_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android"
         run: |
+          # THE FIX: Nuke Ubuntu's default pkg-config directories from orbit so they literally cannot be found.
+          sudo rm -rf /usr/lib/pkgconfig /usr/share/pkgconfig /usr/lib/x86_64-linux-gnu/pkgconfig
+          
+          export PATH="$GITHUB_WORKSPACE/bin-override:$PATH"
           cd app/src/main/rust/tectonic-jni
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../jniLibs build --release
 
