@@ -22,6 +22,8 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y gperf
       - name: Install Rust & cargo-ndk
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
@@ -67,14 +69,16 @@ jobs:
             # zlib
             mkdir -p zlib-build-$arch && cd zlib-build-$arch
             ../zlib-1.2.13/configure --prefix=$GITHUB_WORKSPACE/deps/$arch --static
-            make -j4 install && cd ..
+            make -j4 install
+            cd ..
 
             # libpng
             mkdir -p png-build-$arch && cd png-build-$arch
             export CPPFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include"
             export LDFLAGS="-L$GITHUB_WORKSPACE/deps/$arch/lib"
             ../libpng-1.6.40/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static
-            make -j4 install && cd ..
+            make -j4 install
+            cd ..
 
             # graphite2
             mkdir -p graphite2-build-$arch && cd graphite2-build-$arch
@@ -91,7 +95,8 @@ jobs:
             # freetype
             mkdir -p freetype-build-$arch && cd freetype-build-$arch
             ../freetype-2.13.2/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static
-            make -j4 install && cd ..
+            make -j4 install
+            cd ..
 
             # harfbuzz
             mkdir -p hb-build-$arch && cd hb-build-$arch
@@ -107,7 +112,8 @@ jobs:
             # NEW: expat
             mkdir -p expat-build-$arch && cd expat-build-$arch
             ../expat-2.5.0/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared
-            make -j4 install && cd ..
+            make -j4 install
+            cd ..
 
             # NEW: fontconfig
             mkdir -p fontconfig-build-$arch && cd fontconfig-build-$arch
@@ -116,7 +122,8 @@ jobs:
             export FREETYPE_CFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include/freetype2"
             export FREETYPE_LIBS="-L$GITHUB_WORKSPACE/deps/$arch/lib -lfreetype"
             ../fontconfig-2.14.2/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared --disable-docs --with-expat=$GITHUB_WORKSPACE/deps/$arch
-            make -j4 install && cd ..
+            make -j4 install
+            cd ..
 
             # --- BULLETPROOF PKG-CONFIG ECHO WRITERS ---
             PKG_DIR="$GITHUB_WORKSPACE/deps/$arch/lib/pkgconfig"
