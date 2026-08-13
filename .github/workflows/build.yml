@@ -294,8 +294,6 @@ jobs:
           cd app/src/main/rust/tectonic-jni
 
           # THE FIX: Forcefully override the broken Tectonic crate with the last stable version!
-          cargo generate-lockfile || true
-          cargo update -p tectonic_bundles --precise 0.4.0 || true
 
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../jniLibs build --release
 
