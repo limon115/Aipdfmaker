@@ -60,7 +60,7 @@ class LatexCompilerRepository(private val context: Context) {
                 }
             }
 
-            val texFile = File(baseDir, "document.tex")
+            val texFile = File(baseDir, "main.tex")
             texFile.writeText(fullLatex)
 
             val result = TectonicBridge.compileLatex(context, fullLatex)
