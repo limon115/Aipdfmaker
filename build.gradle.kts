@@ -1,9 +1,14 @@
 buildscript {
     configurations.classpath {
         resolutionStrategy.eachDependency {
-            if (requested.group.startsWith("org.jetbrains.kotlin")) {
+            if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-")) {
                 useVersion("2.2.10")
             }
+        }
+    }
+}
+
+
         }
     }
 }
