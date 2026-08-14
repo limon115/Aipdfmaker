@@ -30,11 +30,11 @@ class LatexCompilerRepository(private val context: Context) {
                 \usepackage{fontspec}
                 
                 % Set Baskervville as the premium main English font
-                \setmainfont[Path=./]{Baskervville.ttf}
+                \setmainfont[Path=${baseDir.absolutePath}/]{Baskervville.ttf}
                 
                 % Auto-switch to Kalpurush ONLY for Bengali characters
                 \usepackage[Bengali]{ucharclasses}
-                \newfontfamily\bengalifont[Path=./]{kalpurush.ttf}
+                \newfontfamily\bengalifont[Path=${baseDir.absolutePath}/]{kalpurush.ttf}
                 \setTransitionsForBengali{\begingroup\bengalifont}{\endgroup}
                 
                 \title{$projectName}
