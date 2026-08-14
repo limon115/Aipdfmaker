@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir -p app/src/main/assets/tectonic-bundle
           echo "Extracting vendored Tectonic TeX Live bundle..."
-          cp vendor_tars/tlextras-2021.3r1.tar app/src/main/assets/tectonic-bundle/default.ttb
+          mkdir -p app/src/main/assets/tectonic-bundle/default.ttb && tar -xf vendor_tars/tlextras-2021.3r1.tar -C app/src/main/assets/tectonic-bundle/default.ttb
 
       - name: Build Static Dependencies for Android NDK
         run: |
