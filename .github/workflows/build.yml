@@ -33,11 +33,11 @@ jobs:
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           cargo install cargo-ndk --locked
 
-      - name: Download Tectonic TeX Bundle
+      - name: Setup Tectonic TeX Bundle
         run: |
           mkdir -p app/src/main/assets/tectonic-bundle
-          echo "Downloading Tectonic TeX Live bundle directly from working server..."
-          curl -fL --retry 5 --retry-delay 5 -o app/src/main/assets/tectonic-bundle/default.ttb "https://data1.fullyjustified.net/tlextras-2021.3r1.tar"
+          echo "Extracting vendored Tectonic TeX Live bundle..."
+          cp vendor_tars/tlextras-2021.3r1.tar app/src/main/assets/tectonic-bundle/default.ttb
 
       - name: Build Static Dependencies for Android NDK
         run: |
