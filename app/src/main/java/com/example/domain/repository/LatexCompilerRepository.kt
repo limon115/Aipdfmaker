@@ -12,10 +12,10 @@ class LatexCompilerRepository(private val context: Context) {
     suspend fun compileAndExportPdf(projectName: String, latexContent: String): Result<Pair<File, File>> = withContext(Dispatchers.IO) {
         runCatching {
             val safeName = projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
-            
+
             var documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
             var baseDir = File(documentsDir, "aipdfs/$safeName")
-            
+
             if (!baseDir.exists() && !baseDir.mkdirs()) {
                 documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: context.filesDir
                 baseDir = File(documentsDir, "aipdfs/$safeName")
@@ -28,7 +28,15 @@ class LatexCompilerRepository(private val context: Context) {
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
-                \setmainfont{kalpurush.ttf}[Path=./]
+                
+                % Set Baskervville as the premium main English font
+                \setmainfont[Path=./]{Baskervville.ttf}
+                
+                % Auto-switch to Kalpurush ONLY for Bengali characters
+                \usepackage[Bengali]{ucharclasses}
+                \newfontfamily\bengalifont[Path=./]{kalpurush.ttf}
+                \setTransitionsForBengali{\begingroup\bengalifont}{\endgroup}
+                
                 \title{$projectName}
                 \begin{document}
                 \maketitle
@@ -36,13 +44,19 @@ class LatexCompilerRepository(private val context: Context) {
                 \end{document}
             """.trimIndent()
 
-            // Copy the Kalpurush font to the working directory so Tectonic can find it
-            val fontFile = File(baseDir, "kalpurush.ttf")
-            if (!fontFile.exists()) {
+            // Copy Kalpurush (Bengali Font)
+            val bnFontFile = File(baseDir, "kalpurush.ttf")
+            if (!bnFontFile.exists()) {
                 context.assets.open("fonts/kalpurush.ttf").use { input ->
-                    fontFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+                    bnFontFile.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+
+            // Copy Baskervville (English Font)
+            val enFontFile = File(baseDir, "Baskervville.ttf")
+            if (!enFontFile.exists()) {
+                context.assets.open("fonts/Baskervville.ttf").use { input ->
+                    enFontFile.outputStream().use { output -> input.copyTo(output) }
                 }
             }
 
@@ -50,7 +64,7 @@ class LatexCompilerRepository(private val context: Context) {
             texFile.writeText(fullLatex)
 
             val result = TectonicBridge.compileLatex(context, fullLatex)
-            
+
             if (result.isSuccess) {
                 val generatedPdf = result.getOrNull()
                 if (generatedPdf != null && generatedPdf.exists()) {
