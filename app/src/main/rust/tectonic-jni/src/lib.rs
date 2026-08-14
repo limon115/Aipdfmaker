@@ -18,6 +18,10 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
 
     let mut status = tectonic::status::NoopStatusBackend::default();
 
+        // THE FIX: Blindfold Fontconfig to prevent C++ panic on Android
+    std::env::set_var("FONTCONFIG_FILE", "/dev/null");
+    std::env::set_var("FONTCONFIG_PATH", "/dev/null");
+    
     let mut builder = ProcessingSessionBuilder::default();
     builder
         .bundle(Box::new(tectonic_bundles::dir::DirBundle::new(std::path::PathBuf::from(&bundle_path))))
