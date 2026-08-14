@@ -18,14 +18,16 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
 
     let mut status = tectonic::status::NoopStatusBackend::default();
 
-    let mut session = ProcessingSessionBuilder::default()
+    let mut builder = ProcessingSessionBuilder::default();
+    builder
         .bundle(Box::new(tectonic_bundles::dir::DirBundle::new(std::path::PathBuf::from(&bundle_path))))
         .primary_input_buffer(tex_source.as_bytes())
         .tex_input_name("main.tex")
         .build_date(std::time::SystemTime::now())
         .output_dir(PathBuf::from(&output_dir))
         .output_format(tectonic::driver::OutputFormat::Pdf)
-        .create(&mut status)
+        ;
+    let mut session = builder.create(&mut status)
         .unwrap();
 
     let result = session.run(&mut status);
