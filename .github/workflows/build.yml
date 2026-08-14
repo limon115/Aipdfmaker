@@ -207,7 +207,7 @@ jobs:
           sudo rm -rf /usr/lib/pkgconfig /usr/share/pkgconfig /usr/lib/x86_64-linux-gnu/pkgconfig
           export PATH="$GITHUB_WORKSPACE/bin-override:$PATH"
           cd app/src/main/rust/tectonic-jni
-          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../../jniLibs build --release
+          cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../jniLibs build --release
 
       - name: Generate Gradle Wrapper (Cloud Execution)
         run: gradle wrapper
