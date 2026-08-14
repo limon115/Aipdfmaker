@@ -21,6 +21,7 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
         // THE FIX: Blindfold Fontconfig to prevent C++ panic on Android
     std::env::set_var("FONTCONFIG_FILE", "/dev/null");
     std::env::set_var("FONTCONFIG_PATH", "/dev/null");
+    std::env::set_var("TECTONIC_CACHE_DIR", &output_dir);
     
     let mut builder = ProcessingSessionBuilder::default();
     builder
