@@ -96,8 +96,12 @@ jobs:
 
           for arch in aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android; do
             abi=${ABI_MAP[$arch]}
-            export CC=$TOOLCHAIN/bin/${arch}${API}-clang
-            export CXX=$TOOLCHAIN/bin/${arch}${API}-clang++
+            clang_prefix=$arch
+            if [ "$arch" = "armv7-linux-androideabi" ]; then
+                clang_prefix="armv7a-linux-androideabi"
+            fi
+            export CC=$TOOLCHAIN/bin/${clang_prefix}${API}-clang
+            export CXX=$TOOLCHAIN/bin/${clang_prefix}${API}-clang++
             export AR=$TOOLCHAIN/bin/llvm-ar
             export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
             export CFLAGS="-Wno-error -fPIC"
