@@ -100,6 +100,8 @@ jobs:
             export CXX=$TOOLCHAIN/bin/${arch}${API}-clang++
             export AR=$TOOLCHAIN/bin/llvm-ar
             export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
+            export CFLAGS="-Wno-error -fPIC"
+            export CXXFLAGS="-Wno-error -fPIC"
 
             mkdir -p "zlib-build-$arch" && cd "zlib-build-$arch"
             ../zlib-1.2.13/configure --prefix="$GITHUB_WORKSPACE/deps/$arch" --static
