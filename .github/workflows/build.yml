@@ -213,7 +213,7 @@ jobs:
           find $NDK -name "libc++_shared.so" | grep "i686" | head -n 1 | xargs -I {} cp {} ../../jniLibs/x86/
 
       - name: Generate Gradle Wrapper (Cloud Execution)
-        run: gradle wrapper
+        run: gradle wrapper --gradle-version 8.10.2
 
       - name: Generate Debug Keystore Dynamically
         run: |
