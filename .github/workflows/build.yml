@@ -24,6 +24,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+          validate-wrappers: false
 
       - name: Install System Dependencies
         run: sudo apt-get update && sudo apt-get install -y gperf cmake make autoconf automake libtool pkg-config ninja-build
@@ -139,7 +142,7 @@ jobs:
             mkdir -p "icu-build-$arch" && cd "icu-build-$arch"
             export CFLAGS="-fPIC"
             export CXXFLAGS="-fPIC -std=c++14"
-            ../icu/source/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared --with-data-packaging=static --with-cross-build="$GITHUB_WORKSPACE/icu-host"
+            ../icu/source/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared --with-data-packaging=static --with-cross-build="$GITHUB_WORKSPACE/icu-ho[...]
             make -j4 install
             cd ..
 
@@ -148,44 +151,44 @@ jobs:
 
             for lib in zlib libpng freetype2 graphite2 harfbuzz expat fontconfig icu-uc icu-i18n icu-io; do
                 echo "prefix=$GITHUB_WORKSPACE/deps/$arch" > "$PKG_DIR/$lib.pc"
-                echo "exec_prefix=\${prefix}" >> "$PKG_DIR/$lib.pc"
-                echo "libdir=\${exec_prefix}/lib" >> "$PKG_DIR/$lib.pc"
-                echo "includedir=\${prefix}/include" >> "$PKG_DIR/$lib.pc"
+                echo "exec_prefix=${prefix}" >> "$PKG_DIR/$lib.pc"
+                echo "libdir=${exec_prefix}/lib" >> "$PKG_DIR/$lib.pc"
+                echo "includedir=${prefix}/include" >> "$PKG_DIR/$lib.pc"
                 echo "Name: $lib" >> "$PKG_DIR/$lib.pc"
                 echo "Description: $lib" >> "$PKG_DIR/$lib.pc"
                 echo "Version: 1.0" >> "$PKG_DIR/$lib.pc"
             done
 
             # Append appropriate Libs/Cflags entries
-            echo "Libs: -L\${libdir} -lz" >> "$PKG_DIR/zlib.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/zlib.pc"
+            echo "Libs: -L${libdir} -lz" >> "$PKG_DIR/zlib.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/zlib.pc"
 
-            echo "Libs: -L\${libdir} -lpng16 -lz" >> "$PKG_DIR/libpng.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/libpng.pc"
+            echo "Libs: -L${libdir} -lpng16 -lz" >> "$PKG_DIR/libpng.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/libpng.pc"
 
-            echo "Libs: -L\${libdir} -lfreetype" >> "$PKG_DIR/freetype2.pc"
-            echo "Cflags: -I\${includedir}/freetype2" >> "$PKG_DIR/freetype2.pc"
+            echo "Libs: -L${libdir} -lfreetype" >> "$PKG_DIR/freetype2.pc"
+            echo "Cflags: -I${includedir}/freetype2" >> "$PKG_DIR/freetype2.pc"
 
-            echo "Libs: -L\${libdir} -lgraphite2 -lstdc++" >> "$PKG_DIR/graphite2.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/graphite2.pc"
+            echo "Libs: -L${libdir} -lgraphite2 -lstdc++" >> "$PKG_DIR/graphite2.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/graphite2.pc"
 
-            echo "Libs: -L\${libdir} -lharfbuzz" >> "$PKG_DIR/harfbuzz.pc"
-            echo "Cflags: -I\${includedir}/harfbuzz" >> "$PKG_DIR/harfbuzz.pc"
+            echo "Libs: -L${libdir} -lharfbuzz" >> "$PKG_DIR/harfbuzz.pc"
+            echo "Cflags: -I${includedir}/harfbuzz" >> "$PKG_DIR/harfbuzz.pc"
 
-            echo "Libs: -L\${libdir} -lexpat" >> "$PKG_DIR/expat.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/expat.pc"
+            echo "Libs: -L${libdir} -lexpat" >> "$PKG_DIR/expat.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/expat.pc"
 
-            echo "Libs: -L\${libdir} -lfontconfig -lexpat -lfreetype -lpng16 -lz -lm" >> "$PKG_DIR/fontconfig.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/fontconfig.pc"
+            echo "Libs: -L${libdir} -lfontconfig -lexpat -lfreetype -lpng16 -lz -lm" >> "$PKG_DIR/fontconfig.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/fontconfig.pc"
 
-            echo "Libs: -L\${libdir} -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-uc.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-uc.pc"
+            echo "Libs: -L${libdir} -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-uc.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/icu-uc.pc"
 
-            echo "Libs: -L\${libdir} -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-i18n.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Libs: -L${libdir} -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-i18n.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/icu-i18n.pc"
 
-            echo "Libs: -L\${libdir} -licuio -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-io.pc"
-            echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-io.pc"
+            echo "Libs: -L${libdir} -licuio -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-io.pc"
+            echo "Cflags: -I${includedir}" >> "$PKG_DIR/icu-io.pc"
           done
 
       - name: Build Tectonic JNI (Rust)
@@ -230,9 +233,12 @@ jobs:
       - name: Generate Gradle Wrapper (Cloud Execution)
         run: gradle wrapper --gradle-version 8.10.2
 
+      - name: Print generated Gradle wrapper checksum
+        run: sha256sum gradle/wrapper/gradle-wrapper.jar || true
+
       - name: Generate Debug Keystore Dynamically
         run: |
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug/"
 
       - name: Grant Execute Permissions
         run: chmod +x gradlew
