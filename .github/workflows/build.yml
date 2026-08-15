@@ -158,7 +158,7 @@ jobs:
             mkdir -p "icu-build-$arch" && cd "icu-build-$arch"
             export CFLAGS="-fPIC"
             export CXXFLAGS="-fPIC -std=c++14"
-            ../icu/source/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared --with-data-packaging=static --with-cross-build="$GITHUB_WORKSPACE/icu-ho[...]
+            ../icu/source/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared --with-data-packaging=static --with-cross-build="$GITHUB_WORKSPACE/icu-host"
             make -j4 install
             cd ..
 
@@ -254,7 +254,7 @@ jobs:
 
       - name: Generate Debug Keystore Dynamically
         run: |
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug/"
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
 
       - name: Grant Execute Permissions
         run: chmod +x gradlew
