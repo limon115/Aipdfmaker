@@ -72,8 +72,11 @@ class LatexCompilerRepository(private val context: Context) {
             var result: Result<File>? = null
             val latch = java.util.concurrent.CountDownLatch(1)
             Thread(null, {
-                result = TectonicBridge.compileLatex(context, fullLatex)
-                latch.countDown()
+                try {
+                    kotlinx.coroutines.runBlocking { result = TectonicBridge.compileLatex(context, fullLatex) }
+                } finally {
+                    latch.countDown() // 🟠 THE FIX: Guarantee the latch releases even if compilation fails
+                }
             }, "TectonicEngine", 8388608).start() // 8MB Stack Size
             latch.await()
 

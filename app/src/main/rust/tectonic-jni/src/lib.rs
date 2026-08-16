@@ -2,7 +2,7 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::jstring;
 use std::path::PathBuf;
-use tectonic::driver::{ProcessingSessionBuilder};
+use tectonic::driver::ProcessingSessionBuilder;
 
 #[no_mangle]
 pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compileToPdf(
@@ -12,17 +12,17 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
     bundle_path: JString,
     output_dir: JString,
 ) -> jstring {
-    let tex_source: String = env.get_string(&tex_source).unwrap().into();
-    let bundle_path: String = env.get_string(&bundle_path).unwrap().into();
-    let output_dir: String = env.get_string(&output_dir).unwrap().into();
+    let tex_source: String = env.get_string(&tex_source).unwrap_or_default().into();
+    let bundle_path: String = env.get_string(&bundle_path).unwrap_or_default().into();
+    let output_dir: String = env.get_string(&output_dir).unwrap_or_default().into();
 
     let mut status = tectonic::status::NoopStatusBackend::default();
 
-        // THE FIX: Blindfold Fontconfig to prevent C++ panic on Android
+    // Blindfold Fontconfig to prevent C++ panic on Android
     std::env::set_var("FONTCONFIG_FILE", "/dev/null");
     std::env::set_var("FONTCONFIG_PATH", "/dev/null");
     std::env::set_var("TECTONIC_CACHE_DIR", &output_dir);
-    
+
     let mut builder = ProcessingSessionBuilder::default();
     builder
         .bundle(Box::new(tectonic_bundles::dir::DirBundle::new(std::path::PathBuf::from(&bundle_path))))
@@ -30,18 +30,26 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
         .tex_input_name("main.tex")
         .build_date(std::time::SystemTime::now())
         .output_dir(PathBuf::from(&output_dir))
-        .output_format(tectonic::driver::OutputFormat::Pdf)
-        ;
-    let mut session = builder.create(&mut status)
-        .unwrap();
+        .output_format(tectonic::driver::OutputFormat::Pdf);
 
-    let result = session.run(&mut status);
+    // 🔴 THE FIX: Catch the builder error instead of unwrap() panic
+    let mut session = match builder.create(&mut status) {
+        Ok(s) => s,
+        Err(e) => {
+            let err_msg = format!("Error: Failed to create session - {}", e);
+            return env.new_string(err_msg).unwrap().into_raw();
+        }
+    };
 
-    let output_path = if result.is_ok() {
-        let pdf_path = PathBuf::from(&output_dir).join("main.pdf");
-        pdf_path.to_string_lossy().into_owned()
-    } else {
-        String::from("Error")
+    // 🔴 THE FIX: Catch the execution error and return the exact reason
+    let output_path = match session.run(&mut status) {
+        Ok(_) => {
+            let pdf_path = PathBuf::from(&output_dir).join("main.pdf");
+            pdf_path.to_string_lossy().into_owned()
+        }
+        Err(e) => {
+            format!("Error: Compilation failed - {}", e)
+        }
     };
 
     let output = env.new_string(output_path).unwrap();

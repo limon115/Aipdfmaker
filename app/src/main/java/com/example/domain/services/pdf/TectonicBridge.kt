@@ -20,8 +20,8 @@ object TectonicBridge {
             val bundlePath = ensureBundleExtracted(context)
             val outDir = context.cacheDir.absolutePath
             val resultPath = compileToPdf(tex, bundlePath, outDir)
-            if (resultPath == "Error") {
-                throw Exception("Tectonic compilation failed")
+            if (resultPath.startsWith("Error")) {
+                throw Exception(resultPath) // 🔴 THE FIX: Throw the exact Rust error message
             }
             File(resultPath)
         }
