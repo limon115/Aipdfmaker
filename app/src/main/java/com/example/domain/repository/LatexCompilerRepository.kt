@@ -67,10 +67,18 @@ class LatexCompilerRepository(private val context: Context) {
             val texFile = File(baseDir, "main.tex")
             texFile.writeText(fullLatex)
 
-            val result = TectonicBridge.compileLatex(context, fullLatex)
+            // 🎯 NATIVE STACK OVERFLOW FIX: Android limits background threads to 1MB.
+            // Complex XeTeX font parsing requires massive memory. We forge an 8MB thread!
+            var result: Result<File>? = null
+            val latch = java.util.concurrent.CountDownLatch(1)
+            Thread(null, {
+                result = TectonicBridge.compileLatex(context, fullLatex)
+                latch.countDown()
+            }, "TectonicEngine", 8388608).start() // 8MB Stack Size
+            latch.await()
 
-            if (result.isSuccess) {
-                val generatedPdf = result.getOrNull()
+            if (result!!.isSuccess) {
+                val generatedPdf = result!!.getOrNull()
                 if (generatedPdf != null && generatedPdf.exists()) {
                     val targetPdf = File(baseDir, "document.pdf")
                     generatedPdf.copyTo(targetPdf, overwrite = true)
