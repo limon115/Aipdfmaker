@@ -1,5 +1,5 @@
 use jni::JNIEnv;
-use jni::objects::{JClass, JString};
+use jni::objects::{JClass, JString, JObject};
 use jni::sys::jstring;
 use std::path::PathBuf;
 use tectonic::driver::ProcessingSessionBuilder;
@@ -8,10 +8,20 @@ use tectonic::driver::ProcessingSessionBuilder;
 pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compileToPdf(
     mut env: JNIEnv,
     _class: JClass,
+    context: JObject, // 🛡️ THE MASTER KEY: Android Context passed from Kotlin
     tex_source: JString,
     bundle_path: JString,
     output_dir: JString,
 ) -> jstring {
+    // 🛡️ THE FIX: Initialize ndk-context so app_dirs2 doesn't trigger a JNI Fatal Abort on a null pointer!
+    if let Ok(vm) = env.get_java_vm() {
+        unsafe {
+            ndk_context::initialize(
+                vm.get_java_vm_pointer() as *mut std::ffi::c_void,
+                context.as_raw() as *mut std::ffi::c_void,
+            );
+        }
+    }
     let tex_source: String = env.get_string(&tex_source).map(|s| s.into()).unwrap_or_default();
     let bundle_path: String = env.get_string(&bundle_path).map(|s| s.into()).unwrap_or_default();
     let output_dir: String = env.get_string(&output_dir).map(|s| s.into()).unwrap_or_default();

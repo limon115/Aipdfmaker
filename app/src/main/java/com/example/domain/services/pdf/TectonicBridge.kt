@@ -13,13 +13,13 @@ object TectonicBridge {
             com.example.utils.AppLogger.e("TectonicBridge", "Could not load tectonic_jni library. Have you compiled the Rust crate and placed .so in jniLibs?", e)
         }
     }
-    external fun compileToPdf(texSource: String, bundlePath: String, outputDir: String): String
+    external fun compileToPdf(context: android.content.Context, texSource: String, bundlePath: String, outputDir: String): String
 
     suspend fun compileLatex(context: Context, tex: String): Result<File> = withContext(kotlinx.coroutines.Dispatchers.Unconfined) {
         runCatching {
             val bundlePath = ensureBundleExtracted(context)
             val outDir = context.cacheDir.absolutePath
-            val resultPath = compileToPdf(tex, bundlePath, outDir)
+            val resultPath = compileToPdf(context, tex, bundlePath, outDir)
             if (resultPath.startsWith("Error")) {
                 throw Exception(resultPath) // 🔴 THE FIX: Throw the exact Rust error message
             }
