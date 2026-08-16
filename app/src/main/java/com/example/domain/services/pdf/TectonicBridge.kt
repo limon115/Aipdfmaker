@@ -15,7 +15,7 @@ object TectonicBridge {
     }
     external fun compileToPdf(texSource: String, bundlePath: String, outputDir: String): String
 
-    suspend fun compileLatex(context: Context, tex: String): Result<File> = withContext(Dispatchers.IO) {
+    suspend fun compileLatex(context: Context, tex: String): Result<File> = withContext(kotlinx.coroutines.Dispatchers.Unconfined) {
         runCatching {
             val bundlePath = ensureBundleExtracted(context)
             val outDir = context.cacheDir.absolutePath
