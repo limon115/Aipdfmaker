@@ -38,7 +38,8 @@ class LatexCompilerRepository(private val context: Context) {
                 % Auto-switch to Kalpurush ONLY for Bengali characters (from safe internal storage)
                 \usepackage[Bengali]{ucharclasses}
                 \newfontfamily\bengalifont[Path=${internalFontDir.absolutePath}/]{kalpurush.ttf}
-                \setTransitionsForBengali{\begingroup\bengalifont}{\endgroup}
+                \newfontfamily\englishfont[Path=${internalFontDir.absolutePath}/]{Baskervville.ttf}
+                \setTransitionsForBengali{\bengalifont}{\englishfont}
 
                 \title{$projectName}
                 \begin{document}
