@@ -22,21 +22,24 @@ class LatexCompilerRepository(private val context: Context) {
             }
             baseDir.mkdirs()
 
+            // 🎯 THE SANDBOX FIX: Create an internal font directory that the C++ engine has root access to
+            val internalFontDir = File(context.filesDir, "tectonic_fonts").apply { mkdirs() }
+
             val fullLatex = """
                 \documentclass{article}
                 \usepackage{amsmath}
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
-                
-                % Set Baskervville as the premium main English font
-                \setmainfont[Path=${baseDir.absolutePath}/]{Baskervville.ttf}
-                
-                % Auto-switch to Kalpurush ONLY for Bengali characters
+
+                % Set Baskervville as the premium main English font (from safe internal storage)
+                \setmainfont[Path=${internalFontDir.absolutePath}/]{Baskervville.ttf}
+
+                % Auto-switch to Kalpurush ONLY for Bengali characters (from safe internal storage)
                 \usepackage[Bengali]{ucharclasses}
-                \newfontfamily\bengalifont[Path=${baseDir.absolutePath}/]{kalpurush.ttf}
+                \newfontfamily\bengalifont[Path=${internalFontDir.absolutePath}/]{kalpurush.ttf}
                 \setTransitionsForBengali{\begingroup\bengalifont}{\endgroup}
-                
+
                 \title{$projectName}
                 \begin{document}
                 \maketitle
@@ -44,16 +47,16 @@ class LatexCompilerRepository(private val context: Context) {
                 \end{document}
             """.trimIndent()
 
-            // Copy Kalpurush (Bengali Font)
-            val bnFontFile = File(baseDir, "kalpurush.ttf")
+            // Copy Kalpurush (Bengali Font) to safe internal sandbox
+            val bnFontFile = File(internalFontDir, "kalpurush.ttf")
             if (!bnFontFile.exists()) {
                 context.assets.open("fonts/kalpurush.ttf").use { input ->
                     bnFontFile.outputStream().use { output -> input.copyTo(output) }
                 }
             }
 
-            // Copy Baskervville (English Font)
-            val enFontFile = File(baseDir, "Baskervville.ttf")
+            // Copy Baskervville (English Font) to safe internal sandbox
+            val enFontFile = File(internalFontDir, "Baskervville.ttf")
             if (!enFontFile.exists()) {
                 context.assets.open("fonts/Baskervville.ttf").use { input ->
                     enFontFile.outputStream().use { output -> input.copyTo(output) }
