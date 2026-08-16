@@ -22,6 +22,8 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
     std::env::set_var("FONTCONFIG_FILE", "/dev/null");
     std::env::set_var("FONTCONFIG_PATH", "/dev/null");
     std::env::set_var("TECTONIC_CACHE_DIR", &output_dir);
+    // 🌐 THE SSL FIX: Point Rust to Android's hidden CA certificates
+    std::env::set_var("SSL_CERT_DIR", "/system/etc/security/cacerts");
 
     let mut builder = ProcessingSessionBuilder::default();
     builder
@@ -42,14 +44,24 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
         }
     };
 
-    // 🔴 THE FIX: Catch the execution error and return the exact reason
-    let output_path = match session.run(&mut status) {
-        Ok(_) => {
+    // 🛡️ THE ULTIMATE SHIELD: Catch execution errors AND Native Rust Panics
+    let output_path = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        session.run(&mut status)
+    })) {
+        Ok(Ok(_)) => {
             let pdf_path = PathBuf::from(&output_dir).join("main.pdf");
             pdf_path.to_string_lossy().into_owned()
         }
-        Err(e) => {
-            format!("Error: Compilation failed - {}", e)
+        Ok(Err(e)) => format!("Error: Compilation failed - {}", e),
+        Err(panic_err) => {
+            let msg = if let Some(s) = panic_err.downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = panic_err.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "Unknown Native Rust Panic".to_string()
+            };
+            format!("Error: Native Rust Panic Caught! - {}", msg)
         }
     };
 
