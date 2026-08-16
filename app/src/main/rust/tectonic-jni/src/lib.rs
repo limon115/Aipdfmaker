@@ -16,7 +16,7 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
     // 🛡️ THE FIX: Initialize ndk-context so app_dirs2 doesn't trigger a JNI Fatal Abort on a null pointer!
     if let Ok(vm) = env.get_java_vm() {
         unsafe {
-            ndk_context::initialize(
+            ndk_context::initialize_android_context(
                 vm.get_java_vm_pointer() as *mut std::ffi::c_void,
                 context.as_raw() as *mut std::ffi::c_void,
             );
