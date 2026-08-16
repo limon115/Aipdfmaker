@@ -98,10 +98,17 @@ class LatexCompilerRepository(private val context: Context) {
                 if (generatedPdf != null && generatedPdf.exists()) {
                     val targetPdf = File(baseDir, "document.pdf")
                     generatedPdf.copyTo(targetPdf, overwrite = true)
+                    android.util.Log.i("DOCMORPH_CRITICAL", "=======================================")
+                    android.util.Log.i("DOCMORPH_CRITICAL", "PDF SUCCESSFULLY GENERATED AT: ${targetPdf.absolutePath}")
+                    android.util.Log.i("DOCMORPH_CRITICAL", "=======================================")
                     return@runCatching Pair(targetPdf, texFile)
                 }
             }
-            throw Exception("PDF compilation failed: ${result.exceptionOrNull()?.message}")
+            val errorMsg = "PDF compilation failed: ${result?.exceptionOrNull()?.message ?: "Unknown Error"}"
+            android.util.Log.e("DOCMORPH_CRITICAL", "=======================================")
+            android.util.Log.e("DOCMORPH_CRITICAL", "TECTONIC ENGINE FAILED: $errorMsg")
+            android.util.Log.e("DOCMORPH_CRITICAL", "=======================================")
+            throw Exception(errorMsg)
         }
     }
 }
