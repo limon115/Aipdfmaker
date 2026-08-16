@@ -12,6 +12,19 @@ class LatexCompilerRepository(private val context: Context) {
     suspend fun compileAndExportPdf(projectName: String, latexContent: String): Result<Pair<File, File>> = withContext(Dispatchers.IO) {
         runCatching {
             val safeName = projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
+            
+            // 🎯 PREEMPTIVE FIX: Escape LaTeX special characters so they don't break the compiler
+            val displayTitle = projectName
+                .replace("\\", "\\textbackslash{}")
+                .replace("&", "\\&")
+                .replace("%", "\\%")
+                .replace("$", "\\$")
+                .replace("#", "\\#")
+                .replace("_", "\\_")
+                .replace("{", "\\{")
+                .replace("}", "\\}")
+                .replace("~", "\\textasciitilde{}")
+                .replace("^", "\\textasciicircum{}")
 
             var documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
             var baseDir = File(documentsDir, "aipdfs/$safeName")
@@ -41,7 +54,7 @@ class LatexCompilerRepository(private val context: Context) {
                 \newfontfamily\englishfont[Path=${internalFontDir.absolutePath}/]{Baskervville.ttf}
                 \setTransitionsForBengali{\bengalifont}{\englishfont}
 
-                \title{$projectName}
+                \title{$displayTitle}
                 \begin{document}
                 \maketitle
                 $latexContent
