@@ -18,9 +18,11 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
 
     let mut status = tectonic::status::NoopStatusBackend::default();
 
-    // Blindfold Fontconfig to prevent C++ panic on Android
-    std::env::set_var("FONTCONFIG_FILE", "/dev/null");
-    std::env::set_var("FONTCONFIG_PATH", "/dev/null");
+    // 🎯 THE FIX: Give Fontconfig a real, writable directory so the C++ library doesn't abort()
+    let fc_dir = PathBuf::from(&output_dir).join("fontconfig");
+    std::fs::create_dir_all(&fc_dir).unwrap_or_default();
+    std::env::set_var("FONTCONFIG_FILE", fc_dir.join("fonts.conf").to_string_lossy().to_string());
+    std::env::set_var("FONTCONFIG_PATH", fc_dir.to_string_lossy().to_string());
     std::env::set_var("TECTONIC_CACHE_DIR", &output_dir);
     // 🌐 THE SSL FIX: Point Rust to Android's hidden CA certificates
     std::env::set_var("SSL_CERT_DIR", "/system/etc/security/cacerts");
