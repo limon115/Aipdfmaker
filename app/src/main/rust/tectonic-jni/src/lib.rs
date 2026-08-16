@@ -12,9 +12,9 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
     bundle_path: JString,
     output_dir: JString,
 ) -> jstring {
-    let tex_source: String = env.get_string(&tex_source).unwrap_or_default().into();
-    let bundle_path: String = env.get_string(&bundle_path).unwrap_or_default().into();
-    let output_dir: String = env.get_string(&output_dir).unwrap_or_default().into();
+    let tex_source: String = env.get_string(&tex_source).map(|s| s.into()).unwrap_or_default();
+    let bundle_path: String = env.get_string(&bundle_path).map(|s| s.into()).unwrap_or_default();
+    let output_dir: String = env.get_string(&output_dir).map(|s| s.into()).unwrap_or_default();
 
     let mut status = tectonic::status::NoopStatusBackend::default();
 
