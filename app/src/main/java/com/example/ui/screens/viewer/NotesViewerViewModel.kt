@@ -76,11 +76,25 @@ class NotesViewerViewModel(
                 if (result.isSuccess) {
                     val (pdf, tex) = result.getOrThrow()
                     _state.update { it.copy(generatedPdfFile = pdf, generatedTexFile = tex, isExporting = false) }
+                    // 🟢 THE SUCCESS MESSAGE
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        try {
+                            val context = Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as android.content.Context
+                            android.widget.Toast.makeText(context, "✅ PDF Generated Successfully!", android.widget.Toast.LENGTH_LONG).show()
+                        } catch (e: Exception) {}
+                    }
                     onComplete(pdf, tex)
                 } else {
                     val safeName = _state.value.projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
                     val tex = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS), "aipdfs/$safeName/document.tex")
                     _state.update { it.copy(isExporting = false) }
+                    // 🔴 THE FAILURE MESSAGE
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        try {
+                            val context = Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as android.content.Context
+                            android.widget.Toast.makeText(context, "❌ PDF Generation Failed! Check Logcat.", android.widget.Toast.LENGTH_LONG).show()
+                        } catch (e: Exception) {}
+                    }
                     onComplete(null, tex)
                 }
             } catch (e: Exception) {
