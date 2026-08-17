@@ -63,7 +63,7 @@ class ExportEngine(private val context: Context) {
                     \usepackage{amsfonts}
                     \usepackage{amssymb}
                     \usepackage{fontspec}
-                    \usepackage{ucharclasses}
+                    \usepackage[Bengali]{ucharclasses}
 
                     \setmainfont{DejaVu Serif}
 
@@ -71,11 +71,9 @@ class ExportEngine(private val context: Context) {
                         Path=/data/data/com.termux/files/home/
                     ]{solaiman.ttf}
 
-                    \setTransitionsForBengali{
-                        \begingroup\bengalifont
-                    }{
-                        \endgroup
-                    }
+                    \setTransitionsFor{Bengali}
+                    {\begingroup\bengalifont}
+                    {\endgroup}
 
                     \title{$projectName}
 

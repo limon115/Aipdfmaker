@@ -36,19 +36,6 @@ class LatexCompilerRepository(private val context: Context) {
                 )
             }
 
-            /*
-             * XeLaTeX document.
-             *
-             * English:
-             *   DejaVu Serif
-             *
-             * Bangla:
-             *   SolaimanLipi
-             *
-             * The SolaimanLipi font is supplied by the Termux XeLaTeX
-             * environment. The LaTeX source itself is passed to Termux
-             * through the file path, not through the Intent.
-             */
             val fullLatex = """
                 \documentclass{article}
 
@@ -56,7 +43,7 @@ class LatexCompilerRepository(private val context: Context) {
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
-                \usepackage{ucharclasses}
+                \usepackage[Bengali]{ucharclasses}
 
                 \setmainfont{DejaVu Serif}
 
@@ -64,11 +51,9 @@ class LatexCompilerRepository(private val context: Context) {
                     Path=/data/data/com.termux/files/home/
                 ]{solaiman.ttf}
 
-                \setTransitionsForBengali{
-                    \begingroup\bengalifont
-                }{
-                    \endgroup
-                }
+                \setTransitionsFor{Bengali}
+                    {\begingroup\bengalifont}
+                    {\endgroup}
 
                 \title{$projectName}
 
@@ -94,10 +79,7 @@ class LatexCompilerRepository(private val context: Context) {
                 )
             }
 
-            val targetPdf = File(
-                baseDir,
-                "document.pdf"
-            )
+            val targetPdf = File(baseDir, "document.pdf")
 
             result.copyTo(
                 targetPdf,
