@@ -24,12 +24,11 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
     // 🛡️ 2. THE ULTIMATE SHIELD: Wrap EVERYTHING in catch_unwind
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         
-        // Initialize Android Context for app_dirs2
-        unsafe {
-            if ndk_context::android_context().context().is_null() {
-                ndk_context::initialize_android_context(vm_ptr, context_ptr);
-            }
-        }
+        // 🛡️ THE RACE CONDITION FIX: Use a Thread-Safe Once Lock
+        static INIT: std::sync::Once = std::sync::Once::new();
+        INIT.call_once(|| {
+            unsafe { ndk_context::initialize_android_context(vm_ptr, context_ptr); }
+        });
 
         // 🛡️ THE FILE-LOCK FIX: Force Tectonic to use Internal Storage (EXT4) for its SQLite cache.
         // External storage (FUSE/FAT32) does not support Linux file locking (flock), causing the Tokio thread to panic!
