@@ -26,14 +26,23 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
         
         // Initialize Android Context for app_dirs2
         unsafe {
-            ndk_context::initialize_android_context(vm_ptr, context_ptr);
+            if ndk_context::android_context().context().is_null() {
+                ndk_context::initialize_android_context(vm_ptr, context_ptr);
+            }
         }
 
-        // Lock ALL Tectonic Linux paths exclusively to the Android cache directory
-        std::env::set_var("TECTONIC_CACHE_DIR", &output_dir_str);
-        std::env::set_var("XDG_CACHE_HOME", &output_dir_str);
-        std::env::set_var("XDG_CONFIG_HOME", &output_dir_str);
-        std::env::set_var("XDG_DATA_HOME", &output_dir_str);
+        // 🛡️ THE FILE-LOCK FIX: Force Tectonic to use Internal Storage (EXT4) for its SQLite cache.
+        // External storage (FUSE/FAT32) does not support Linux file locking (flock), causing the Tokio thread to panic!
+        let cache_dir_obj = env.call_method(&context, "getCacheDir", "()Ljava/io/File;", &[]).unwrap().l().unwrap();
+        let cache_dir_path_obj = env.call_method(cache_dir_obj, "getAbsolutePath", "()Ljava/lang/String;", &[]).unwrap().l().unwrap();
+        let cache_dir_jstr = jni::objects::JString::from(cache_dir_path_obj);
+        let internal_cache_str: String = env.get_string(&cache_dir_jstr).unwrap().into();
+
+        // Lock ALL Tectonic cache paths to the safe EXT4 internal directory
+        std::env::set_var("TECTONIC_CACHE_DIR", &internal_cache_str);
+        std::env::set_var("XDG_CACHE_HOME", &internal_cache_str);
+        std::env::set_var("XDG_CONFIG_HOME", &internal_cache_str);
+        std::env::set_var("XDG_DATA_HOME", &internal_cache_str);
         std::env::set_var("SSL_CERT_DIR", "/system/etc/security/cacerts");
 
         let fc_dir = PathBuf::from(&output_dir_str).join("fontconfig");
