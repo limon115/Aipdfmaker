@@ -42,8 +42,19 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
         std::env::set_var("FONTCONFIG_PATH", fc_dir.to_string_lossy().to_string());
 
         let mut status = tectonic::status::NoopStatusBackend::default();
+        
+        // 🌐 THE WEB BUNDLE FIX: Ask Tectonic for the global cloud bundle configuration!
+        let config = tectonic::config::PersistentConfig::open(false)
+            .expect("Failed to open Tectonic config");
+        let bundle = config.default_bundle(false, &mut status)
+            .expect("Failed to load default web bundle");
+        let format_cache_path = config.format_cache_path()
+            .expect("Failed to setup format cache");
+
         let mut builder = ProcessingSessionBuilder::default();
         builder
+            .bundle(bundle)
+            .format_cache_path(format_cache_path)
             .primary_input_buffer(tex_source_str.as_bytes())
             .tex_input_name("main.tex")
             .build_date(std::time::SystemTime::now())
