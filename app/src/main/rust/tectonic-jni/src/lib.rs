@@ -46,7 +46,7 @@ pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compi
         // 🌐 THE WEB BUNDLE FIX: Ask Tectonic for the global cloud bundle configuration!
         let config = tectonic::config::PersistentConfig::open(false)
             .expect("Failed to open Tectonic config");
-        let bundle = config.default_bundle(false, &mut status)
+        let bundle = config.default_bundle(false)
             .expect("Failed to load default web bundle");
         let format_cache_path = config.format_cache_path()
             .expect("Failed to setup format cache");
