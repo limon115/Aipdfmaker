@@ -85,6 +85,9 @@ class NotesViewerViewModel(
                     }
                     onComplete(pdf, tex)
                 } else {
+                    // 🌲 TIMBER LOG: Extracting the true Rust engine failure
+                    timber.log.Timber.tag("DOCMORPH_CRITICAL").e("TRUE ENGINE ERROR REVEALED: %s", result.exceptionOrNull()?.message ?: "Unknown Failure")
+                    
                     val safeName = _state.value.projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
                     val tex = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS), "aipdfs/$safeName/document.tex")
                     _state.update { it.copy(isExporting = false) }
