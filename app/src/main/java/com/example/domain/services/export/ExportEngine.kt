@@ -67,9 +67,12 @@ class ExportEngine(private val context: Context) {
 
                     \setmainfont{DejaVu Serif}
 
-                    \newfontfamily\bengalifont[
-                        Path=/data/data/com.termux/files/home/
-                    ]{solaiman.ttf}
+                    
+ewfontfamilyengalifont[
+    Path=/data/data/com.termux/files/home/,
+    Script=Bengali,
+    Language=Bengali
+]{solaiman.ttf}
 
                     \setTransitionsFor{Bengali}
                     {\begingroup\bengalifont}
