@@ -14,66 +14,48 @@ jobs:
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '21'
+          java-version: '17'
           cache: 'gradle'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
-          validate-wrappers: false
 
       - name: Install System Dependencies
-        run: sudo apt-get update && sudo apt-get install -y gperf cmake make autoconf automake libtool pkg-config ninja-build
+        run: sudo apt-get update && sudo apt-get install -y gperf
 
       - name: Install Rust & cargo-ndk
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           cargo install cargo-ndk --locked
 
+
       - name: Build Static Dependencies for Android NDK
         run: |
           set -euo pipefail
 
           # Mask the host's icu-config
-          mkdir -p "$GITHUB_WORKSPACE/bin-override"
-          cat << 'EOSH' > "$GITHUB_WORKSPACE/bin-override/icu-config"
+          mkdir -p $GITHUB_WORKSPACE/bin-override
+          cat << 'EOSH' > $GITHUB_WORKSPACE/bin-override/icu-config
           #!/bin/sh
           exit 1
           EOSH
-          chmod +x "$GITHUB_WORKSPACE/bin-override/icu-config"
+          chmod +x $GITHUB_WORKSPACE/bin-override/icu-config
           export PATH="$GITHUB_WORKSPACE/bin-override:$PATH"
 
-          echo "Extracting C++ tarballs (with dynamic network fallback for corrupted files)..."
-          
-          extract_or_download() {
-              local file=$1
-              local url=$2
-              cp "vendor_tars/$file" . 2>/dev/null || true
-              if ! tar xf "$file" 2>/dev/null; then
-                  echo "⚠️ $file is corrupted (HTML/LFS pointer)! Downloading real binary..."
-                  curl -fL --retry 3 -o "$file" "$url"
-                  tar xf "$file"
-              else
-                  echo "✅ Successfully extracted $file"
-              fi
-          }
-
-          extract_or_download "zlib-1.2.13.tar.gz" "https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz"
-          extract_or_download "libpng-1.6.40.tar.gz" "https://downloads.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.gz"
-          extract_or_download "graphite2-1.3.14.tgz" "https://github.com/silnrsi/graphite/releases/download/1.3.14/graphite2-1.3.14.tgz"
-          extract_or_download "freetype-2.13.2.tar.gz" "https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.gz"
-          extract_or_download "harfbuzz-8.3.0.tar.xz" "https://github.com/harfbuzz/harfbuzz/releases/download/8.3.0/harfbuzz-8.3.0.tar.xz"
-          extract_or_download "expat-2.5.0.tar.gz" "https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz"
-          extract_or_download "fontconfig-2.14.2.tar.gz" "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz"
-          extract_or_download "icu4c-73_2-src.tgz" "https://github.com/unicode-org/icu/releases/download/release-73-2/icu4c-73_2-src.tgz"
+          echo "Extracting vendored C++ tarballs..."
+          cp vendor_tars/zlib-1.2.13.tar.gz . && tar xf zlib-1.2.13.tar.gz
+          cp vendor_tars/libpng-1.6.40.tar.gz . && tar xf libpng-1.6.40.tar.gz
+          cp vendor_tars/graphite2-1.3.14.tgz . && tar xf graphite2-1.3.14.tgz
+          cp vendor_tars/freetype-2.13.2.tar.gz . && tar xf freetype-2.13.2.tar.gz
+          cp vendor_tars/harfbuzz-8.3.0.tar.xz . && tar xf harfbuzz-8.3.0.tar.xz
+          cp vendor_tars/expat-2.5.0.tar.gz . && tar xf expat-2.5.0.tar.gz
+          cp vendor_tars/fontconfig-2.14.2.tar.gz . && tar xf fontconfig-2.14.2.tar.gz
+          cp vendor_tars/icu4c-73_2-src.tgz . && tar xf icu4c-73_2-src.tgz
 
           export NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_LATEST_HOME:-}}
           echo "Using NDK at: $NDK"
@@ -86,85 +68,68 @@ jobs:
           make -j4
           cd ..
 
-          # Map Rust/NDK target names to Android ABI names used by CMake
           declare -A ABI_MAP=(
             [aarch64-linux-android]=arm64-v8a
-            [armv7-linux-androideabi]=armeabi-v7a
+            [armv7a-linux-androideabi]=armeabi-v7a
             [x86_64-linux-android]=x86_64
             [i686-linux-android]=x86
           )
 
-          for arch in aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android; do
+          for arch in aarch64-linux-android armv7a-linux-androideabi x86_64-linux-android i686-linux-android; do
             abi=${ABI_MAP[$arch]}
-            clang_prefix=$arch
-            if [ "$arch" = "armv7-linux-androideabi" ]; then
-                clang_prefix="armv7a-linux-androideabi"
-            fi
-            export CC=$TOOLCHAIN/bin/${clang_prefix}${API}-clang
-            export CXX=$TOOLCHAIN/bin/${clang_prefix}${API}-clang++
+            export CC=$TOOLCHAIN/bin/${arch}${API}-clang
+            export CXX=$TOOLCHAIN/bin/${arch}${API}-clang++
             export AR=$TOOLCHAIN/bin/llvm-ar
             export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
-            export CFLAGS="-Wno-error -fPIC"
-            export CXXFLAGS="-Wno-error -fPIC"
 
-            mkdir -p "zlib-build-$arch" && cd "zlib-build-$arch"
-            ../zlib-1.2.13/configure --prefix="$GITHUB_WORKSPACE/deps/$arch" --static
+            mkdir -p zlib-build-$arch && cd zlib-build-$arch
+            ../zlib-1.2.13/configure --prefix=$GITHUB_WORKSPACE/deps/$arch --static
             make -j4 install
             cd ..
 
-            mkdir -p "png-build-$arch" && cd "png-build-$arch"
+            mkdir -p png-build-$arch && cd png-build-$arch
             export CPPFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include"
             export LDFLAGS="-L$GITHUB_WORKSPACE/deps/$arch/lib"
-            ../libpng-1.6.40/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static
+            ../libpng-1.6.40/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static
             make -j4 install
             cd ..
 
-            mkdir -p "graphite2-build-$arch" && cd "graphite2-build-$arch"
-            cmake ../graphite2-1.3.14 \
-              -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
-              -DANDROID_ABI="$abi" \
-              -DANDROID_PLATFORM="android-$API" \
-              -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/deps/$arch" \
-              -DCMAKE_BUILD_TYPE=Release
+            mkdir -p graphite2-build-$arch && cd graphite2-build-$arch
+            cmake ../graphite2-1.3.14 -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=$abi -DANDROID_PLATFORM=android-$API -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/deps/$arch -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/deps/$arch -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON
             cmake --build . -j4
             cmake --install .
             cd ..
 
-            mkdir -p "freetype-build-$arch" && cd "freetype-build-$arch"
-            ../freetype-2.13.2/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static CFLAGS="-fPIC" CXXFLAGS="-fPIC"
+            mkdir -p freetype-build-$arch && cd freetype-build-$arch
+            ../freetype-2.13.2/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch CC=$CC AR=$AR RANLIB=$RANLIB --disable-shared --enable-static
             make -j4 install
             cd ..
 
-            mkdir -p "hb-build-$arch" && cd "hb-build-$arch"
-            cmake ../harfbuzz-8.3.0 \
-              -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
-              -DANDROID_ABI="$abi" \
-              -DANDROID_PLATFORM="android-$API" \
-              -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/deps/$arch" \
-              -DCMAKE_BUILD_TYPE=Release
+            mkdir -p hb-build-$arch && cd hb-build-$arch
+            cmake ../harfbuzz-8.3.0 -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=$abi -DANDROID_PLATFORM=android-$API -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/deps/$arch -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/deps/$arch -DBUILD_SHARED_LIBS=OFF -Dharfbuzz_with_cairo=OFF -Dharfbuzz_with_chafa=OFF -Dharfbuzz_with_glib=OFF -Dharfbuzz_with_gobject=OFF -Dharfbuzz_with_icu=OFF -Dharfbuzz_with_tests=OFF -Dharfbuzz_with_utilities=OFF
             cmake --build . -j4
             cmake --install .
             cd ..
 
-            mkdir -p "expat-build-$arch" && cd "expat-build-$arch"
-            ../expat-2.5.0/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared CC=$CC AR=$AR RANLIB=$RANLIB
+            mkdir -p expat-build-$arch && cd expat-build-$arch
+            ../expat-2.5.0/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared
             make -j4 install
             cd ..
 
-            mkdir -p "fontconfig-build-$arch" && cd "fontconfig-build-$arch"
+            mkdir -p fontconfig-build-$arch && cd fontconfig-build-$arch
             export EXPAT_CFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include"
             export EXPAT_LIBS="-L$GITHUB_WORKSPACE/deps/$arch/lib -lexpat"
             export FREETYPE_CFLAGS="-I$GITHUB_WORKSPACE/deps/$arch/include/freetype2"
             export FREETYPE_LIBS="-L$GITHUB_WORKSPACE/deps/$arch/lib -lfreetype"
-            ../fontconfig-2.14.2/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared --disable-docs --with-expat="$GITHUB_WORKSPACE/deps/$arch"
+            ../fontconfig-2.14.2/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared --disable-docs --with-expat=$GITHUB_WORKSPACE/deps/$arch
             make -j4 install
             cd ..
 
             echo "Building Target ICU for $arch..."
-            mkdir -p "icu-build-$arch" && cd "icu-build-$arch"
+            mkdir -p icu-build-$arch && cd icu-build-$arch
             export CFLAGS="-fPIC"
             export CXXFLAGS="-fPIC -std=c++14"
-            ../icu/source/configure --host=$arch --prefix="$GITHUB_WORKSPACE/deps/$arch" --enable-static --disable-shared --with-data-packaging=static --with-cross-build="$GITHUB_WORKSPACE/icu-host"
+            ../icu/source/configure --host=$arch --prefix=$GITHUB_WORKSPACE/deps/$arch --enable-static --disable-shared --with-data-packaging=static --with-cross-build=$GITHUB_WORKSPACE/icu-host
             make -j4 install
             cd ..
 
@@ -180,35 +145,34 @@ jobs:
                 echo "Description: $lib" >> "$PKG_DIR/$lib.pc"
                 echo "Version: 1.0" >> "$PKG_DIR/$lib.pc"
             done
-
-            # Append appropriate Libs/Cflags entries
+            
             echo "Libs: -L\${libdir} -lz" >> "$PKG_DIR/zlib.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/zlib.pc"
-
+            
             echo "Libs: -L\${libdir} -lpng16 -lz" >> "$PKG_DIR/libpng.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/libpng.pc"
-
+            
             echo "Libs: -L\${libdir} -lfreetype" >> "$PKG_DIR/freetype2.pc"
             echo "Cflags: -I\${includedir}/freetype2" >> "$PKG_DIR/freetype2.pc"
-
+            
             echo "Libs: -L\${libdir} -lgraphite2 -lstdc++" >> "$PKG_DIR/graphite2.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/graphite2.pc"
-
+            
             echo "Libs: -L\${libdir} -lharfbuzz" >> "$PKG_DIR/harfbuzz.pc"
             echo "Cflags: -I\${includedir}/harfbuzz" >> "$PKG_DIR/harfbuzz.pc"
-
+            
             echo "Libs: -L\${libdir} -lexpat" >> "$PKG_DIR/expat.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/expat.pc"
-
+            
             echo "Libs: -L\${libdir} -lfontconfig -lexpat -lfreetype -lpng16 -lz -lm" >> "$PKG_DIR/fontconfig.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/fontconfig.pc"
-
+            
             echo "Libs: -L\${libdir} -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-uc.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-uc.pc"
-
+            
             echo "Libs: -L\${libdir} -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-i18n.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-i18n.pc"
-
+            
             echo "Libs: -L\${libdir} -licuio -licui18n -licuuc -licudata -lm -lstdc++" >> "$PKG_DIR/icu-io.pc"
             echo "Cflags: -I\${includedir}" >> "$PKG_DIR/icu-io.pc"
           done
@@ -218,14 +182,14 @@ jobs:
           CARGO_BUILD_JOBS: "2"
           PKG_CONFIG_ALLOW_CROSS: "1"
           TECTONIC_DEP_BACKEND: "pkg-config"
-
+          
           PKG_CONFIG_PATH_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android/lib/pkgconfig"
           PKG_CONFIG_LIBDIR_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android/lib/pkgconfig"
           PKG_CONFIG_SYSROOT_DIR_aarch64_linux_android: "${{ github.workspace }}/deps/aarch64-linux-android"
 
-          PKG_CONFIG_PATH_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7-linux-androideabi/lib/pkgconfig"
-          PKG_CONFIG_LIBDIR_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7-linux-androideabi/lib/pkgconfig"
-          PKG_CONFIG_SYSROOT_DIR_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7-linux-androideabi"
+          PKG_CONFIG_PATH_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi/lib/pkgconfig"
+          PKG_CONFIG_LIBDIR_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi/lib/pkgconfig"
+          PKG_CONFIG_SYSROOT_DIR_armv7_linux_androideabi: "${{ github.workspace }}/deps/armv7a-linux-androideabi"
 
           PKG_CONFIG_PATH_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android/lib/pkgconfig"
           PKG_CONFIG_LIBDIR_x86_64_linux_android: "${{ github.workspace }}/deps/x86_64-linux-android/lib/pkgconfig"
@@ -235,28 +199,21 @@ jobs:
           PKG_CONFIG_LIBDIR_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android/lib/pkgconfig"
           PKG_CONFIG_SYSROOT_DIR_i686_linux_android: "${{ github.workspace }}/deps/i686-linux-android"
         run: |
-          # Remove system pkgconfig dirs so pkg-config prefers our cross pkgconfig files
-          sudo rm -rf /usr/lib/pkgconfig /usr/share/pkgconfig /usr/lib/x86_64-linux-gnu/pkgconfig || true
+          sudo rm -rf /usr/lib/pkgconfig /usr/share/pkgconfig /usr/lib/x86_64-linux-gnu/pkgconfig
           export PATH="$GITHUB_WORKSPACE/bin-override:$PATH"
           cd app/src/main/rust/tectonic-jni
-
-          # Build for Android ABIs (cargo-ndk targets are armeabi-v7a / arm64-v8a / x86 / x86_64)
           cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -t x86 -o ../../jniLibs build --release
 
-          # Package libc++_shared.so for all architectures so Android can load the native library
+          # THE FIX: Manually package the Android C++ Standard Library so the device can boot Tectonic
           echo "Packaging libc++_shared.so for all architectures..."
           export NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_LATEST_HOME}}
-          # Copy matching libc++_shared for each ABI
-          find "$NDK" -type f -name "libc++_shared.so" | grep "aarch64" | head -n 1 | xargs -I {} cp {} ../../jniLibs/arm64-v8a/ || true
-          find "$NDK" -type f -name "libc++_shared.so" | grep "arm" | grep -E "androideabi|armeabi" | head -n 1 | xargs -I {} cp {} ../../jniLibs/armeabi-v7a/ || true
-          find "$NDK" -type f -name "libc++_shared.so" | grep "x86_64" | head -n 1 | xargs -I {} cp {} ../../jniLibs/x86_64/ || true
-          find "$NDK" -type f -name "libc++_shared.so" | grep "/x86/" | head -n 1 | xargs -I {} cp {} ../../jniLibs/x86/ || true
+          find $NDK -name "libc++_shared.so" | grep "aarch64" | head -n 1 | xargs -I {} cp {} ../../jniLibs/arm64-v8a/
+          find $NDK -name "libc++_shared.so" | grep "arm-linux-androideabi" | head -n 1 | xargs -I {} cp {} ../../jniLibs/armeabi-v7a/
+          find $NDK -name "libc++_shared.so" | grep "x86_64" | head -n 1 | xargs -I {} cp {} ../../jniLibs/x86_64/
+          find $NDK -name "libc++_shared.so" | grep "i686" | head -n 1 | xargs -I {} cp {} ../../jniLibs/x86/
 
       - name: Generate Gradle Wrapper (Cloud Execution)
-        run: gradle wrapper --gradle-version 9.3.1
-
-      - name: Print generated Gradle wrapper checksum
-        run: sha256sum gradle/wrapper/gradle-wrapper.jar || true
+        run: gradle wrapper --gradle-version 8.10.2
 
       - name: Generate Debug Keystore Dynamically
         run: |
@@ -264,15 +221,6 @@ jobs:
 
       - name: Grant Execute Permissions
         run: chmod +x gradlew
-
-      - name: Stub dummy google-services.json for CI
-        run: |
-          echo '{
-            "project_info": { "project_number": "123456789", "project_id": "ci-dummy-project" },
-            "client": [{
-              "client_info": { "mobilesdk_app_id": "1:123456789:android:abcdef", "android_client_info": { "package_name": "com.aistudio.docmorph.kqbzpa" } }
-            }]
-          }' > app/google-services.json
 
       - name: Assemble Debug APK with Gradle
         run: ./gradlew clean assembleDebug --no-daemon --refresh-dependencies --no-build-cache

@@ -1,102 +1,47 @@
 use jni::JNIEnv;
-use jni::objects::{JClass, JString, JObject};
+use jni::objects::{JClass, JString};
 use jni::sys::jstring;
 use std::path::PathBuf;
-use tectonic::driver::ProcessingSessionBuilder;
+use tectonic::driver::{ProcessingSessionBuilder};
 
 #[no_mangle]
 pub extern "system" fn Java_com_example_domain_services_pdf_TectonicBridge_compileToPdf(
     mut env: JNIEnv,
     _class: JClass,
-    context: JObject,
     tex_source: JString,
     bundle_path: JString,
     output_dir: JString,
 ) -> jstring {
-    // 1. Extract Java strings safely outside the panic shield
-    let tex_source_str: String = env.get_string(&tex_source).map(|s| s.into()).unwrap_or_default();
-    let output_dir_str: String = env.get_string(&output_dir).map(|s| s.into()).unwrap_or_default();
+    let tex_source: String = env.get_string(&tex_source).unwrap().into();
+    let bundle_path: String = env.get_string(&bundle_path).unwrap().into();
+    let output_dir: String = env.get_string(&output_dir).unwrap().into();
+
+    let mut status = tectonic::status::NoopStatusBackend::default();
+
+        // THE FIX: Blindfold Fontconfig to prevent C++ panic on Android
+    std::env::set_var("FONTCONFIG_FILE", "/dev/null");
+    std::env::set_var("FONTCONFIG_PATH", "/dev/null");
+    std::env::set_var("TECTONIC_CACHE_DIR", &output_dir);
     
-    let vm = env.get_java_vm().unwrap();
-    let vm_ptr = vm.get_java_vm_pointer() as *mut std::ffi::c_void;
-    let context_ptr = context.as_raw() as *mut std::ffi::c_void;
+    let mut builder = ProcessingSessionBuilder::default();
+    builder
+        .bundle(Box::new(tectonic_bundles::dir::DirBundle::new(std::path::PathBuf::from(&bundle_path))))
+        .primary_input_buffer(tex_source.as_bytes())
+        .tex_input_name("main.tex")
+        .build_date(std::time::SystemTime::now())
+        .output_dir(PathBuf::from(&output_dir))
+        .output_format(tectonic::driver::OutputFormat::Pdf)
+        ;
+    let mut session = builder.create(&mut status)
+        .unwrap();
 
-    // 🛡️ 2. THE ULTIMATE SHIELD: Wrap EVERYTHING in catch_unwind
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        
-        // 🛡️ THE RACE CONDITION FIX: Use a Thread-Safe Once Lock
-        static INIT: std::sync::Once = std::sync::Once::new();
-        INIT.call_once(|| {
-            unsafe { ndk_context::initialize_android_context(vm_ptr, context_ptr); }
-        });
+    let result = session.run(&mut status);
 
-        // 🛡️ THE FILE-LOCK FIX: Force Tectonic to use Internal Storage (EXT4) for its SQLite cache.
-        // External storage (FUSE/FAT32) does not support Linux file locking (flock), causing the Tokio thread to panic!
-        let cache_dir_obj = env.call_method(&context, "getCacheDir", "()Ljava/io/File;", &[]).unwrap().l().unwrap();
-        let cache_dir_path_obj = env.call_method(cache_dir_obj, "getAbsolutePath", "()Ljava/lang/String;", &[]).unwrap().l().unwrap();
-        let cache_dir_jstr = jni::objects::JString::from(cache_dir_path_obj);
-        let internal_cache_str: String = env.get_string(&cache_dir_jstr).unwrap().into();
-
-        // Lock ALL Tectonic cache paths to the safe EXT4 internal directory
-        std::env::set_var("TECTONIC_CACHE_DIR", &internal_cache_str);
-        std::env::set_var("XDG_CACHE_HOME", &internal_cache_str);
-        std::env::set_var("XDG_CONFIG_HOME", &internal_cache_str);
-        std::env::set_var("XDG_DATA_HOME", &internal_cache_str);
-        std::env::set_var("SSL_CERT_DIR", "/system/etc/security/cacerts");
-
-        let fc_dir = PathBuf::from(&output_dir_str).join("fontconfig");
-        std::fs::create_dir_all(&fc_dir).unwrap_or_default();
-        std::env::set_var("FONTCONFIG_FILE", fc_dir.join("fonts.conf").to_string_lossy().to_string());
-        std::env::set_var("FONTCONFIG_PATH", fc_dir.to_string_lossy().to_string());
-
-        let mut status = tectonic::status::NoopStatusBackend::default();
-        
-        // 🌐 THE WEB BUNDLE FIX: Ask Tectonic for the global cloud bundle configuration!
-        let config = tectonic::config::PersistentConfig::open(false)
-            .expect("Failed to open Tectonic config");
-        let bundle = config.default_bundle(false)
-            .expect("Failed to load default web bundle");
-        let format_cache_path = config.format_cache_path()
-            .expect("Failed to setup format cache");
-
-        let mut builder = ProcessingSessionBuilder::default();
-        builder
-            .bundle(bundle)
-            .format_cache_path(format_cache_path)
-            .primary_input_buffer(tex_source_str.as_bytes())
-            .tex_input_name("main.tex")
-            .build_date(std::time::SystemTime::now())
-            .output_dir(PathBuf::from(&output_dir_str))
-            .output_format(tectonic::driver::OutputFormat::Pdf);
-
-        // 🔴 We missed this before! builder.create() is now safely trapped inside the shield!
-        let mut session = match builder.create(&mut status) {
-            Ok(s) => s,
-            Err(e) => return format!("Error: Failed to create session - {}", e),
-        };
-
-        match session.run(&mut status) {
-            Ok(_) => {
-                let pdf_path = PathBuf::from(&output_dir_str).join("main.pdf");
-                pdf_path.to_string_lossy().into_owned()
-            }
-            Err(e) => format!("Error: Compilation failed - {}", e),
-        }
-    }));
-
-    // 3. Process the result and safely return it to Kotlin
-    let output_path = match result {
-        Ok(path) => path,
-        Err(panic_err) => {
-            let msg = if let Some(s) = panic_err.downcast_ref::<&str>() {
-                s.to_string()
-            } else if let Some(s) = panic_err.downcast_ref::<String>() {
-                s.clone()
-            } else {
-                "Unknown Native Rust Panic".to_string()
-            };
-            format!("Error: Native Rust Panic Caught! - {}", msg)
-        }
+    let output_path = if result.is_ok() {
+        let pdf_path = PathBuf::from(&output_dir).join("main.pdf");
+        pdf_path.to_string_lossy().into_owned()
+    } else {
+        String::from("Error")
     };
 
     let output = env.new_string(output_path).unwrap();
