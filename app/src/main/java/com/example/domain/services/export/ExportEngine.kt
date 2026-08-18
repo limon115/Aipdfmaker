@@ -40,10 +40,9 @@ class ExportEngine(private val context: Context) {
                     .replace(Regex("[^a-zA-Z0-9.-]"), "_")
                     .ifEmpty { "Project" }
 
-                val documentsDir =
-                    Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOCUMENTS
-                    )
+                val documentsDir = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOCUMENTS
+                )
 
                 val baseDir = File(
                     documentsDir,
@@ -67,16 +66,15 @@ class ExportEngine(private val context: Context) {
 
                     \setmainfont{DejaVu Serif}
 
-                    
-ewfontfamilyengalifont[
-    Path=/data/data/com.termux/files/home/,
-    Script=Bengali,
-    Language=Bengali
-]{solaiman.ttf}
+                    \newfontfamily\bengalifont[
+                        Path=/data/data/com.termux/files/home/,
+                        Script=Bengali,
+                        Language=Bengali
+                    ]{solaiman.ttf}
 
                     \setTransitionsFor{Bengali}
-                    {\begingroup\bengalifont}
-                    {\endgroup}
+                        {\begingroup\bengalifont}
+                        {\endgroup}
 
                     \title{$projectName}
 
