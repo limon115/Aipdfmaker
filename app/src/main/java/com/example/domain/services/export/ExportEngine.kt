@@ -69,12 +69,14 @@ class ExportEngine(private val context: Context) {
                     \newfontfamily\bengalifont[
                         Path=/data/data/com.termux/files/home/,
                         Script=Bengali,
-                        Language=Bengali
+                        Language=Bengali,
+                        AutoFakeBold=1.5,
+                        AutoFakeSlant=0.2
                     ]{solaiman.ttf}
 
-                    \setTransitionsFor{Bengali}
-                        {\begingroup\bengalifont}
-                        {\endgroup}
+                    \setTransitionsFor{Bengali}{\bengalifont}{}
+                    \setTransitionsFor{Devanagari}{\bengalifont}{}
+                    \setTransitionsFor{BasicLatin}{\rmfamily}{}
 
                     \title{$projectName}
 
