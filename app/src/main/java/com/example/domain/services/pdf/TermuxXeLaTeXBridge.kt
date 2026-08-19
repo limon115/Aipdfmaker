@@ -123,7 +123,11 @@ object TermuxXeLaTeXBridge {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     context.startForegroundService(intent)
                 } else {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
                     context.startService(intent)
+                }
                 }
                 } catch (e: Exception) {
                     pendingJobs.remove(executionId)
