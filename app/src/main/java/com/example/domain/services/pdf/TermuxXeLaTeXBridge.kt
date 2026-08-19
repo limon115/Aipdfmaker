@@ -120,7 +120,11 @@ object TermuxXeLaTeXBridge {
                 }
 
                 try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
                     context.startService(intent)
+                }
                 } catch (e: Exception) {
                     pendingJobs.remove(executionId)
                     continuation.resume(
@@ -172,19 +176,19 @@ class TermuxCommandResultService : IntentService(
         const val EXTRA_EXECUTION_ID = "execution_id"
 
         private const val RESULT_BUNDLE =
-            "com.termux.service.EXTRA_PLUGIN_RESULT_BUNDLE"
+            "result_bundle"
 
         private const val EXIT_CODE =
-            "com.termux.service.EXTRA_PLUGIN_RESULT_BUNDLE_EXIT_CODE"
+            "exitCode"
 
         private const val STDOUT =
-            "com.termux.service.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT"
+            "stdout"
 
         private const val STDERR =
-            "com.termux.service.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR"
+            "stderr"
 
         private const val ERROR_MESSAGE =
-            "com.termux.service.EXTRA_PLUGIN_RESULT_BUNDLE_ERRMSG"
+            "err"
     }
 
     override fun onHandleIntent(intent: Intent?) {
