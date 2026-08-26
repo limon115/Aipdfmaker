@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -68,7 +69,7 @@ fun OnboardingScreen(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Filled.Edit,
+                imageVector = Icons.Default.Edit,
                 contentDescription = "App Logo",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(48.dp)

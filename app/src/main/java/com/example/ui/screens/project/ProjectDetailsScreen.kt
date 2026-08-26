@@ -1,5 +1,8 @@
 package com.example.ui.screens.project
 
+import com.example.ui.components.glass.GlassTextField
+
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -76,12 +79,12 @@ fun ProjectDetailsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -91,7 +94,7 @@ fun ProjectDetailsScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
+            GlassTextField(
                 value = state.projectTitle,
                 onValueChange = viewModel::updateProjectTitle,
                 label = { Text("Title") },
@@ -100,7 +103,7 @@ fun ProjectDetailsScreen(
                 shape = RoundedCornerShape(8.dp)
             )
 
-            OutlinedTextField(
+            GlassTextField(
                 value = state.course,
                 onValueChange = viewModel::updateCourse,
                 label = { Text("Course / Subject") },
@@ -109,7 +112,7 @@ fun ProjectDetailsScreen(
                 shape = RoundedCornerShape(8.dp)
             )
 
-            OutlinedTextField(
+            GlassTextField(
                 value = state.chapter,
                 onValueChange = viewModel::updateChapter,
                 label = { Text("Chapter (Optional)") },
@@ -118,7 +121,7 @@ fun ProjectDetailsScreen(
                 shape = RoundedCornerShape(8.dp)
             )
 
-            OutlinedTextField(
+            GlassTextField(
                 value = state.description,
                 onValueChange = viewModel::updateDescription,
                 label = { Text("Description (Optional)") },
@@ -135,11 +138,11 @@ fun ProjectDetailsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Card(
+                com.example.ui.components.glass.GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { /* Show dropdown */ },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -192,7 +195,7 @@ fun ProjectDetailsScreen(
             
             if (projectId != null) {
                 if (documentExists) {
-                    Card(
+                    com.example.ui.components.glass.GlassCard(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                     ) {

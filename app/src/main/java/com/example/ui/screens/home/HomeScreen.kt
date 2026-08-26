@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import com.example.ui.components.glass.GlassCard
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,10 +43,26 @@ fun HomeScreen(
     onNavigateToProject: (Int, String) -> Unit = { _, _ -> }
 ) {
     val projects by viewModel.projects.collectAsStateWithLifecycle()
+    
+    HomeScreenContent(
+        projects = projects,
+        onNavigateToNewProject = onNavigateToNewProject,
+        onNavigateToProject = onNavigateToProject,
+        onDeleteProject = viewModel::deleteProject
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreenContent(
+    projects: List<ProjectEntity>,
+    onNavigateToNewProject: () -> Unit = {},
+    onNavigateToProject: (Int, String) -> Unit = { _, _ -> },
+    onDeleteProject: (ProjectEntity) -> Unit = {}
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
     
     val tabs = listOf("All", "Completed", "Processing")
-
     val filteredProjects = remember(projects, selectedTab) {
         when (selectedTab) {
             1 -> projects.filter { it.status == "Completed" }
@@ -52,7 +70,7 @@ fun HomeScreen(
             else -> projects
         }
     }
-
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,13 +86,14 @@ fun HomeScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
+        floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToNewProject,
@@ -85,7 +104,7 @@ fun HomeScreen(
                 Icon(Icons.Default.Add, contentDescription = "Add Project")
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -94,7 +113,7 @@ fun HomeScreen(
         ) {
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.background,
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 contentColor = MaterialTheme.colorScheme.onBackground,
                 indicator = { tabPositions ->
                     if (selectedTab < tabPositions.size) {
@@ -119,16 +138,16 @@ fun HomeScreen(
                     )
                 }
             }
-
+            
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredProjects, key = { it.id }) { project ->
                     ProjectCard(
                         project = project, 
-                        onDelete = { viewModel.deleteProject(it) },
+                        onDelete = { onDeleteProject(it) },
                         onClick = { onNavigateToProject(project.id, project.status) }
                     )
                 }
@@ -136,18 +155,14 @@ fun HomeScreen(
         }
     }
 }
-
 @Composable
 fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier

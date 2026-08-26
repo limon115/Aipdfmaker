@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.datastore.AiSettings
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.domain.models.AiProvider
+import com.example.domain.models.ThemeMode
 import com.example.data.network.AiNetworkClient
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
@@ -51,6 +52,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
 
+
+    fun updateThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch { dataStore.updateThemeMode(themeMode) }
+    }
     fun testConnection(
         provider: String,
         model: String,

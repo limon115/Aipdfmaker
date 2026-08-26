@@ -1,7 +1,11 @@
 package com.example.ui.screens
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
 
 import androidx.compose.foundation.layout.Box
@@ -11,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,44 +77,22 @@ fun MainScreen() {
     
     val blueprintViewModel: BlueprintViewModel = viewModel()
 
-    Scaffold(
-        bottomBar = {
-            if (currentRoute in items.map { it.route }) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ) {
-                    items.forEach { item ->
-                        NavigationBarItem(
-                            icon = { Icon(if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) },
-                            label = { Text(item.title) },
-                            selected = currentRoute == item.route,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
+    MainScreenContent(
+        currentRoute = currentRoute,
+        onNavigate = { route ->
+            navController.navigate(route) {
+                popUpTo(navController.graph.startDestinationId) {
+                    saveState = true
                 }
+                launchSingleTop = true
+                restoreState = true
             }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = BottomNavItem.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(BottomNavItem.Home.route) {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -139,9 +123,14 @@ fun MainScreen() {
                 )
             }
             composable(BottomNavItem.Dashboard.route) {
-                
-                Column(modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp).padding(top = 48.dp)) {
+                Column(
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxSize()
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                        .padding(start = 16.dp, end = 16.dp, top = 48.dp)
+                ) {
                     com.example.ui.screens.settings.AiUsageDashboardCard()
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(100.dp))
                 }
             }
             composable(BottomNavItem.Settings.route) {
@@ -199,7 +188,9 @@ fun MainScreen() {
                 )
             }
             composable("file_input") {
-                CenteredText("Import from File (Placeholder)")
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Import from File (Placeholder)")
+                }
             }
             composable(
                 route = "project_details?projectId={projectId}",
@@ -319,10 +310,71 @@ fun MainScreen() {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+    }
+}
+}
+
+
+@Composable
+fun MainScreenContent(
+    currentRoute: String?,
+    onNavigate: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
+) {
+    val items = listOf(
+        BottomNavItem.Home,
+        BottomNavItem.Dashboard,
+        BottomNavItem.Settings
+    )
+
+    com.example.ui.components.glass.LiquidBackground {
+        Scaffold(
+            modifier = modifier,
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            bottomBar = {
+                if (currentRoute in items.map { it.route }) {
+                    val colors = com.example.ui.theme.AppTheme.colors
+                    com.example.ui.components.glass.GlassSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                            topStart = 24.dp,
+                            topEnd = 24.dp,
+                            bottomStart = 0.dp,
+                            bottomEnd = 0.dp
+                        ),
+                        alpha = 0.3f
+                    ) {
+                        NavigationBar(
+                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            tonalElevation = 0.dp,
+                            windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                        ) {
+                            items.forEach { item ->
+                                NavigationBarItem(
+                                    icon = { Icon(if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) },
+                                    label = { Text(item.title) },
+                                    selected = currentRoute == item.route,
+                                    onClick = { onNavigate(item.route) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        ) { innerPadding ->
+            content(innerPadding)
         }
     }
 }
-
 @Composable
 fun CenteredText(text: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

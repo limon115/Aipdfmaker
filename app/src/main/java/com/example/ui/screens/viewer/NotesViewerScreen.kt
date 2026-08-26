@@ -140,12 +140,12 @@ fun NotesViewerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = Color.Black
                 )
             )
         },
-        containerColor = Color.White,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             Box(
                 modifier = Modifier

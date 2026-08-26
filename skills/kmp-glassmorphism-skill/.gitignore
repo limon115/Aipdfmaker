@@ -1,0 +1,11 @@
+# IntelliJ IDEA / Android Studio
+.idea/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Gemini / AI agent local data
+.gemini/

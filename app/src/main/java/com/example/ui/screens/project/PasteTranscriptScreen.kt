@@ -1,5 +1,8 @@
 package com.example.ui.screens.project
 
+import com.example.ui.components.glass.GlassTextField
+
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,12 +32,12 @@ fun PasteTranscriptScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -42,7 +45,7 @@ fun PasteTranscriptScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            OutlinedTextField(
+            GlassTextField(
                 value = state.extractedText,
                 onValueChange = { viewModel.updateExtractedText(it) },
                 label = { Text("Paste text here") },

@@ -45,12 +45,12 @@ fun BlueprintSummaryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = Color.Black
                 )
             )
         },
-        containerColor = Color.White,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             Box(
                 modifier = Modifier
@@ -86,7 +86,7 @@ fun BlueprintSummaryScreen(
                     .padding(horizontal = 16.dp)
             ) {
                 // Top Section
-                Card(
+                com.example.ui.components.glass.GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
@@ -191,9 +191,9 @@ fun MetricCard(
     iconTint: Color,
     iconBg: Color
 ) {
-    Card(
+    com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         elevation = CardDefaults.cardElevation(2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {

@@ -10,7 +10,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.screens.MainScreen
 import com.example.ui.screens.OnboardingScreen
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.ThemeProvider
+import com.example.ui.components.glass.LiquidBackground
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.data.datastore.AiSettingsDataStore
+import com.example.domain.models.ThemeMode
+
 
 class MainActivity : ComponentActivity() {
 
@@ -25,9 +32,21 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    val dataStore = AiSettingsDataStore(applicationContext)
+    
     setContent {
-      MyApplicationTheme {
+      val settings by dataStore.aiSettingsFlow.collectAsState(initial = null)
+      val themeMode = settings?.themeMode ?: ThemeMode.SYSTEM
+      val isDarkTheme = when (themeMode) {
+          ThemeMode.LIGHT -> false
+          ThemeMode.DARK -> true
+          ThemeMode.SYSTEM -> isSystemInDarkTheme()
+      }
+
+      ThemeProvider(initialDarkTheme = isDarkTheme) {
+        LiquidBackground {
         DocMorphApp()
+      }
       }
     }
   }

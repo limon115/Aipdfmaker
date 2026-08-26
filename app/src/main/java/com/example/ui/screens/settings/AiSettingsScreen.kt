@@ -1,5 +1,8 @@
 package com.example.ui.screens.settings
 
+import com.example.ui.components.glass.GlassTextField
+
+
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.MenuAnchorType
 
@@ -39,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.datastore.AiSettings
 import com.example.domain.models.AiProvider
+import com.example.domain.models.ThemeMode
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,12 +63,12 @@ fun AiSettingsScreen(
             TopAppBar(
                 title = { Text("AI Settings", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         if (settingsNullable == null) {
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -80,6 +84,10 @@ fun AiSettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            ThemeSettingsCard(
+                themeMode = settings.themeMode,
+                onThemeModeChange = { viewModel.updateThemeMode(it) }
+            )
             AiConfigCard(
                 title = "AI #1 - Blueprint Builder",
                 provider = settings.ai1Provider,
@@ -141,6 +149,7 @@ fun AiSettingsScreen(
                 onNavigateToApiLab = onNavigateToApiLab,
                 onNavigateToLogs = onNavigateToLogs
             )
+            Spacer(modifier = Modifier.height(100.dp))
         }
         }
     }
@@ -176,9 +185,9 @@ fun AiConfigCard(
         else -> listOf("default-model")
     }
 
-    Card(
+    com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -203,11 +212,11 @@ fun AiConfigCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Card(
+                com.example.ui.components.glass.GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(onClick = onProviderClick),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(
@@ -233,9 +242,10 @@ fun AiConfigCard(
             // Model Selection
             ExposedDropdownMenuBox(
                 expanded = modelDropdownExpanded,
-                onExpandedChange = { modelDropdownExpanded = !modelDropdownExpanded }
+                onExpandedChange = { modelDropdownExpanded = !modelDropdownExpanded },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                OutlinedTextField(
+                GlassTextField(
                     value = localModel,
                     onValueChange = { localModel = it; onModelChange(it) },
                     label = { Text("Model (e.g. ${recommendedModels.first()})") },
@@ -247,7 +257,6 @@ fun AiConfigCard(
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelDropdownExpanded)
                     },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                 )
                 
                 ExposedDropdownMenu(
@@ -267,7 +276,7 @@ fun AiConfigCard(
             }
 
             // API Key
-            OutlinedTextField(
+            GlassTextField(
                 value = localApiKey,
                 onValueChange = { localApiKey = it; onApiKeyChange(it) },
                 label = { Text("API Key") },
@@ -390,7 +399,7 @@ fun AdvancedSettingsSection(
                     )
                 }
 
-                OutlinedTextField(
+                GlassTextField(
                     value = maxTokens.toString(),
                     onValueChange = { 
                         it.toIntOrNull()?.let { tokens -> onMaxTokensChange(tokens) }
@@ -415,9 +424,9 @@ fun BatteryOptimizationCard() {
     // for this settings screen, or we can just calculate it in real time during composition.
     val isIgnoringOptimizations = powerManager.isIgnoringBatteryOptimizations(packageName)
     
-    Card(
+    com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -491,9 +500,9 @@ fun AiUsageDashboardCard() {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Card(
+        com.example.ui.components.glass.GlassCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(
@@ -534,9 +543,9 @@ fun AiUsageDashboardCard() {
 
 @Composable
 fun UsageBarChartCard(requests: Int, cacheHits: Int, rateLimits: Int) {
-    Card(
+    com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -607,9 +616,9 @@ fun DeveloperToolsCard(
     onNavigateToApiLab: () -> Unit,
     onNavigateToLogs: () -> Unit = {}
 ) {
-    Card(
+    com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
@@ -626,6 +635,7 @@ fun DeveloperToolsCard(
             )
             
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                 headlineContent = { Text("API Lab") },
                 supportingContent = { Text("Test and diagnose your AI connection") },
                 leadingContent = {
@@ -641,10 +651,10 @@ fun DeveloperToolsCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onNavigateToApiLab() },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
             
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                 headlineContent = { Text("App Logs") },
                 supportingContent = { Text("View internal application logs for debugging") },
                 leadingContent = {
@@ -660,8 +670,70 @@ fun DeveloperToolsCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onNavigateToLogs() },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
+        }
+    }
+}
+
+@Composable
+fun ThemeSettingsCard(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
+    com.example.ui.components.glass.GlassCard(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("App Theme", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ThemeOptionButton(
+                    text = "System",
+                    selected = themeMode == ThemeMode.SYSTEM,
+                    onClick = { onThemeModeChange(ThemeMode.SYSTEM) },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                ThemeOptionButton(
+                    text = "Light",
+                    selected = themeMode == ThemeMode.LIGHT,
+                    onClick = { onThemeModeChange(ThemeMode.LIGHT) },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                ThemeOptionButton(
+                    text = "Dark",
+                    selected = themeMode == ThemeMode.DARK,
+                    onClick = { onThemeModeChange(ThemeMode.DARK) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ThemeOptionButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = if (selected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent
+    val contentColor = if (selected) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface
+    val borderColor = if (selected) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.outline
+
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        modifier = modifier.height(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = bgColor,
+        contentColor = contentColor,
+        border = if (!selected) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text = text, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

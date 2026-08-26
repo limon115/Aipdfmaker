@@ -1,5 +1,8 @@
 package com.example.ui.screens.project
 
+import com.example.ui.components.glass.GlassTextField
+
+
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,12 +41,12 @@ fun YouTubeLinkScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -51,7 +54,7 @@ fun YouTubeLinkScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            OutlinedTextField(
+            GlassTextField(
                 value = youtubeUrl,
                 onValueChange = { youtubeUrl = it },
                 label = { Text("Paste YouTube Video URL") },

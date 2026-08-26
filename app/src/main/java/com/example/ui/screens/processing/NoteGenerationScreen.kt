@@ -89,12 +89,12 @@ fun NoteGenerationScreen(
             TopAppBar(
                 title = { Text(state.title, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = Color.Black
                 )
             )
         },
-        containerColor = Color.White,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             Box(
                 modifier = Modifier
@@ -157,9 +157,9 @@ fun NoteGenerationScreen(
             val aiStats by AiUsageTracker.stats.collectAsStateWithLifecycle()
             
             if (aiStats.requests > 0 || aiStats.estimatedTokens > 0) {
-                Card(
+                com.example.ui.components.glass.GlassCard(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {

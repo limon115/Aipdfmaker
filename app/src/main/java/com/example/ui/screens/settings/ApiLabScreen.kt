@@ -1,5 +1,8 @@
 package com.example.ui.screens.settings
 
+import com.example.ui.components.glass.GlassTextField
+
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,12 +64,12 @@ fun ApiLabScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -122,7 +125,7 @@ fun ApiLabScreen(
 fun ProviderSelection() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Provider", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
+        GlassTextField(
             value = "✦ Google Gemini",
             onValueChange = {},
             readOnly = true,
@@ -155,7 +158,7 @@ fun ApiKeyTestSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("API KEY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
+        GlassTextField(
             value = apiKey,
             onValueChange = onApiKeyChange,
             modifier = Modifier.fillMaxWidth(),
@@ -182,20 +185,23 @@ fun ApiKeyTestSection(
                 }
             }
             is TestState.Success -> {
-                Card(
+                com.example.ui.components.glass.GlassCard(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            val isDark = com.example.ui.theme.AppTheme.colors.isDark
+                            val successColor = if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
+                            val successColorMuted = if (isDark) Color(0xFFA5D6A7) else Color(0xFF1B5E20)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CheckCircle, "Success", tint = Color(0xFF4CAF50))
+                            Icon(Icons.Default.CheckCircle, "Success", tint = successColor)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("API KEY VALID", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                            Text("API KEY VALID", fontWeight = FontWeight.Bold, color = successColor)
                         }
-                        Text("Connection successful", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF2E7D32))
-                        Text("Response time    ${testState.latencyMs} ms", style = MaterialTheme.typography.bodySmall, color = Color(0xFF2E7D32))
-                        Text("Models found     ${testState.models.size}", style = MaterialTheme.typography.bodySmall, color = Color(0xFF2E7D32))
+                        Text("Connection successful", style = MaterialTheme.typography.bodyMedium, color = successColor)
+                        Text("Response time    ${testState.latencyMs} ms", style = MaterialTheme.typography.bodySmall, color = successColor)
+                        Text("Models found     ${testState.models.size}", style = MaterialTheme.typography.bodySmall, color = successColor)
                     }
                 }
             }
@@ -215,9 +221,9 @@ fun AvailableModelsSection(models: List<GeminiModel>) {
         
         val exampleModel = models.firstOrNull()
         if (exampleModel != null) {
-            Card(
+            com.example.ui.components.glass.GlassCard(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -255,9 +261,10 @@ fun ModelTestSection(
             Text("Model", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ExposedDropdownMenuBox(
                 expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                OutlinedTextField(
+                GlassTextField(
                     value = selectedModel?.displayName?.ifEmpty { selectedModel.name } ?: selectedModel?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
@@ -284,7 +291,7 @@ fun ModelTestSection(
         
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("TEST PROMPT", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(
+            GlassTextField(
                 value = prompt,
                 onValueChange = onPromptChange,
                 modifier = Modifier.fillMaxWidth(),
@@ -310,22 +317,25 @@ fun ModelTestSection(
                 }
             }
             is ModelTestState.Success -> {
-                Card(
+                com.example.ui.components.glass.GlassCard(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val isDark = com.example.ui.theme.AppTheme.colors.isDark
+                            val successColor = if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
+                            val successColorMuted = if (isDark) Color(0xFFA5D6A7) else Color(0xFF1B5E20)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CheckCircle, "Success", tint = Color(0xFF4CAF50))
+                            Icon(Icons.Default.CheckCircle, "Success", tint = successColor)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("MODEL TEST PASSED", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                            Text("MODEL TEST PASSED", fontWeight = FontWeight.Bold, color = successColor)
                         }
-                        Text("Response", style = MaterialTheme.typography.labelMedium, color = Color(0xFF2E7D32))
-                        Text(testState.response, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF1B5E20))
+                        Text("Response", style = MaterialTheme.typography.labelMedium, color = successColor)
+                        Text(testState.response, style = MaterialTheme.typography.bodyMedium, color = successColorMuted)
                         
-                        Text("Latency", style = MaterialTheme.typography.labelMedium, color = Color(0xFF2E7D32))
-                        Text("${testState.latencyMs} ms", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF1B5E20))
+                        Text("Latency", style = MaterialTheme.typography.labelMedium, color = successColor)
+                        Text("${testState.latencyMs} ms", style = MaterialTheme.typography.bodyMedium, color = successColorMuted)
                     }
                 }
             }
@@ -343,8 +353,13 @@ fun ErrorDiagnosticsCard(code: String, message: String, onRetry: () -> Unit) {
     val isRateLimit = code == "429"
     val isAuthError = code == "401" || code == "403"
     
+    val isDark = com.example.ui.theme.AppTheme.colors.isDark
     val containerColor = if (isNetwork || isRateLimit) Color(0xFFFFF3E0) else Color(0xFFFFEBEE)
-    val contentColor = if (isNetwork || isRateLimit) Color(0xFFE65100) else Color(0xFFC62828)
+    val contentColor = if (isDark) {
+        if (isNetwork || isRateLimit) Color(0xFFFFB74D) else Color(0xFFE57373)
+    } else {
+        if (isNetwork || isRateLimit) Color(0xFFE65100) else Color(0xFFC62828)
+    }
     val icon = if (isNetwork || isRateLimit) Icons.Default.Warning else Icons.Default.Error
     val title = when (code) {
         "401" -> "AUTHENTICATION FAILED"
@@ -354,7 +369,7 @@ fun ErrorDiagnosticsCard(code: String, message: String, onRetry: () -> Unit) {
         else -> "ERROR"
     }
     
-    Card(
+    com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(8.dp)

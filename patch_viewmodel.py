@@ -1,10 +1,20 @@
-with open("app/src/main/java/com/example/ui/screens/viewer/NotesViewerViewModel.kt", "r") as f:
-    text = f.read()
+import re
 
-text = text.replace(
-    "exportEngine.exportProjectFiles(_state.value.projectName, _state.value.jsonContent)",
-    "exportEngine.exportProjectFiles(_state.value.projectName, _state.value.jsonContent, _state.value.outputFormat.equals(\"pdf\", ignoreCase = true))"
-)
+with open("app/src/main/java/com/example/ui/screens/settings/SettingsViewModel.kt", "r") as f:
+    content = f.read()
 
-with open("app/src/main/java/com/example/ui/screens/viewer/NotesViewerViewModel.kt", "w") as f:
-    f.write(text)
+if "import com.example.domain.models.ThemeMode" not in content:
+    content = content.replace("import com.example.domain.models.AiProvider", "import com.example.domain.models.AiProvider\nimport com.example.domain.models.ThemeMode")
+
+if "fun updateThemeMode" not in content:
+    method = """
+    fun updateThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch { dataStore.updateThemeMode(themeMode) }
+    }
+"""
+    # Insert before testConnection
+    content = content.replace("    fun testConnection(", method + "    fun testConnection(")
+
+with open("app/src/main/java/com/example/ui/screens/settings/SettingsViewModel.kt", "w") as f:
+    f.write(content)
+
