@@ -1,4 +1,4 @@
-name: DocMorph Cloud Compilation 
+name: DocMorph Cloud Compilation new
 
 on:
   push:
