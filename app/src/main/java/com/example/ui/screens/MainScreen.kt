@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,6 +89,9 @@ fun MainScreen() {
                 launchSingleTop = true
                 restoreState = true
             }
+        },
+        onNavigateToNewProject = {
+            navController.navigate("input_source")
         }
     ) { innerPadding ->
         NavHost(
@@ -116,9 +121,6 @@ fun MainScreen() {
                         } else {
                             navController.navigate("notes_viewer/$projectId")
                         }
-                    },
-                    onNavigateToNewProject = {
-                        navController.navigate("input_source")
                     }
                 )
             }
@@ -319,6 +321,7 @@ fun MainScreen() {
 fun MainScreenContent(
     currentRoute: String?,
     onNavigate: (String) -> Unit,
+    onNavigateToNewProject: () -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
 ) {
@@ -351,21 +354,58 @@ fun MainScreenContent(
                             tonalElevation = 0.dp,
                             windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
                         ) {
-                            items.forEach { item ->
-                                NavigationBarItem(
-                                    icon = { Icon(if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon, contentDescription = item.title) },
-                                    label = { Text(item.title) },
-                                    selected = currentRoute == item.route,
-                                    onClick = { onNavigate(item.route) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                            NavigationBarItem(
+                                icon = { Icon(if (currentRoute == BottomNavItem.Home.route) BottomNavItem.Home.selectedIcon else BottomNavItem.Home.unselectedIcon, contentDescription = BottomNavItem.Home.title) },
+                                label = { Text(BottomNavItem.Home.title) },
+                                selected = currentRoute == BottomNavItem.Home.route,
+                                onClick = { onNavigate(BottomNavItem.Home.route) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            }
+                            )
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Add, contentDescription = "Add Project") },
+                                label = { Text("New") },
+                                selected = false,
+                                onClick = onNavigateToNewProject,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                            NavigationBarItem(
+                                icon = { Icon(if (currentRoute == BottomNavItem.Dashboard.route) BottomNavItem.Dashboard.selectedIcon else BottomNavItem.Dashboard.unselectedIcon, contentDescription = BottomNavItem.Dashboard.title) },
+                                label = { Text(BottomNavItem.Dashboard.title) },
+                                selected = currentRoute == BottomNavItem.Dashboard.route,
+                                onClick = { onNavigate(BottomNavItem.Dashboard.route) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                            NavigationBarItem(
+                                icon = { Icon(if (currentRoute == BottomNavItem.Settings.route) BottomNavItem.Settings.selectedIcon else BottomNavItem.Settings.unselectedIcon, contentDescription = BottomNavItem.Settings.title) },
+                                label = { Text(BottomNavItem.Settings.title) },
+                                selected = currentRoute == BottomNavItem.Settings.route,
+                                onClick = { onNavigate(BottomNavItem.Settings.route) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
                         }
                     }
                 }

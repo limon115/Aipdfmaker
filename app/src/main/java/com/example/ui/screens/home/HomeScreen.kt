@@ -39,14 +39,12 @@ import com.example.data.database.ProjectEntity
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onNavigateToNewProject: () -> Unit = {},
     onNavigateToProject: (Int, String) -> Unit = { _, _ -> }
 ) {
     val projects by viewModel.projects.collectAsStateWithLifecycle()
     
     HomeScreenContent(
         projects = projects,
-        onNavigateToNewProject = onNavigateToNewProject,
         onNavigateToProject = onNavigateToProject,
         onDeleteProject = viewModel::deleteProject
     )
@@ -56,7 +54,6 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     projects: List<ProjectEntity>,
-    onNavigateToNewProject: () -> Unit = {},
     onNavigateToProject: (Int, String) -> Unit = { _, _ -> },
     onDeleteProject: (ProjectEntity) -> Unit = {}
 ) {
@@ -92,17 +89,6 @@ fun HomeScreenContent(
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        },
-        floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToNewProject,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Project")
-            }
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
