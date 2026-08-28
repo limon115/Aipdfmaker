@@ -13,7 +13,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,80 +53,113 @@ fun OnboardingScreen(
         }
     )
 
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.weight(1f))
         
-        // Logo Placeholder
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
-            contentAlignment = Alignment.Center
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = slideInVertically(
+                initialOffsetY = { 50 },
+                animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(durationMillis = 1000))
         ) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "App Logo",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
-            )
+            com.example.ui.components.glass.GlassCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp, horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Logo Placeholder
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "App Logo",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Text(
+                        text = "DocMorph Notes AI",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Your intelligent companion for crafting, organizing, and morphing notes effortlessly.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Text(
-            text = "DocMorph Notes AI",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = "Your intelligent companion for crafting, organizing, and morphing notes effortlessly.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
         
         Spacer(modifier = Modifier.weight(1f))
         
-        Button(
-            onClick = { getStartedLauncher.launch(permissionsToRequest) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = slideInVertically(
+                initialOffsetY = { 50 },
+                animationSpec = tween(durationMillis = 1000, delayMillis = 300, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(durationMillis = 1000, delayMillis = 300))
         ) {
-            Text(text = "Get Started", style = MaterialTheme.typography.titleMedium)
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        OutlinedButton(
-            onClick = { signInLauncher.launch(permissionsToRequest) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-        ) {
-            Text(text = "Sign In", style = MaterialTheme.typography.titleMedium)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = { getStartedLauncher.launch(permissionsToRequest) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(text = "Get Started", style = MaterialTheme.typography.titleMedium)
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedButton(
+                    onClick = { signInLauncher.launch(permissionsToRequest) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(text = "Sign In", style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))
