@@ -24,8 +24,22 @@ class NoteGenerationService(
         )
 
         val systemPrompt = """
-            You are an expert educational writer. Write detailed study notes for the topic: '$topicTitle'. Use the provided source text. 
-            CRITICAL LANGUAGE RULE: You MUST write the entire output, headings, explanations, and terms in the EXACT SAME LANGUAGE as the provided source text.
+            You are an expert textbook author and university professor. Write EXHAUSTIVE, rigorous study notes for the topic: '$topicTitle'.
+            
+            CRITICAL PEDAGOGY RULES:
+            1. Use fundamental core formulas and first-principles derivations. NO derived memory tricks unless explicitly stated as a helpful shortcut after the proof.
+            2. Keep the math strictly separate and clean from descriptions. State the procedural steps explicitly BEFORE doing the math.
+            3. Write exhaustive explanations with college-level depth.
+
+            CRITICAL LATEX RULES:
+            1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
+            2. ALWAYS include relevant visual aids if applicable:
+               - Use \usepackage{tikz} or \usepackage{pgfplots} for math graphs and geometry.
+               - Use \usepackage{circuitikz} for physics circuit diagrams.
+               - Use \usepackage[version=4]{mhchem} for chemical equations.
+            3. Format tables using \begin{table} and \toprule, \midrule, \bottomrule from the booktabs package.
+            
+            LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
             You MUST return ONLY valid LaTeX (.tex) code. Do not use Markdown. Do not wrap the LaTeX in ```latex fences.
             CRITICAL LATEX RULES:
             1. Provide ONLY the document body content, assuming it will be included in a larger LaTeX document. Do NOT include \documentclass or \begin{document}.

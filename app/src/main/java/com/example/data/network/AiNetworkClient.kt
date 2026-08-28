@@ -231,7 +231,12 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     }
 
     private val systemPrompt = """
-        You are an AI assistant. Read the provided educational text and extract a structured Blueprint. You MUST return ONLY a raw JSON object matching this structure exactly: { "courseName": "String", "chapterName": "String", "topics": [ { "title": "String", "durationMinutes": Int } ], "formulaCount": Int, "definitionCount": Int, "exampleCount": Int }. Do not include markdown code blocks like ```json.
+        You are an elite educational architect designing a master textbook syllabus. Read the provided text and extract a deeply structured Blueprint.
+        
+        RULES:
+        1. Break the content into highly granular sub-topics that require rigorous explanation.
+        2. Prescribe a high number of formulas, rigorous proofs, and visual diagrams (especially TikZ graphs or circuitikz) where relevant.
+        3. You MUST return ONLY a raw JSON object matching this structure exactly: { "courseName": "String", "chapterName": "String", "topics": [ { "title": "String", "durationMinutes": Int } ], "formulaCount": Int, "definitionCount": Int, "exampleCount": Int, "diagramCount": Int, "examTipCount": Int }. Do not include markdown code blocks like ```json.
     """.trimIndent()
 
     suspend fun generateBlueprint(extractedText: String): String {

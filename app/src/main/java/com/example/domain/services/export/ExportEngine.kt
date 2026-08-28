@@ -58,11 +58,22 @@ class ExportEngine(private val context: Context) {
                 val fullLatex = """
                     \documentclass{article}
 
+                    % 🎯 TEXTBOOK UPGRADE: Essential Packages
                     \usepackage{amsmath}
                     \usepackage{amsfonts}
                     \usepackage{amssymb}
                     \usepackage{fontspec}
                     \usepackage[Bengali]{ucharclasses}
+                    \usepackage{geometry}
+                    \geometry{a4paper, margin=1in}
+                    \usepackage{tikz}
+                    \usepackage{pgfplots}
+                    \pgfplotsset{compat=1.18}
+                    \usepackage{circuitikz}
+                    \usepackage[version=4]{mhchem}
+                    \usepackage{chemfig}
+                    \usepackage{booktabs}
+                    \usepackage{hyperref}
 
                     \setmainfont{DejaVu Serif}
 
@@ -79,10 +90,14 @@ class ExportEngine(private val context: Context) {
                     \setTransitionsFor{BasicLatin}{\rmfamily}{}
 
                     \title{$projectName}
+                    \author{AI Generated Notes}
+                    \date{\today}
 
                     \begin{document}
 
                     \maketitle
+                    \tableofcontents
+                    \newpage
 
                     $latexContent
 
@@ -96,59 +111,29 @@ class ExportEngine(private val context: Context) {
 
                 if (!isPdf) {
                     _exportProgress.value = 1f
-
-                    withContext(Dispatchers.Main) {
-                        onComplete(null, texFile)
-                    }
-
+                    withContext(Dispatchers.Main) { onComplete(null, texFile) }
                     return@launch
                 }
 
-                val result = TermuxXeLaTeXBridge.compile(
-                    context = context,
-                    texFile = texFile
-                )
+                val result = TermuxXeLaTeXBridge.compile(context = context, texFile = texFile)
 
                 if (result.isSuccess) {
                     val generatedPdf = result.getOrNull()
-
                     if (generatedPdf != null && generatedPdf.exists()) {
-                        val targetPdf = File(
-                            baseDir,
-                            "document.pdf"
-                        )
-
-                        generatedPdf.copyTo(
-                            targetPdf,
-                            overwrite = true
-                        )
-
+                        val targetPdf = File(baseDir, "document.pdf")
+                        generatedPdf.copyTo(targetPdf, overwrite = true)
                         _exportProgress.value = 1f
-
-                        withContext(Dispatchers.Main) {
-                            onComplete(targetPdf, texFile)
-                        }
-
+                        withContext(Dispatchers.Main) { onComplete(targetPdf, texFile) }
                         return@launch
                     }
                 }
 
-                throw Exception(
-                    "XeLaTeX compilation failed: ${
-                        result.exceptionOrNull()?.message
-                    }"
-                )
+                throw Exception("XeLaTeX compilation failed: ${result.exceptionOrNull()?.message}")
 
             } catch (e: Exception) {
                 Timber.e(e, "XeLaTeX export failed")
-
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        "PDF compilation failed: ${e.localizedMessage}",
-                        Toast.LENGTH_LONG
-                    ).show()
-
+                    Toast.makeText(context, "PDF compilation failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     onComplete(null, File(""))
                 }
             }
