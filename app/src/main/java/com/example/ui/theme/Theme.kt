@@ -1,6 +1,11 @@
 package com.example.ui.theme
 
 import android.app.Activity
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Typeface
+import android.graphics.Typeface as AndroidTypeface
+import java.io.File
+import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -70,10 +75,29 @@ val LocalThemeIsDark = staticCompositionLocalOf<MutableState<Boolean>> {
 @Composable
 fun ThemeProvider(
     initialDarkTheme: Boolean = isSystemInDarkTheme(),
+    customFontPath: String = "",
     content: @Composable () -> Unit
 ) {
     val isDarkMode = remember(initialDarkTheme) { mutableStateOf(initialDarkTheme) }
     val isDark = isDarkMode.value
+
+    val fontFamily = remember(customFontPath) {
+        if (customFontPath.isNotEmpty()) {
+            val file = File(customFontPath)
+            if (file.exists()) {
+                try {
+                    val androidTypeface = AndroidTypeface.createFromFile(file)
+                    val composeTypeface = Typeface(androidTypeface)
+                    FontFamily(composeTypeface)
+                } catch (e: Exception) {
+                    Log.e("Theme", "Failed to load custom font", e)
+                    FontFamily.Default
+                }
+            } else FontFamily.Default
+        } else FontFamily.Default
+    }
+
+    val typography = remember(fontFamily) { getTypography(fontFamily) }
 
     // Expose custom ColorScheme based on the required palettes (with backgrounds)
     val colorScheme = if (isDark) {
@@ -121,7 +145,7 @@ fun ThemeProvider(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = typography,
             shapes = com.example.ui.theme.Shapes,
             content = content
         )

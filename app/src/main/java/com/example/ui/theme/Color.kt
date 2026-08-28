@@ -3,14 +3,14 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Light Theme
-val PrimaryLight = Color(0xFF60A5FA)
-val BackgroundLight = Color(0xFF00D0FF)
-val SurfaceLight = Color(0xFF111827).copy(alpha = 0.6f)
-val SurfaceElevatedLight = Color(0xFF111827).copy(alpha = 0.8f)
-val TextPrimaryLight = Color(0xFFF8FAFC)
-val TextSecondaryLight = Color(0xFF94A3B8)
-val BorderLight = Color(0xFFFFFFFF).copy(alpha = 0.08f)
-val DividerLight = Color(0xFFFFFFFF).copy(alpha = 0.05f)
+val PrimaryLight = Color(0xFF2563EB) // Darker blue for better contrast on light mode
+val BackgroundLight = Color(0xFFF8FAFC)
+val SurfaceLight = Color(0xFFFFFFFF).copy(alpha = 0.6f)
+val SurfaceElevatedLight = Color(0xFFFFFFFF).copy(alpha = 0.8f)
+val TextPrimaryLight = Color(0xFF0F172A)
+val TextSecondaryLight = Color(0xFF475569)
+val BorderLight = Color(0xFF000000).copy(alpha = 0.08f)
+val DividerLight = Color(0xFF000000).copy(alpha = 0.05f)
 
 // Dark Theme
 val PrimaryDark = Color(0xFF60A5FA)

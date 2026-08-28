@@ -30,6 +30,7 @@ class AiSettingsDataStore(private val context: Context) {
         val AI2_MAX_TOKENS = intPreferencesKey("ai2_max_tokens")
         val AI2_TOP_P = floatPreferencesKey("ai2_top_p")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
     }
 
     val aiSettingsFlow: Flow<AiSettings> = context.dataStore.data
@@ -44,7 +45,8 @@ class AiSettingsDataStore(private val context: Context) {
                 ai2Temperature = preferences[AI2_TEMPERATURE] ?: 0.7f,
                 ai2MaxTokens = preferences[AI2_MAX_TOKENS] ?: 2048,
                 ai2TopP = preferences[AI2_TOP_P] ?: 1.0f,
-                themeMode = runCatching { ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM)
+                themeMode = runCatching { ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM),
+                customFontPath = preferences[CUSTOM_FONT_PATH] ?: ""
             )
         }
 
@@ -82,6 +84,10 @@ class AiSettingsDataStore(private val context: Context) {
     suspend fun updateThemeMode(themeMode: ThemeMode) {
         context.dataStore.edit { it[THEME_MODE] = themeMode.name }
     }
+
+    suspend fun updateCustomFontPath(path: String) {
+        context.dataStore.edit { it[CUSTOM_FONT_PATH] = path }
+    }
 }
 data class AiSettings(
     val ai1Provider: AiProvider = AiProvider.GOOGLE_GEMINI,
@@ -93,5 +99,6 @@ data class AiSettings(
     val ai2Temperature: Float = 0.7f,
     val ai2MaxTokens: Int = 2048,
     val ai2TopP: Float = 1.0f,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val customFontPath: String = ""
 )

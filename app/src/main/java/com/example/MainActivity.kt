@@ -43,7 +43,10 @@ class MainActivity : ComponentActivity() {
           ThemeMode.SYSTEM -> isSystemInDarkTheme()
       }
 
-      ThemeProvider(initialDarkTheme = isDarkTheme) {
+      ThemeProvider(
+          initialDarkTheme = isDarkTheme,
+          customFontPath = settings?.customFontPath ?: ""
+      ) {
         LiquidBackground {
         DocMorphApp()
       }

@@ -5,6 +5,8 @@ import com.example.ui.components.glass.GlassTextField
 
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.MenuAnchorType
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 import androidx.compose.foundation.background
 
@@ -86,7 +88,10 @@ fun AiSettingsScreen(
         ) {
             ThemeSettingsCard(
                 themeMode = settings.themeMode,
-                onThemeModeChange = { viewModel.updateThemeMode(it) }
+                onThemeModeChange = { viewModel.updateThemeMode(it) },
+                customFontPath = settings.customFontPath,
+                onFontPicked = { uri -> viewModel.saveCustomFont(uri) },
+                onClearFont = { viewModel.clearCustomFont() }
             )
             AiConfigCard(
                 title = "AI #1 - Blueprint Builder",
@@ -678,8 +683,19 @@ fun DeveloperToolsCard(
 @Composable
 fun ThemeSettingsCard(
     themeMode: ThemeMode,
-    onThemeModeChange: (ThemeMode) -> Unit
+    onThemeModeChange: (ThemeMode) -> Unit,
+    customFontPath: String = "",
+    onFontPicked: (android.net.Uri) -> Unit = {},
+    onClearFont: () -> Unit = {}
 ) {
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            onFontPicked(uri)
+        }
+    }
+
     com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -708,6 +724,32 @@ fun ThemeSettingsCard(
                     onClick = { onThemeModeChange(ThemeMode.DARK) },
                     modifier = Modifier.weight(1f)
                 )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text("Custom App Font", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Pick a .ttf or .otf file from your device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { launcher.launch("*/*") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                ) {
+                    Text("Pick Font")
+                }
+                
+                if (customFontPath.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = onClearFont,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Reset")
+                    }
+                }
             }
         }
     }

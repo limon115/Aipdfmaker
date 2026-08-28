@@ -56,6 +56,37 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateThemeMode(themeMode: ThemeMode) {
         viewModelScope.launch { dataStore.updateThemeMode(themeMode) }
     }
+
+    fun saveCustomFont(uri: android.net.Uri) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val context = getApplication<Application>()
+                val inputStream = context.contentResolver.openInputStream(uri) ?: return@launch
+                val fontFile = java.io.File(context.filesDir, "custom_ui_font.ttf")
+                inputStream.use { input ->
+                    fontFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                dataStore.updateCustomFontPath(fontFile.absolutePath)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun clearCustomFont() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val context = getApplication<Application>()
+                val fontFile = java.io.File(context.filesDir, "custom_ui_font.ttf")
+                if (fontFile.exists()) fontFile.delete()
+                dataStore.updateCustomFontPath("")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
     fun testConnection(
         provider: String,
         model: String,
