@@ -92,7 +92,7 @@ fun ProcessingScreen(
     }
 
     Scaffold(
-        containerColor = Color.Black // True-black background
+        containerColor = Color.Transparent
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -118,7 +118,7 @@ fun ProcessingScreen(
                 CircularProgressIndicator(
                     progress = { 1f },
                     modifier = Modifier.fillMaxSize(),
-                    color = Color.White.copy(alpha = 0.05f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
                     strokeWidth = 8.dp
                 )
 
@@ -133,9 +133,8 @@ fun ProcessingScreen(
                 Text(
                     text = "${(progressAnim.value * 100).toInt()}%",
                     style = MaterialTheme.typography.displayMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Light,
-                    fontFamily = FontFamily.Serif
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Light
                 )
             }
 
@@ -157,29 +156,25 @@ fun ProcessingScreen(
                 Text(
                     text = textToShow,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontFamily = FontFamily.Serif
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                 )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Background Button (Glassmorphism)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(32.dp))
-                    .clickable { onNavigateBack() }
-                    .padding(horizontal = 32.dp, vertical = 16.dp)
+            com.example.ui.components.glass.GlassCard(
+                onClick = onNavigateBack,
+                modifier = Modifier.wrapContentSize(),
+                shape = RoundedCornerShape(32.dp)
             ) {
-                Text(
-                    text = "Run in Background",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Medium
-                )
+                Box(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)) {
+                    Text(
+                        text = "Run in Background",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
