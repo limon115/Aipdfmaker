@@ -1,28 +1,37 @@
 import re
 
-with open("app/src/main/java/com/example/data/datastore/AiSettingsDataStore.kt", "r") as f:
+with open('app/src/main/java/com/example/data/datastore/AiSettingsDataStore.kt', 'r') as f:
     content = f.read()
 
-# First, restore original structure if we messed up
-if "suspend fun updateThemeMode" in content:
-    content = re.sub(r'suspend fun updateThemeMode.*?\}', '', content, flags=re.DOTALL)
+# Add to AiSettings data class
+content = re.sub(
+    r'val ai2TopP: Float = 1\.0f,',
+    r'val ai2TopP: Float = 1.0f,\n    val ai3Provider: AiProvider = AiProvider.GOOGLE_GEMINI,\n    val ai3Model: String = "",\n    val ai3ApiKey: String = "",',
+    content
+)
 
-# Add method inside the class (before the closing brace of the class, which is before `data class AiSettings`)
-# We can find `data class AiSettings` and insert before it.
-parts = content.split("data class AiSettings")
-if len(parts) == 2:
-    # check if the method is already there
-    if "suspend fun updateThemeMode" not in parts[0]:
-        new_method = """    suspend fun updateThemeMode(themeMode: ThemeMode) {
-        context.dataStore.edit { it[THEME_MODE] = themeMode.name }
+# Add to aiSettingsFlow
+content = re.sub(
+    r'ai2TopP = preferences\[AI2_TOP_P\] \?: 1\.0f,',
+    r'ai2TopP = preferences[AI2_TOP_P] ?: 1.0f,\n                ai3Provider = runCatching { AiProvider.valueOf(preferences[AI3_PROVIDER] ?: AiProvider.GOOGLE_GEMINI.name) }.getOrDefault(AiProvider.GOOGLE_GEMINI),\n                ai3Model = preferences[AI3_MODEL] ?: "",\n                ai3ApiKey = preferences[AI3_API_KEY] ?: "",',
+    content
+)
+
+# Add update methods
+methods = """
+    suspend fun updateAi3Provider(provider: AiProvider) {
+        context.dataStore.edit { it[AI3_PROVIDER] = provider.name }
     }
-}
+    suspend fun updateAi3Model(model: String) {
+        context.dataStore.edit { it[AI3_MODEL] = model }
+    }
+    suspend fun updateAi3ApiKey(apiKey: String) {
+        context.dataStore.edit { it[AI3_API_KEY] = apiKey }
+    }
 """
-        # replace the last "}" in parts[0] with the new method
-        parts[0] = parts[0].rsplit("}", 1)[0] + new_method
 
-content = parts[0] + "data class AiSettings" + parts[1]
+content = re.sub(r'suspend fun updateThemeMode', methods + '\n    suspend fun updateThemeMode', content)
 
-with open("app/src/main/java/com/example/data/datastore/AiSettingsDataStore.kt", "w") as f:
+with open('app/src/main/java/com/example/data/datastore/AiSettingsDataStore.kt', 'w') as f:
     f.write(content)
 

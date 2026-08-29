@@ -1,4 +1,9 @@
 package com.example.ui.screens
+
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.launch
@@ -124,6 +129,14 @@ fun MainScreen() {
                     }
                 )
             }
+            composable("latex_debugger") {
+                com.example.ui.screens.debugger.LatexDebuggerScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToViewer = { projectId -> 
+                        navController.navigate("notes_viewer/$projectId")
+                    }
+                )
+            }
             composable(BottomNavItem.Dashboard.route) {
                 Column(
                     modifier = androidx.compose.ui.Modifier
@@ -132,13 +145,28 @@ fun MainScreen() {
                         .padding(start = 16.dp, end = 16.dp, top = 48.dp)
                 ) {
                     com.example.ui.screens.settings.AiUsageDashboardCard()
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                    
+                    com.example.ui.components.glass.GlassCard(
+                        modifier = Modifier.fillMaxWidth().clickable { navController.navigate("latex_debugger") }
+                    ) {
+                        androidx.compose.foundation.layout.Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Build, contentDescription = "LaTeX Debugger", tint = MaterialTheme.colorScheme.primary)
+                            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text("LaTeX Debugger", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text("Debug and fix LaTeX compilation errors using AI.", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                    
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(100.dp))
                 }
             }
             composable(BottomNavItem.Settings.route) {
                 AiSettingsScreen(
-                    onNavigateToProviderSelection = { isAi1 ->
-                        navController.navigate("provider_selection/$isAi1")
+                    onNavigateToProviderSelection = { aiIndex ->
+                        navController.navigate("provider_selection/$aiIndex")
                     },
                     onNavigateToApiLab = {
                         navController.navigate("api_lab")
@@ -294,18 +322,22 @@ fun MainScreen() {
                     onNavigateHome = { navController.navigate(BottomNavItem.Home.route) { popUpTo(BottomNavItem.Home.route) { inclusive = false } } }
                 )
             }
-            composable("provider_selection/{isAi1}") { backStackEntry ->
-                val isAi1 = backStackEntry.arguments?.getString("isAi1")?.toBoolean() ?: true
+            composable("provider_selection/{aiIndex}") { backStackEntry ->
+                val aiIndex = backStackEntry.arguments?.getString("aiIndex")?.toIntOrNull() ?: 1
                 val settingsViewModel: SettingsViewModel = viewModel()
                 val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
                 
                 ProviderSelectionScreen(
-                    currentProvider = if (isAi1) settings?.ai1Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI else settings?.ai2Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI,
+                    currentProvider = when (aiIndex) {
+                        1 -> settings?.ai1Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI
+                        2 -> settings?.ai2Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI
+                        else -> settings?.ai3Provider ?: com.example.domain.models.AiProvider.GOOGLE_GEMINI
+                    },
                     onProviderSelected = { provider ->
-                        if (isAi1) {
-                            settingsViewModel.updateAi1Provider(provider)
-                        } else {
-                            settingsViewModel.updateAi2Provider(provider)
+                        when (aiIndex) {
+                            1 -> settingsViewModel.updateAi1Provider(provider)
+                            2 -> settingsViewModel.updateAi2Provider(provider)
+                            else -> settingsViewModel.updateAi3Provider(provider)
                         }
                         navController.popBackStack()
                     },

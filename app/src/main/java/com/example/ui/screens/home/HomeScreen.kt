@@ -59,11 +59,12 @@ fun HomeScreenContent(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     
-    val tabs = listOf("All", "Completed", "Processing")
+    val tabs = listOf("All", "Notes", "Debugged", "Tasks")
     val filteredProjects = remember(projects, selectedTab) {
         when (selectedTab) {
             1 -> projects.filter { it.status == "Completed" }
-            2 -> projects.filter { it.status == "Processing" }
+            2 -> projects.filter { it.status == "Debugged" }
+            3 -> projects.filter { it.status != "Completed" && it.status != "Debugged" }
             else -> projects
         }
     }

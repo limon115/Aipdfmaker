@@ -9,15 +9,24 @@ data class AiUsageStats(
     val requests: Int = 0,
     val estimatedTokens: Int = 0,
     val cacheHits: Int = 0,
-    val rateLimitErrors: Int = 0
+    val rateLimitErrors: Int = 0,
+    val tokensByFeature: Map<String, Int> = emptyMap(),
+    val requestsByFeature: Map<String, Int> = emptyMap()
 )
 
 object AiUsageTracker {
     private val _stats = MutableStateFlow(AiUsageStats())
     val stats: StateFlow<AiUsageStats> = _stats.asStateFlow()
 
-    fun trackRequest(tokens: Int) {
-        _stats.update { it.copy(requests = it.requests + 1, estimatedTokens = it.estimatedTokens + tokens) }
+    fun trackRequest(feature: String, tokens: Int) {
+        _stats.update { current ->
+            current.copy(
+                requests = current.requests + 1,
+                estimatedTokens = current.estimatedTokens + tokens,
+                tokensByFeature = current.tokensByFeature.toMutableMap().apply { put(feature, (get(feature) ?: 0) + tokens) },
+                requestsByFeature = current.requestsByFeature.toMutableMap().apply { put(feature, (get(feature) ?: 0) + 1) }
+            )
+        }
     }
 
     fun trackCacheHit() {

@@ -40,7 +40,7 @@ import kotlinx.coroutines.delay
     @Serializable data class Candidate(val content: GeminiContent)
 }
 
-class AiNetworkClient(private val provider: String, private val apiKey: String, private val model: String, private val temperature: Float) {
+class AiNetworkClient(private val provider: String, private val apiKey: String, private val model: String, private val temperature: Float, private val featureName: String = "AI 1 - Blueprint") {
     private val jsonFormat = Json { ignoreUnknownKeys = true }
     companion object {
         private val requestMutex = Mutex()
@@ -239,6 +239,14 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         3. You MUST return ONLY a raw JSON object matching this structure exactly: { "courseName": "String", "chapterName": "String", "topics": [ { "title": "String", "durationMinutes": Int } ], "formulaCount": Int, "definitionCount": Int, "exampleCount": Int, "diagramCount": Int, "examTipCount": Int }. Do not include markdown code blocks like ```json.
     """.trimIndent()
 
+    
+    suspend fun debugLatex(latexCode: String, logContent: String): String {
+        val systemPrompt = "You are an elite LaTeX debugging assistant. Read the following LaTeX code and the corresponding compiler log which contains errors. Your task is to identify and fix all errors, warnings, and formatting issues. You MUST return ONLY the completely rewritten, compiling LaTeX code. Do NOT include any markdown code blocks, explanations, or wrapper text. Just the raw LaTeX code."
+        val userPrompt = "LaTeX Code:\n$latexCode\n\nCompiler Log:\n$logContent"
+        val rawResponse = generateContent(userPrompt, customSystemPrompt = systemPrompt)
+        return rawResponse.replace("```latex", "").replace("```", "").trim()
+    }
+
     suspend fun generateBlueprint(extractedText: String): String {
         val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
@@ -289,6 +297,8 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null, schema: JsonObject? = null): String {
         val estimatedTokens = (prompt.length + (sysPrompt?.length ?: 0)) / 4
         enforceRateLimit(estimatedTokens)
+        com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
+        com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         val targetModel = model.ifBlank { "gemini-1.5-flash" }
         val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
 
@@ -322,6 +332,8 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null): String {
         val estimatedTokens = messages.sumOf { (it.content ?: "").length } / 4
         enforceRateLimit(estimatedTokens)
+        com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
+        com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         val requestPayload = OpenAiRequest(reqModel, messages, temp, maxTokens)
         com.example.utils.AppLogger.d("AiNetwork", "Sending OpenAI request to $reqModel (${messages.size} messages)")
         try {

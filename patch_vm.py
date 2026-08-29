@@ -1,30 +1,22 @@
 import re
 
-with open("app/src/main/java/com/example/ui/screens/project/NewProjectViewModel.kt", "r") as f:
-    text = f.read()
+with open('app/src/main/java/com/example/ui/screens/settings/SettingsViewModel.kt', 'r') as f:
+    content = f.read()
 
-# Add loadProject method
-load_project = """
-    fun loadProject(projectId: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val project = projectDao.getProjectById(projectId)
-            if (project != null) {
-                _state.update {
-                    it.copy(
-                        projectTitle = project.title,
-                        course = project.course,
-                        chapter = project.chapter,
-                        noteStyle = project.noteStyle,
-                        outputFormat = project.outputFormat,
-                        extractedText = project.sourceText
-                    )
-                }
-            }
-        }
+methods = """
+    fun updateAi3Provider(provider: AiProvider) {
+        viewModelScope.launch { dataStore.updateAi3Provider(provider) }
+    }
+    fun updateAi3Model(model: String) {
+        viewModelScope.launch { dataStore.updateAi3Model(model) }
+    }
+    fun updateAi3ApiKey(apiKey: String) {
+        viewModelScope.launch { dataStore.updateAi3ApiKey(apiKey) }
     }
 """
 
-text = text.replace("fun createProject(onProjectCreated: (Int) -> Unit) {", load_project + "\n    fun createProject(onProjectCreated: (Int) -> Unit) {")
+content = re.sub(r'fun updateThemeMode', methods + '\n    fun updateThemeMode', content)
 
-with open("app/src/main/java/com/example/ui/screens/project/NewProjectViewModel.kt", "w") as f:
-    f.write(text)
+with open('app/src/main/java/com/example/ui/screens/settings/SettingsViewModel.kt', 'w') as f:
+    f.write(content)
+

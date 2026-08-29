@@ -56,7 +56,6 @@ class NoteGenerationService(
             return cleanLatex(cachedResponse)
         }
 
-        com.example.domain.services.ai.AiUsageTracker.trackRequest((prompt.length + systemPrompt.length) / 4)
         val rawResponse = try {
             clientForGeneration.generateContent(prompt, systemPrompt, "text/plain", true)
         } catch (e: Exception) {

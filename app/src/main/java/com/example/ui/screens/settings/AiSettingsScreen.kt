@@ -51,7 +51,7 @@ import java.util.Locale
 @Composable
 fun AiSettingsScreen(
     viewModel: SettingsViewModel = viewModel(),
-    onNavigateToProviderSelection: (isAi1: Boolean) -> Unit,
+    onNavigateToProviderSelection: (aiIndex: Int) -> Unit,
     onNavigateToApiLab: () -> Unit,
     onNavigateToLogs: () -> Unit = {}
 ) {
@@ -98,7 +98,7 @@ fun AiSettingsScreen(
                 provider = settings.ai1Provider,
                 model = settings.ai1Model,
                 apiKey = settings.ai1ApiKey,
-                onProviderClick = { onNavigateToProviderSelection(true) },
+                onProviderClick = { onNavigateToProviderSelection(1) },
                 onModelChange = viewModel::updateAi1Model,
                 onApiKeyChange = viewModel::updateAi1ApiKey,
                 onTestConnection = { provider, model, apiKey ->
@@ -120,7 +120,7 @@ fun AiSettingsScreen(
                 provider = settings.ai2Provider,
                 model = settings.ai2Model,
                 apiKey = settings.ai2ApiKey,
-                onProviderClick = { onNavigateToProviderSelection(false) },
+                onProviderClick = { onNavigateToProviderSelection(2) },
                 onModelChange = viewModel::updateAi2Model,
                 onApiKeyChange = viewModel::updateAi2ApiKey,
                 onTestConnection = { provider, model, apiKey ->
@@ -146,6 +146,29 @@ fun AiSettingsScreen(
                     )
                 }
             )
+
+            AiConfigCard(
+                title = "AI #3 - LaTeX Debugger",
+                provider = settings.ai3Provider,
+                model = settings.ai3Model,
+                apiKey = settings.ai3ApiKey,
+                onProviderClick = { onNavigateToProviderSelection(3) },
+                onModelChange = viewModel::updateAi3Model,
+                onApiKeyChange = viewModel::updateAi3ApiKey,
+                onTestConnection = { provider, model, apiKey ->
+                    viewModel.testConnection(
+                        provider = provider,
+                        model = model,
+                        apiKey = apiKey,
+                        onSuccess = { android.widget.Toast.makeText(context, "Connection Successful", android.widget.Toast.LENGTH_SHORT).show() },
+                        onError = {
+                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(it))
+                            android.widget.Toast.makeText(context, "Connection Failed: copied full error to clipboard", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    )
+                }
+            )
+
             
             BatteryOptimizationCard()
             
@@ -524,7 +547,7 @@ fun AiUsageDashboardCard() {
                 )
                 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Requests Made:", style = MaterialTheme.typography.bodyMedium)
+                    Text("Total Requests:", style = MaterialTheme.typography.bodyMedium)
                     Text("${stats.requests}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -542,7 +565,122 @@ fun AiUsageDashboardCard() {
             }
         }
         
+        if (stats.tokensByFeature.isNotEmpty()) {
+            UsagePieChartCard(stats.tokensByFeature, "Token Distribution")
+        }
+        
+        if (stats.requestsByFeature.isNotEmpty()) {
+            FeatureBarChartCard(stats.requestsByFeature, "Requests by Feature")
+        }
+        
         UsageBarChartCard(stats.requests, stats.cacheHits, stats.rateLimitErrors)
+    }
+}
+
+@Composable
+fun UsagePieChartCard(data: Map<String, Int>, title: String) {
+    com.example.ui.components.glass.GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            
+            val total = data.values.sum().coerceAtLeast(1)
+            val colors = listOf(
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.secondary,
+                MaterialTheme.colorScheme.tertiary,
+                MaterialTheme.colorScheme.error,
+                androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                androidx.compose.ui.graphics.Color(0xFFFF9800)
+            )
+            
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // Pie Chart Canvas
+                androidx.compose.foundation.Canvas(modifier = Modifier.size(120.dp).padding(8.dp)) {
+                    var startAngle = -90f
+                    data.entries.forEachIndexed { index, entry ->
+                        val sweepAngle = (entry.value.toFloat() / total) * 360f
+                        drawArc(
+                            color = colors[index % colors.size],
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = true,
+                            size = size
+                        )
+                        startAngle += sweepAngle
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                // Legend
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    data.entries.forEachIndexed { index, entry ->
+                        val percentage = (entry.value.toFloat() / total) * 100
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(12.dp).background(colors[index % colors.size], androidx.compose.foundation.shape.CircleShape))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(entry.key, style = MaterialTheme.typography.labelMedium)
+                                Text("${entry.value} (${String.format("%.1f", percentage)}%)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FeatureBarChartCard(data: Map<String, Int>, title: String) {
+    com.example.ui.components.glass.GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            
+            val maxVal = data.values.maxOrNull()?.coerceAtLeast(1) ?: 1
+            val colors = listOf(
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.secondary,
+                MaterialTheme.colorScheme.tertiary,
+                androidx.compose.ui.graphics.Color(0xFF4CAF50)
+            )
+            
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                data.entries.forEachIndexed { index, entry ->
+                    ChartBarRow(entry.key, entry.value, maxVal, colors[index % colors.size])
+                }
+            }
+        }
     }
 }
 

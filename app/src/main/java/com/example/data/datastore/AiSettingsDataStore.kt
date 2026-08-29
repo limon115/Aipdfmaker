@@ -25,6 +25,9 @@ class AiSettingsDataStore(private val context: Context) {
         val AI2_PROVIDER = stringPreferencesKey("ai2_provider")
         val AI2_MODEL = stringPreferencesKey("ai2_model")
         val AI2_API_KEY = stringPreferencesKey("ai2_api_key")
+        val AI3_PROVIDER = stringPreferencesKey("ai3_provider")
+        val AI3_MODEL = stringPreferencesKey("ai3_model")
+        val AI3_API_KEY = stringPreferencesKey("ai3_api_key")
 
         val AI2_TEMPERATURE = floatPreferencesKey("ai2_temperature")
         val AI2_MAX_TOKENS = intPreferencesKey("ai2_max_tokens")
@@ -45,6 +48,9 @@ class AiSettingsDataStore(private val context: Context) {
                 ai2Temperature = preferences[AI2_TEMPERATURE] ?: 0.7f,
                 ai2MaxTokens = preferences[AI2_MAX_TOKENS] ?: 2048,
                 ai2TopP = preferences[AI2_TOP_P] ?: 1.0f,
+                ai3Provider = runCatching { AiProvider.valueOf(preferences[AI3_PROVIDER] ?: AiProvider.GOOGLE_GEMINI.name) }.getOrDefault(AiProvider.GOOGLE_GEMINI),
+                ai3Model = preferences[AI3_MODEL] ?: "",
+                ai3ApiKey = preferences[AI3_API_KEY] ?: "",
                 themeMode = runCatching { ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM),
                 customFontPath = preferences[CUSTOM_FONT_PATH] ?: ""
             )
@@ -81,6 +87,17 @@ class AiSettingsDataStore(private val context: Context) {
             it[AI2_TOP_P] = topP
         }
     }
+    
+    suspend fun updateAi3Provider(provider: AiProvider) {
+        context.dataStore.edit { it[AI3_PROVIDER] = provider.name }
+    }
+    suspend fun updateAi3Model(model: String) {
+        context.dataStore.edit { it[AI3_MODEL] = model }
+    }
+    suspend fun updateAi3ApiKey(apiKey: String) {
+        context.dataStore.edit { it[AI3_API_KEY] = apiKey }
+    }
+
     suspend fun updateThemeMode(themeMode: ThemeMode) {
         context.dataStore.edit { it[THEME_MODE] = themeMode.name }
     }
@@ -99,6 +116,9 @@ data class AiSettings(
     val ai2Temperature: Float = 0.7f,
     val ai2MaxTokens: Int = 2048,
     val ai2TopP: Float = 1.0f,
+    val ai3Provider: AiProvider = AiProvider.GOOGLE_GEMINI,
+    val ai3Model: String = "",
+    val ai3ApiKey: String = "",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val customFontPath: String = ""
 )

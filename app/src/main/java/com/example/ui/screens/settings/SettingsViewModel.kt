@@ -53,6 +53,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
 
+    
+    fun updateAi3Provider(provider: AiProvider) {
+        viewModelScope.launch { dataStore.updateAi3Provider(provider) }
+    }
+    fun updateAi3Model(model: String) {
+        viewModelScope.launch { dataStore.updateAi3Model(model) }
+    }
+    fun updateAi3ApiKey(apiKey: String) {
+        viewModelScope.launch { dataStore.updateAi3ApiKey(apiKey) }
+    }
+
     fun updateThemeMode(themeMode: ThemeMode) {
         viewModelScope.launch { dataStore.updateThemeMode(themeMode) }
     }
