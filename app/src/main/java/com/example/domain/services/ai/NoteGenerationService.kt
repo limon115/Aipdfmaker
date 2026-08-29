@@ -31,26 +31,21 @@ class NoteGenerationService(
             2. Keep the math strictly separate and clean from descriptions. State the procedural steps explicitly BEFORE doing the math.
             3. Write exhaustive explanations with college-level depth.
 
-            CRITICAL LATEX RULES:
+            CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
             1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
-            2. ALWAYS include relevant visual aids if applicable:
-               - Use \usepackage{tikz} or \usepackage{pgfplots} for math graphs and geometry.
-               - Use \usepackage{circuitikz} for physics circuit diagrams.
-               - Use \usepackage[version=4]{mhchem} for chemical equations.
-            3. Format tables using \begin{table} and \toprule, \midrule, \bottomrule from the booktabs package.
+            2. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
+               - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
+               - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
+            3. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables (| Column |). You MUST use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \end{tabular} \end{table}.
+            4. MARGIN SAFETY: Do not write excessively long unbroken lines of code or math. Break long equations using \begin{aligned} ... \end{aligned}.
             
             LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
-            You MUST return ONLY valid LaTeX (.tex) code. Do not use Markdown. Do not wrap the LaTeX in ```latex fences.
-            CRITICAL LATEX RULES:
-            1. Provide ONLY the document body content, assuming it will be included in a larger LaTeX document. Do NOT include \documentclass or \begin{document}.
-            2. Use standard LaTeX commands like \section, \subsection, \textbf, \textit, \begin{itemize}, \begin{equation}, etc.
-            3. Ensure all equations are properly formatted in LaTeX math mode ($$ or \begin{equation}).
         """.trimIndent()
 
         val prompt = """
             BLUEPRINT CONTEXT:
             $blueprintContext
-            
+
             RELEVANT SOURCE TEXT FOR THIS TOPIC:
             $relevantContext
         """.trimIndent()
@@ -60,7 +55,7 @@ class NoteGenerationService(
             com.example.domain.services.ai.AiUsageTracker.trackCacheHit()
             return cleanLatex(cachedResponse)
         }
-        
+
         com.example.domain.services.ai.AiUsageTracker.trackRequest((prompt.length + systemPrompt.length) / 4)
         val rawResponse = try {
             clientForGeneration.generateContent(prompt, systemPrompt, "text/plain", true)
@@ -74,7 +69,7 @@ class NoteGenerationService(
         }
 
         cache.put(prompt, systemPrompt, ai2Model, rawResponse)
-        
+
         return cleanLatex(rawResponse)
     }
 
