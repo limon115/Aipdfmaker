@@ -11,7 +11,8 @@ class LatexCompilerRepository(private val context: Context) {
 
     suspend fun compileAndExportPdf(
         projectName: String,
-        latexContent: String
+        latexContent: String,
+        fixScript: String? = null
     ): Result<Pair<File, File>> = withContext(Dispatchers.IO) {
         runCatching {
             val safeName = projectName
@@ -34,17 +35,17 @@ class LatexCompilerRepository(private val context: Context) {
                 )
             }
 
-            val fullLatex = """
+            val fullLatex = if (latexContent.contains("\\documentclass")) {
+                latexContent
+            } else {
+                """
                 \documentclass{article}
-
                 \usepackage{amsmath}
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
                 \usepackage[Bengali]{ucharclasses}
-
                 \setmainfont{DejaVu Serif}
-
                 \newfontfamily\bengalifont[
                     Path=/data/data/com.termux/files/home/,
                     Script=Bengali,
@@ -52,28 +53,24 @@ class LatexCompilerRepository(private val context: Context) {
                     AutoFakeBold=1.5,
                     AutoFakeSlant=0.2
                 ]{solaiman.ttf}
-
                 \setTransitionsFor{Bengali}{\bengalifont}{}
                 \setTransitionsFor{Devanagari}{\bengalifont}{}
                 \setTransitionsFor{BasicLatin}{\rmfamily}{}
-
                 \title{$projectName}
-
                 \begin{document}
-
                 \maketitle
-
                 $latexContent
-
                 \end{document}
-            """.trimIndent()
+                """.trimIndent()
+            }
 
             val texFile = File(baseDir, "main.tex")
             texFile.writeText(fullLatex)
 
             val result = TermuxXeLaTeXBridge.compile(
                 context = context,
-                texFile = texFile
+                texFile = texFile,
+                fixScript = fixScript
             ).getOrElse { error ->
                 throw Exception(
                     "XeLaTeX compilation failed: ${error.message}",

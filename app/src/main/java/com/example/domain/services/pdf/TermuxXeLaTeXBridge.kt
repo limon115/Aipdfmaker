@@ -19,7 +19,7 @@ object TermuxXeLaTeXBridge {
         .connectTimeout(5, TimeUnit.SECONDS)
         .build()
 
-    suspend fun compile(context: Context, texFile: File): Result<File> = withContext(Dispatchers.IO) {
+    suspend fun compile(context: Context, texFile: File, fixScript: String? = null): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             require(texFile.exists()) { "LaTeX file does not exist." }
             
@@ -27,7 +27,7 @@ object TermuxXeLaTeXBridge {
             val latexContent = texFile.readText()
             
             // Package payload
-            val jsonBody = JSONObject().apply { put("latex", latexContent) }.toString()
+            val jsonBody = JSONObject().apply { put("latex", latexContent); fixScript?.let { put("fix_script", it) } }.toString()
             val requestBody = jsonBody.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
             
             // Dispatch to Localhost Termux Server

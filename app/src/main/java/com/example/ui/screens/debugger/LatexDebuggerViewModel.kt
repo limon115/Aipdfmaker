@@ -88,7 +88,7 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
                     status = "Debugged",
                     pageCount = 1,
                     lastUpdated = System.currentTimeMillis(),
-                    sourceText = ""
+                    sourceText = _state.value.latexCode
                 )
                 val projectId = db.projectDao().insertProject(project).toInt()
                 

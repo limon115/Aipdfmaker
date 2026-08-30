@@ -15,6 +15,7 @@ import java.io.File
 
 data class NotesViewerState(
     val latexContent: String = "",
+    val fixScript: String? = null,
     val isLoading: Boolean = true,
     val generatedPdfFile: File? = null,
     val generatedTexFile: File? = null,
@@ -71,7 +72,8 @@ class NotesViewerViewModel(
             try {
                 val result = compilerRepository.compileAndExportPdf(
                     projectName = _state.value.projectName,
-                    latexContent = _state.value.latexContent
+                    latexContent = _state.value.latexContent,
+                    fixScript = _state.value.fixScript
                 )
                 if (result.isSuccess) {
                     val (pdf, tex) = result.getOrThrow()

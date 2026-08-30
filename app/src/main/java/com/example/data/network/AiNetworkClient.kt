@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
 @Serializable data class GeminiPart(val text: String)
 @Serializable data class GeminiContent(val role: String = "user", val parts: List<GeminiPart>)
 @Serializable data class GeminiSystemInstruction(val parts: List<GeminiPart>)
-@Serializable data class GeminiGenConfig(val temperature: Float, val responseMimeType: String? = null, val responseSchema: JsonObject? = null)
+@Serializable data class GeminiGenConfig(val temperature: Float, val responseMimeType: String? = null, val responseSchema: JsonObject? = null, val maxOutputTokens: Int? = null)
 @Serializable data class GeminiRequest(val contents: List<GeminiContent>, val systemInstruction: GeminiSystemInstruction? = null, val generationConfig: GeminiGenConfig? = null)
 @Serializable data class GeminiResponse(val candidates: List<Candidate>? = null) {
     @Serializable data class Candidate(val content: GeminiContent)
@@ -241,10 +241,27 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
 
     
     suspend fun debugLatex(latexCode: String, logContent: String): String {
-        val systemPrompt = "You are an elite LaTeX debugging assistant. Read the following LaTeX code and the corresponding compiler log which contains errors. Your task is to identify and fix all errors, warnings, and formatting issues. You MUST return ONLY the completely rewritten, compiling LaTeX code. Do NOT include any markdown code blocks, explanations, or wrapper text. Just the raw LaTeX code."
-        val userPrompt = "LaTeX Code:\n$latexCode\n\nCompiler Log:\n$logContent"
-        val rawResponse = generateContent(userPrompt, customSystemPrompt = systemPrompt)
-        return rawResponse.replace("```latex", "").replace("```", "").trim()
+        val systemPrompt = """You are an elite Python and LaTeX debugging assistant. Read the following LaTeX code and the corresponding compiler log which contains errors.
+
+Your task is to identify the bugs and write a Python script that injects the fixes into the code.
+
+CRITICAL INSTRUCTIONS:
+1. You MUST return ONLY a raw Python script.
+2. The Python script should read the file path from sys.argv[1].
+3. Open the file, read the contents, perform string replacements or regex substitutions to fix the LaTeX errors, and overwrite the file.
+4. Do NOT output partial LaTeX code or full LaTeX code, ONLY output the Python script.
+5. Do NOT include markdown blocks (like ```python). Just return the raw Python code.
+6. The Python script will be executed locally to patch the user's LaTeX code before compilation.
+""".trimIndent()
+
+        val userPrompt = """LaTeX Code:
+$latexCode
+
+Compiler Log:
+$logContent""".trimIndent()
+        
+        val rawResponse = generateContent(userPrompt, customSystemPrompt = systemPrompt, maxTokens = 8192)
+        return rawResponse.replace("```python", "").replace("```", "").trim()
     }
 
     suspend fun generateBlueprint(extractedText: String): String {
@@ -253,17 +270,17 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         return if (isGemini) generateWithGemini(extractedText, cleanKey) else generateWithOpenAiCompatible(extractedText, cleanKey)
     }
 
-    suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null, useDocumentSchema: Boolean = false): String {
+    suspend fun generateContent(prompt: String, customSystemPrompt: String? = null, mimeType: String? = null, useDocumentSchema: Boolean = false, maxTokens: Int? = null): String {
         val cleanKey = apiKey.replace(" ", "").trim()
         requireKey(cleanKey)
         if (isGemini) {
             val schema = null // if (useDocumentSchema) documentSchema else null
-            return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType, schema)
+            return sendGeminiRequest(cleanKey, prompt, customSystemPrompt, mimeType, schema, maxTokens)
         } else {
             val messages = mutableListOf<OpenAiMessage>()
             if (customSystemPrompt != null) messages.add(OpenAiMessage("system", customSystemPrompt))
             messages.add(OpenAiMessage("user", prompt))
-            return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, messages, temperature)
+            return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, messages, temperature, maxTokens)
         }
     }
 
@@ -294,10 +311,9 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model, messages, temperature)
     }
 
-    private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null, schema: JsonObject? = null): String {
+    private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null, schema: JsonObject? = null, maxTokens: Int? = null): String {
         val estimatedTokens = (prompt.length + (sysPrompt?.length ?: 0)) / 4
         enforceRateLimit(estimatedTokens)
-        com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         val targetModel = model.ifBlank { "gemini-1.5-flash" }
         val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
@@ -305,7 +321,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
         val requestPayload = GeminiRequest(
             contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
             systemInstruction = sysPrompt?.let { GeminiSystemInstruction(listOf(GeminiPart(it))) },
-            generationConfig = GeminiGenConfig(temperature, mimeType, schema)
+            generationConfig = GeminiGenConfig(temperature, mimeType, schema, maxTokens)
         )
 
         com.example.utils.AppLogger.d("AiNetwork", "Sending Gemini request to $targetModel (${prompt.length} chars)")
@@ -332,7 +348,6 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null): String {
         val estimatedTokens = messages.sumOf { (it.content ?: "").length } / 4
         enforceRateLimit(estimatedTokens)
-        com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         val requestPayload = OpenAiRequest(reqModel, messages, temp, maxTokens)
         com.example.utils.AppLogger.d("AiNetwork", "Sending OpenAI request to $reqModel (${messages.size} messages)")
