@@ -33,9 +33,9 @@ $logContent""".trimIndent()
         )
         
         try {
-            val jsonElement = kotlinx.serialization.json.Json.parseToJsonElement(rawResponse.replace("```json", "").replace("```", "").trim())
-            val script = jsonElement.kotlinx.serialization.json.jsonObject["python_script"]?.kotlinx.serialization.json.jsonPrimitive?.content
-            return script ?: rawResponse
+            val cleanJsonStr = rawResponse.replace("```json", "").replace("```", "").trim()
+            val jsonObj = org.json.JSONObject(cleanJsonStr)
+            return jsonObj.optString("python_script", rawResponse)
         } catch (e: Exception) {
             // Fallback if parsing fails
             com.example.utils.AppLogger.e("LatexDebugger", "Failed to parse JSON response", e)

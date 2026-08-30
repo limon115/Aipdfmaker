@@ -33,11 +33,13 @@ class NoteGenerationService(
 
             CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
             1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
-            2. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
+            2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
+            3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
                - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
                - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
-            3. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables (| Column |). You MUST use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \end{tabular} \end{table}.
-            4. MARGIN SAFETY: Do not write excessively long unbroken lines of code or math. Break long equations using \begin{aligned} ... \end{aligned}.
+            4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \end{tabular} \end{table}.
+            5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or `${"$$"} ... ${"$$"}`. NEVER use `\begin{aligned}` completely alone in the text.
+            6. Do NOT invent custom environments like `rectbox`. Use standard environments or `\begin{tcolorbox}` (we have the tcolorbox package).
             
             LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
         """.trimIndent()

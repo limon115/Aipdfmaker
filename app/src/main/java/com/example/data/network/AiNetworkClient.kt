@@ -241,17 +241,15 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
 
     
     suspend fun debugLatex(latexCode: String, logContent: String): String {
-        val systemPrompt = """You are an elite Python and LaTeX debugging assistant. Read the following LaTeX code and the corresponding compiler log which contains errors.
+        val systemPrompt = """You are an automated Python script generator for patching LaTeX files.
+Your ONLY job is to output a valid JSON object containing a Python script.
+The Python script MUST read the file path from `sys.argv[1]`, fix the LaTeX errors via string replacement or regex, and overwrite the file.
 
-Your task is to identify the bugs and write a Python script that injects the fixes into the code.
-
-CRITICAL INSTRUCTIONS:
-1. You MUST return ONLY a raw Python script.
-2. The Python script should read the file path from sys.argv[1].
-3. Open the file, read the contents, perform string replacements or regex substitutions to fix the LaTeX errors, and overwrite the file.
-4. Do NOT output partial LaTeX code or full LaTeX code, ONLY output the Python script.
-5. Do NOT include markdown blocks (like ```python). Just return the raw Python code.
-6. The Python script will be executed locally to patch the user's LaTeX code before compilation.
+CRITICAL RULES:
+1. You MUST respond with ONLY a valid JSON object.
+2. The JSON MUST have exactly two keys: "thought_process" (string, your reasoning) and "python_script" (string, the raw python code).
+3. The python_script string MUST be a valid, raw Python 3 script (starting with import sys).
+4. Do NOT wrap the JSON in markdown blocks. Output pure JSON.
 """.trimIndent()
 
         val userPrompt = """LaTeX Code:
@@ -260,8 +258,28 @@ $latexCode
 Compiler Log:
 $logContent""".trimIndent()
         
-        val rawResponse = generateContent(userPrompt, customSystemPrompt = systemPrompt, maxTokens = 8192)
-        return rawResponse.replace("```python", "").replace("```", "").trim()
+        val rawResponse = generateContent(
+            prompt = userPrompt, 
+            customSystemPrompt = systemPrompt, 
+            mimeType = "application/json",
+            maxTokens = 8192
+        )
+        
+        try {
+            val cleanJsonStr = rawResponse.replace("```json", "").replace("```", "").trim()
+            val jsonObj = org.json.JSONObject(cleanJsonStr)
+            return jsonObj.optString("python_script", rawResponse)
+        } catch (e: Exception) {
+            // Fallback if parsing fails
+            com.example.utils.AppLogger.e("LatexDebugger", "Failed to parse JSON response", e)
+            val codeBlockRegex = Regex("```(?:python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
+            val matchResult = codeBlockRegex.find(rawResponse)
+            return if (matchResult != null) {
+                matchResult.groupValues[1].trim()
+            } else {
+                rawResponse
+            }
+        }
     }
 
     suspend fun generateBlueprint(extractedText: String): String {

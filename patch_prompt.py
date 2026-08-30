@@ -1,39 +1,48 @@
-with open('app/src/main/java/com/example/data/network/AiNetworkClient.kt', 'r') as f:
+import re
+with open('app/src/main/java/com/example/domain/services/ai/NoteGenerationService.kt', 'r') as f:
     content = f.read()
 
-start_str = 'suspend fun debugLatex'
-end_str = '    suspend fun generateBlueprint'
-start_idx = content.find(start_str)
-end_idx = content.find(end_str, start_idx)
+old_prompt = """        val systemPrompt = \"\"\"
+            You are an expert textbook author and university professor. Write EXHAUSTIVE, rigorous study notes for the topic: '$topicTitle'.
+            
+            CRITICAL PEDAGOGY RULES:
+            1. Use fundamental core formulas and first-principles derivations. NO derived memory tricks unless explicitly stated as a helpful shortcut after the proof.
+            2. Keep the math strictly separate and clean from descriptions. State the procedural steps explicitly BEFORE doing the math.
+            3. Write exhaustive explanations with college-level depth.
 
-new_method = '''suspend fun debugLatex(latexCode: String, logContent: String): String {
-        val systemPrompt = """You are an elite Python and LaTeX debugging assistant. Read the following LaTeX code and the corresponding compiler log which contains errors.
+            CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
+            1. Return ONLY valid LaTeX code for the document body. Do NOT include \\documentclass or \\begin{document}.
+            2. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
+               - Math/Geometry graphs MUST be enclosed in \\begin{tikzpicture} ... \\end{tikzpicture}.
+               - Physics Circuits MUST be enclosed in \\begin{circuitikz} ... \\end{circuitikz}.
+            3. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables (| Column |). You MUST use \\begin{table}[h] \\centering \\begin{tabular}{...} \\toprule ... \\end{tabular} \\end{table}.
+            4. MARGIN SAFETY: Do not write excessively long unbroken lines of code or math. Break long equations using \\begin{aligned} ... \\end{aligned}.
+            
+            LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
+        \"\"\".trimIndent()"""
 
-Your task is to identify the bugs and write a Python script that injects the fixes into the code.
+new_prompt = """        val systemPrompt = \"\"\"
+            You are an expert textbook author and university professor. Write EXHAUSTIVE, rigorous study notes for the topic: '$topicTitle'.
+            
+            CRITICAL PEDAGOGY RULES:
+            1. Use fundamental core formulas and first-principles derivations. NO derived memory tricks unless explicitly stated as a helpful shortcut after the proof.
+            2. Keep the math strictly separate and clean from descriptions. State the procedural steps explicitly BEFORE doing the math.
+            3. Write exhaustive explanations with college-level depth.
 
-CRITICAL INSTRUCTIONS:
-1. You MUST return ONLY a raw Python script.
-2. The Python script should read the file path from sys.argv[1].
-3. Open the file, read the contents, perform string replacements or regex substitutions to fix the LaTeX errors, and overwrite the file.
-4. Do NOT output partial LaTeX code or full LaTeX code, ONLY output the Python script.
-5. Do NOT include markdown blocks (like ```python). Just return the raw Python code.
-6. The Python script will be executed locally to patch the user's LaTeX code before compilation.
-""".trimIndent()
+            CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
+            1. Return ONLY valid LaTeX code for the document body. Do NOT include \\documentclass or \\begin{document}.
+            2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \\textbf{}, \\textit{}, \\section{}, \\subsection{}, and \\begin{itemize} \\item ... \\end{itemize}.
+            3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
+               - Math/Geometry graphs MUST be enclosed in \\begin{tikzpicture} ... \\end{tikzpicture}.
+               - Physics Circuits MUST be enclosed in \\begin{circuitikz} ... \\end{circuitikz}.
+            4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \\begin{table}[h] \\centering \\begin{tabular}{...} \\toprule ... \\end{tabular} \\end{table}.
+            5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\\[ ... \\]`, or `$$ ... $$`. NEVER use `\\begin{aligned}` completely alone in the text.
+            6. Do NOT invent custom environments like `rectbox`. Use standard environments or `\\begin{tcolorbox}` (we have the tcolorbox package).
+            
+            LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
+        \"\"\".trimIndent()"""
 
-        val userPrompt = """LaTeX Code:
-$latexCode
+content = content.replace(old_prompt, new_prompt)
 
-Compiler Log:
-$logContent""".trimIndent()
-        
-        val rawResponse = generateContent(userPrompt, customSystemPrompt = systemPrompt, maxTokens = 8192)
-        return rawResponse.replace("```python", "").replace("```", "").trim()
-    }
-
-'''
-
-if start_idx != -1 and end_idx != -1:
-    content = content[:start_idx] + new_method + content[end_idx:]
-
-with open('app/src/main/java/com/example/data/network/AiNetworkClient.kt', 'w') as f:
+with open('app/src/main/java/com/example/domain/services/ai/NoteGenerationService.kt', 'w') as f:
     f.write(content)

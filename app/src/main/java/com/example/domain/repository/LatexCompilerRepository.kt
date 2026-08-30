@@ -44,7 +44,12 @@ class LatexCompilerRepository(private val context: Context) {
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
-                \usepackage[Bengali]{ucharclasses}
+                \usepackage{ucharclasses} % Removed invalid [Bengali] option
+                \usepackage{tikz} % Added for diagrams
+                \usepackage{circuitikz} % Added for circuits
+                \usepackage{booktabs} % Added for toprule/midrule
+                \usepackage{tcolorbox} % Added for rectbox fallback
+                \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
                 \setmainfont{DejaVu Serif}
                 \newfontfamily\bengalifont[
                     Path=/data/data/com.termux/files/home/,
