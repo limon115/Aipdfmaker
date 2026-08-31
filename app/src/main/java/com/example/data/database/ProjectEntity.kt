@@ -8,7 +8,7 @@ data class ProjectEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val title: String,
     val course: String,
-    val chapter: String,
+    val chapter: String, val description: String = "",
     val noteStyle: String,
     val outputFormat: String,
     val status: String,

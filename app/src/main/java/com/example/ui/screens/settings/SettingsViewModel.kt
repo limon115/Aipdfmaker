@@ -105,7 +105,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val cleanKey = apiKey.replace(" ", "")
+        val cleanKey = apiKey.replace(" ", "").ifBlank { com.example.BuildConfig.GEMINI_API_KEY }
         val lowerProvider = provider.lowercase()
         
         if (cleanKey.isEmpty() && !lowerProvider.contains("ollama") && !lowerProvider.contains("lm studio")) {

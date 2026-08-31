@@ -61,7 +61,7 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
             val project = ProjectEntity(
                 title = currentState.projectTitle.ifBlank { "Untitled Project" },
                 course = currentState.course,
-                chapter = currentState.chapter,
+                chapter = currentState.chapter, description = currentState.description,
                 noteStyle = currentState.noteStyle,
                 outputFormat = currentState.outputFormat,
                 status = "Processing",

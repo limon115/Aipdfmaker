@@ -124,7 +124,7 @@ fun ProjectDetailsScreen(
             GlassTextField(
                 value = state.description,
                 onValueChange = viewModel::updateDescription,
-                label = { Text("Description (Optional)") },
+                label = { Text("Details (Optional)") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,

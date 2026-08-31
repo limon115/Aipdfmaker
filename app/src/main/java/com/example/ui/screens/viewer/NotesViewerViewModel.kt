@@ -19,7 +19,7 @@ data class NotesViewerState(
     val isLoading: Boolean = true,
     val generatedPdfFile: File? = null,
     val generatedTexFile: File? = null,
-    val projectName: String = "Project",
+    val project: com.example.data.database.ProjectEntity? = null,
     val outputFormat: String = "PDF",
     val isExporting: Boolean = false,
     val exportProgress: Float = 0f
@@ -56,7 +56,7 @@ class NotesViewerViewModel(
                 _state.update { it.copy(
                     latexContent = masterLatex,
                     isLoading = false,
-                    projectName = project?.title ?: "Project",
+                    project = project,
                     outputFormat = project?.outputFormat ?: "PDF"
                 ) }
             } catch (e: Exception) {
@@ -71,7 +71,7 @@ class NotesViewerViewModel(
         viewModelScope.launch {
             try {
                 val result = compilerRepository.compileAndExportPdf(
-                    projectName = _state.value.projectName,
+                    project = _state.value.project!!,
                     latexContent = _state.value.latexContent,
                     fixScript = _state.value.fixScript
                 )
@@ -80,7 +80,7 @@ class NotesViewerViewModel(
                     _state.update { it.copy(generatedPdfFile = pdf, generatedTexFile = tex, isExporting = false) }
                     onComplete(pdf, tex)
                 } else {
-                    val safeName = _state.value.projectName.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
+                    val safeName = _state.value.project?.title?.trim() ?: "Project".replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
                     val tex = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS), "aipdfs/\$safeName/document.tex")
                     _state.update { it.copy(isExporting = false) }
                     onComplete(null, tex)

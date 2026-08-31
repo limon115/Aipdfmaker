@@ -1,6 +1,7 @@
 package com.example.ui.screens.home
 
 import com.example.ui.components.glass.GlassCard
+import com.example.ui.components.PdfIcon
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -158,19 +159,11 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Image Placeholder
-            Box(
+            PdfIcon(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Image,
-                    contentDescription = "Project Image",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
