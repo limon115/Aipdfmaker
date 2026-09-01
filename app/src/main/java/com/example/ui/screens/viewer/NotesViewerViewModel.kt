@@ -66,7 +66,7 @@ class NotesViewerViewModel(
         }
     }
 
-    fun exportDocument(onComplete: (File?, File) -> Unit) {
+    fun exportDocument(onComplete: (File?, File) -> Unit, onError: (String) -> Unit) {
         _state.update { it.copy(isExporting = true) }
         viewModelScope.launch {
             try {
@@ -80,15 +80,14 @@ class NotesViewerViewModel(
                     _state.update { it.copy(generatedPdfFile = pdf, generatedTexFile = tex, isExporting = false) }
                     onComplete(pdf, tex)
                 } else {
-                    val safeName = _state.value.project?.title?.trim() ?: "Project".replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
-                    val tex = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS), "aipdfs/\$safeName/document.tex")
+                    val error = result.exceptionOrNull()?.message ?: "Unknown error"
                     _state.update { it.copy(isExporting = false) }
-                    onComplete(null, tex)
+                    onError(error)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _state.update { it.copy(isExporting = false) }
-                onComplete(null, File(""))
+                onError(e.message ?: "Unknown error")
             }
         }
     }

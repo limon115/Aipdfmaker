@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.example.data.database.ProjectEntity
+import timber.log.Timber
+import java.io.FileOutputStream
 
 class LatexCompilerRepository(private val context: Context) {
 
@@ -21,7 +23,7 @@ class LatexCompilerRepository(private val context: Context) {
                 .replace(Regex("[^a-zA-Z0-9.-]"), "_")
                 .ifEmpty { "Project" }
 
-            val documentsDir = Environment.getExternalStoragePublicDirectory(
+            val documentsDir = context.getExternalFilesDir(
                 Environment.DIRECTORY_DOCUMENTS
             )
 
@@ -162,7 +164,19 @@ class LatexCompilerRepository(private val context: Context) {
                 """.trimIndent()
             }
             val texFile = File(baseDir, "main.tex")
-            texFile.writeText(fullLatex)
+            Timber.i("Writing LaTeX file to: ${texFile.absolutePath}")
+            var fileOutputStream: FileOutputStream? = null
+            try {
+                fileOutputStream = FileOutputStream(texFile)
+                fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
+                fileOutputStream.flush()
+                Timber.d("LaTeX file writing complete.")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to write LaTeX file")
+                throw e
+            } finally {
+                fileOutputStream?.close()
+            }
 
             val doubleCompileScript = """
                 xelatex main.tex

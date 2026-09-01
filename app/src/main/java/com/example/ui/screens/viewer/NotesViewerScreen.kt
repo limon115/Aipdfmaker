@@ -45,32 +45,37 @@ fun NotesViewerScreen(
         viewModel.loadData(projectId)
     }
 
-    val performExport = {
+        val performExport = {
         showPreviewModal = false
-        viewModel.exportDocument { pdfFile, texFile ->
-            try {
-                val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
-                if (isPdf && pdfFile == null) {
-                    // Handled by PrintManager
-                    return@exportDocument
+        viewModel.exportDocument(
+            onComplete = { pdfFile, texFile ->
+                try {
+                    val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
+                    if (isPdf && pdfFile == null) {
+                        android.widget.Toast.makeText(context, "PDF generation failed.", android.widget.Toast.LENGTH_SHORT).show()
+                        return@exportDocument
+                    }
+                    val selectedFile = if (isPdf && pdfFile != null) pdfFile else texFile
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        selectedFile
+                    )
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/plain"
+                        setDataAndType(uri, mimeType)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Open Document..."))
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-                val selectedFile = if (isPdf && pdfFile != null) pdfFile else texFile
-                val uri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    selectedFile
-                )
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    val mimeType = if (isPdf && pdfFile != null) "application/pdf" else "text/plain"
-                    setDataAndType(uri, mimeType)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                context.startActivity(Intent.createChooser(intent, "Open Document..."))
-            } catch (e: Exception) {
-                e.printStackTrace()
+                onNavigateHome()
+            },
+            onError = { errorMsg ->
+                android.widget.Toast.makeText(context, "Export Failed: $errorMsg", android.widget.Toast.LENGTH_LONG).show()
             }
-            onNavigateHome()
-        }
+        )
     }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(

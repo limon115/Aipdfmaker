@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
+import timber.log.Timber
 
 sealed class MathSolverState {
     object Idle : MathSolverState()
@@ -81,7 +83,7 @@ class MathSolverViewModel : ViewModel() {
                 _state.value = MathSolverState.CompilingPdf
                 
                 val safeName = "Math_Solution_${System.currentTimeMillis()}"
-                val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                val documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
                 val baseDir = File(documentsDir, "aipdfs/$safeName")
                 if (!baseDir.exists()) {
                     baseDir.mkdirs()
@@ -120,8 +122,21 @@ class MathSolverViewModel : ViewModel() {
                 """.trimIndent()
 
                 val texFile = File(baseDir, "solution.tex")
-                texFile.writeText(fullLatex)
+                Timber.i("Writing LaTeX file to: ${texFile.absolutePath}")
+                var fileOutputStream: FileOutputStream? = null
+                try {
+                    fileOutputStream = FileOutputStream(texFile)
+                    fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
+                    fileOutputStream.flush()
+                    Timber.d("LaTeX file writing complete.")
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to write LaTeX file")
+                    throw e
+                } finally {
+                    fileOutputStream?.close()
+                }
 
+                Timber.i("Calling TermuxXeLaTeXBridge.compile...")
                 val compileResult = TermuxXeLaTeXBridge.compile(context = context, texFile = texFile)
 
                 if (compileResult.isSuccess) {

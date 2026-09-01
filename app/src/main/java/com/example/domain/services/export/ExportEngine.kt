@@ -5,6 +5,7 @@ import android.os.Environment
 import android.widget.Toast
 import com.example.domain.services.pdf.TermuxXeLaTeXBridge
 import java.io.File
+import java.io.FileOutputStream
 import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +41,7 @@ class ExportEngine(private val context: Context) {
                     .replace(Regex("[^a-zA-Z0-9.-]"), "_")
                     .ifEmpty { "Project" }
 
-                val documentsDir = Environment.getExternalStoragePublicDirectory(
+                val documentsDir = context.getExternalFilesDir(
                     Environment.DIRECTORY_DOCUMENTS
                 )
 
@@ -105,7 +106,19 @@ class ExportEngine(private val context: Context) {
                 """.trimIndent()
 
                 val texFile = File(baseDir, "document.tex")
-                texFile.writeText(fullLatex)
+                Timber.i("Writing LaTeX file to: ${texFile.absolutePath}")
+                var fileOutputStream: FileOutputStream? = null
+                try {
+                    fileOutputStream = FileOutputStream(texFile)
+                    fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
+                    fileOutputStream.flush()
+                    Timber.d("LaTeX file writing complete.")
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to write LaTeX file")
+                    throw e
+                } finally {
+                    fileOutputStream?.close()
+                }
 
                 _exportProgress.value = 0.5f
 

@@ -48,7 +48,7 @@ fun ProjectDetailsScreen(
     LaunchedEffect(state.projectTitle, projectId) {
         if (projectId != null && state.projectTitle.isNotEmpty()) {
             val safeName = state.projectTitle.trim().replace(Regex("[^a-zA-Z0-9.-]"), "_").ifEmpty { "Project" }
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
             val baseDir = File(documentsDir, "aipdfs/$safeName")
             val fallbackDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
             val fallbackBaseDir = File(fallbackDir ?: context.filesDir, "aipdfs/$safeName")
