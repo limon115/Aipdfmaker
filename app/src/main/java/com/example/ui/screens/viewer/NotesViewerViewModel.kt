@@ -67,10 +67,13 @@ class NotesViewerViewModel(
     }
 
     fun exportDocument(onComplete: (File?, File) -> Unit, onError: (String) -> Unit) {
-        _state.update { it.copy(isExporting = true) }
+        _state.update { it.copy(isExporting = true, exportProgress = 0f) }
         viewModelScope.launch {
             try {
                 val result = compilerRepository.compileAndExportPdf(
+                    onProgress = { progress ->
+                        _state.update { it.copy(exportProgress = progress) }
+                    },
                     project = _state.value.project!!,
                     latexContent = _state.value.latexContent,
                     fixScript = _state.value.fixScript

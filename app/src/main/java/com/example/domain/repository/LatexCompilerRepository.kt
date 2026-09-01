@@ -13,6 +13,8 @@ import java.io.FileOutputStream
 class LatexCompilerRepository(private val context: Context) {
 
     suspend fun compileAndExportPdf(
+        onProgress: (Float) -> Unit = {},
+
         project: ProjectEntity,
         latexContent: String,
         fixScript: String? = null
@@ -38,6 +40,7 @@ class LatexCompilerRepository(private val context: Context) {
                 )
             }
 
+            onProgress(0.2f)
             val fullLatex = if (latexContent.contains("\\documentclass")) {
                 latexContent
             } else {
@@ -164,6 +167,7 @@ class LatexCompilerRepository(private val context: Context) {
                 """.trimIndent()
             }
             val texFile = File(baseDir, "main.tex")
+            onProgress(0.4f)
             Timber.i("Writing LaTeX file to: ${texFile.absolutePath}")
             var fileOutputStream: FileOutputStream? = null
             try {
@@ -178,6 +182,7 @@ class LatexCompilerRepository(private val context: Context) {
                 fileOutputStream?.close()
             }
 
+            onProgress(0.6f)
             val doubleCompileScript = """
                 xelatex main.tex
                 cp main.aux "${baseDir.absolutePath}/main.aux"
@@ -196,6 +201,7 @@ class LatexCompilerRepository(private val context: Context) {
                 )
             }
 
+            onProgress(1.0f)
             // result is already main.pdf in baseDir
             Pair(result, texFile)
         }

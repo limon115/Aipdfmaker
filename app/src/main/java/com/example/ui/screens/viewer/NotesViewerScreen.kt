@@ -211,7 +211,22 @@ fun NotesViewerScreen(
             ) {
                 Text("Generating PDF...", color = Color.Black, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
+                if (state.exportProgress > 0f) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { state.exportProgress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "${(state.exportProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Black
+                    )
+                } else {
+                    CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
