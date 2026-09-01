@@ -144,8 +144,23 @@ fun MainScreen() {
                         .verticalScroll(androidx.compose.foundation.rememberScrollState())
                         .padding(start = 16.dp, end = 16.dp, top = 48.dp)
                 ) {
-                    com.example.ui.screens.settings.AiUsageDashboardCard()
+                                        com.example.ui.screens.settings.AiUsageDashboardCard()
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                    
+                    com.example.ui.components.glass.GlassCard(
+                        modifier = Modifier.fillMaxWidth().clickable { navController.navigate("math_solver") }
+                    ) {
+                        androidx.compose.foundation.layout.Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Build, contentDescription = "Math Solver", tint = MaterialTheme.colorScheme.primary)
+                            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text("AI Math Solver", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text("Generate step-by-step PDF solutions.", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+
                     
                     com.example.ui.components.glass.GlassCard(
                         modifier = Modifier.fillMaxWidth().clickable { navController.navigate("latex_debugger") }
@@ -174,6 +189,12 @@ fun MainScreen() {
                     onNavigateToLogs = {
                         navController.navigate("app_logs")
                     }
+                )
+            }
+            
+                        composable("math_solver") {
+                com.example.ui.screens.math.MathSolverScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             
