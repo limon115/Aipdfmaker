@@ -284,7 +284,7 @@ fun MainScreen() {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-            composable("note_generation/{projectId}") { backStackEntry ->
+            composable("note_generation/{projectId}", deepLinks = listOf(androidx.navigation.navDeepLink { uriPattern = "docmorph://note_generation/{projectId}" })) { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 com.example.ui.screens.processing.NoteGenerationScreen(
                     projectId = projectId,
@@ -299,7 +299,7 @@ fun MainScreen() {
                     }
                 )
             }
-            composable("notes_viewer/{projectId}") { backStackEntry ->
+            composable("notes_viewer/{projectId}", deepLinks = listOf(androidx.navigation.navDeepLink { uriPattern = "docmorph://notes_viewer/{projectId}" })) { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val db = com.example.data.database.AppDatabase.getDatabase(context)

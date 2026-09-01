@@ -21,6 +21,10 @@ import com.example.domain.services.ai.TopicContextRetriever
 import com.example.data.cache.AiResponseCache
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
+import android.app.PendingIntent
+import android.content.Intent
+import android.net.Uri
+
 
 class NoteGenerationWorker(
     private val context: Context,
@@ -79,7 +83,7 @@ class NoteGenerationWorker(
         val totalTopics = blueprint.topics.size
 
         try {
-            setForeground(createForegroundInfo("Starting generation...", 0, totalTopics))
+            setForeground(createForegroundInfo("Starting generation...", 0, totalTopics, projectId))
             
             val chunker = TextChunker()
             val retriever = TopicContextRetriever()
@@ -96,7 +100,7 @@ class NoteGenerationWorker(
                 }
 
                 setProgress(workDataOf(PROGRESS to index, TOTAL to totalTopics, CURRENT_TOPIC to topic.title))
-                setForeground(createForegroundInfo("Generating: ${topic.title}", index, totalTopics))
+                setForeground(createForegroundInfo("Generating: ${topic.title}", index, totalTopics, projectId))
 
                 // Retrieve only relevant chunks for this topic
                 val relevantContextForTopic = retriever.retrieveContext(topic.title, chunks, 8000)
@@ -124,7 +128,7 @@ class NoteGenerationWorker(
             project?.let { projectDao.updateProject(it.copy(status = "Completed", lastUpdated = System.currentTimeMillis())) }
             
             setProgress(workDataOf(PROGRESS to totalTopics, TOTAL to totalTopics, CURRENT_TOPIC to "Finished"))
-            showCompletedNotification("Generation completed for ${project?.title ?: "Project"}")
+            showCompletedNotification("Generation completed for ${project?.title ?: "Project"}", projectId)
             com.example.utils.AppLogger.i("NoteGenWorker", "Finished generation for project $projectId")
             return Result.success()
         } catch (e: Exception) {
@@ -132,18 +136,24 @@ class NoteGenerationWorker(
             e.printStackTrace()
             // Mark project as Failed
             project?.let { projectDao.updateProject(it.copy(status = "Failed", lastUpdated = System.currentTimeMillis())) }
-            showCompletedNotification("Generation failed: ${e.message}")
+            showCompletedNotification("Generation failed: ${e.message}", projectId)
             return Result.failure(workDataOf(ERROR to (e.message ?: "Unknown error")))
         }
     }
 
-    private fun createForegroundInfo(progressText: String, progress: Int, total: Int): ForegroundInfo {
+    private fun createForegroundInfo(progressText: String, progress: Int, total: Int, projectId: Int): ForegroundInfo {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("docmorph://note_generation/$projectId"), context, com.example.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(context, projectId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         val notification = NotificationCompat.Builder(context, channelId)
             .setContentTitle("Generating Study Notes")
             .setContentText(progressText)
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .setOngoing(true)
             .setProgress(total, progress, false)
+            .setContentIntent(pendingIntent)
             .build()
         
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -153,12 +163,18 @@ class NoteGenerationWorker(
         }
     }
 
-    private fun showCompletedNotification(message: String) {
+    private fun showCompletedNotification(message: String, projectId: Int) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("docmorph://notes_viewer/$projectId"), context, com.example.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(context, projectId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         val notification = NotificationCompat.Builder(context, channelId)
             .setContentTitle("DocMorph Note Generation")
             .setContentText(message)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
             .build()
         notificationManager.notify(2, notification)
     }
