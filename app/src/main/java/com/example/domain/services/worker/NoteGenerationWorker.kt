@@ -137,7 +137,7 @@ class NoteGenerationWorker(
                         .trim()
                         .replace(Regex("[^a-zA-Z0-9.-]"), "_")
                         .ifEmpty { "Project" }
-                    val documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                    val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
                     val baseDir = File(documentsDir, "aipdfs/$safeName")
                     
                     if (!baseDir.exists()) {

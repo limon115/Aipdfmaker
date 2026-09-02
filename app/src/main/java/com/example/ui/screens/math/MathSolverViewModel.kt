@@ -83,7 +83,7 @@ class MathSolverViewModel : ViewModel() {
                 _state.value = MathSolverState.CompilingPdf
                 
                 val safeName = "Math_Solution_${System.currentTimeMillis()}"
-                val documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
                 val baseDir = File(documentsDir, "aipdfs/$safeName")
                 if (!baseDir.exists()) {
                     baseDir.mkdirs()

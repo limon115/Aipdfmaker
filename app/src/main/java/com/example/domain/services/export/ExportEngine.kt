@@ -41,7 +41,7 @@ class ExportEngine(private val context: Context) {
                     .replace(Regex("[^a-zA-Z0-9.-]"), "_")
                     .ifEmpty { "Project" }
 
-                val documentsDir = context.getExternalFilesDir(
+                val documentsDir = Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOCUMENTS
                 )
 
