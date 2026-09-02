@@ -116,6 +116,7 @@ class MathSolverViewModel : ViewModel() {
                     \author{AI Tutor}
                     \date{\today}
                     \begin{document}
+                    \XeTeXinterchartokenstate=1
                     \maketitle
                     $cleanLatex
                     \end{document}
