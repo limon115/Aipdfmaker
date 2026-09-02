@@ -18,6 +18,13 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
+import com.example.domain.services.pdf.PdfNotificationManager
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +36,31 @@ fun MathSolverScreen(
     val state by viewModel.state.collectAsState()
     var problemText by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val pdfNotificationManager = remember { PdfNotificationManager(context) }
+
+    val postNotificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    LaunchedEffect(state) {
+        when (val currentState = state) {
+            is MathSolverState.Success -> {
+                pdfNotificationManager.showSuccessNotification("Math Solution", currentState.pdfFile)
+            }
+            is MathSolverState.Error -> {
+                pdfNotificationManager.showErrorNotification("Math Solution", currentState.message)
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {

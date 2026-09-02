@@ -15,6 +15,7 @@ import com.example.data.database.DocumentSnippetEntity
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.data.network.AiNetworkClient
 import com.example.domain.models.BlueprintSummary
+import com.example.domain.repository.LatexCompilerRepository
 import com.example.domain.services.ai.NoteGenerationService
 import com.example.domain.services.ai.TextChunker
 import com.example.domain.services.ai.TopicContextRetriever
@@ -24,6 +25,8 @@ import kotlinx.serialization.json.Json
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
+import java.io.File
+import android.os.Environment
 
 
 class NoteGenerationWorker(
@@ -122,6 +125,34 @@ class NoteGenerationWorker(
                     orderIndex = index
                 )
                 snippetDao.insertSnippet(snippet)
+            }
+            
+            // Combine all snippets and write main.tex to project folder
+            if (project != null) {
+                try {
+                    val allSnippets = snippetDao.getSnippetsForProject(projectId).first()
+                    val masterLatex = allSnippets.joinToString("\n\n") { it.jsonContent }
+                    
+                    val safeName = project.title
+                        .trim()
+                        .replace(Regex("[^a-zA-Z0-9.-]"), "_")
+                        .ifEmpty { "Project" }
+                    val documentsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                    val baseDir = File(documentsDir, "aipdfs/$safeName")
+                    
+                    if (!baseDir.exists()) {
+                        baseDir.mkdirs()
+                    }
+                    
+                    val compilerRepo = LatexCompilerRepository(context)
+                    val fullLatex = compilerRepo.buildFullLatex(project, masterLatex)
+                    
+                    val texFile = File(baseDir, "main.tex")
+                    texFile.writeText(fullLatex, Charsets.UTF_8)
+                    com.example.utils.AppLogger.i("NoteGenWorker", "Successfully wrote full main.tex to ${texFile.absolutePath}")
+                } catch (e: Exception) {
+                    com.example.utils.AppLogger.e("NoteGenWorker", "Failed to write main.tex", e)
+                }
             }
             
             // Mark project as Completed

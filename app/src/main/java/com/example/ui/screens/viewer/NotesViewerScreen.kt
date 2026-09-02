@@ -1,5 +1,7 @@
 package com.example.ui.screens.viewer
 
+import com.example.domain.services.pdf.PdfNotificationManager
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -45,7 +47,9 @@ fun NotesViewerScreen(
         viewModel.loadData(projectId)
     }
 
-        val performExport = {
+        val pdfNotificationManager = remember { PdfNotificationManager(context) }
+
+    val performExport = {
         showPreviewModal = false
         viewModel.exportDocument(
             onComplete = { pdfFile, texFile ->
@@ -53,9 +57,15 @@ fun NotesViewerScreen(
                     val isPdf = state.outputFormat.equals("pdf", ignoreCase = true)
                     if (isPdf && pdfFile == null) {
                         android.widget.Toast.makeText(context, "PDF generation failed.", android.widget.Toast.LENGTH_SHORT).show()
+                        pdfNotificationManager.showErrorNotification(state.project?.title ?: "Project", "PDF generation failed")
                         return@exportDocument
                     }
                     val selectedFile = if (isPdf && pdfFile != null) pdfFile else texFile
+                    
+                    if (isPdf && pdfFile != null) {
+                        pdfNotificationManager.showSuccessNotification(state.project?.title ?: "Project", pdfFile)
+                    }
+                    
                     val uri = FileProvider.getUriForFile(
                         context,
                         "${context.packageName}.fileprovider",
@@ -74,19 +84,16 @@ fun NotesViewerScreen(
             },
             onError = { errorMsg ->
                 android.widget.Toast.makeText(context, "Export Failed: $errorMsg", android.widget.Toast.LENGTH_LONG).show()
+                pdfNotificationManager.showErrorNotification(state.project?.title ?: "Project", errorMsg)
             }
         )
     }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            performExport()
-        } else {
-            // Still try, might fallback to app specific dir
-            performExport() 
-        }
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        // Proceed regardless, but notification might not show if denied
+        performExport()
     }
     
     val manageStorageLauncher = rememberLauncherForActivityResult(
@@ -101,7 +108,19 @@ fun NotesViewerScreen(
         }
     }
 
+    val postNotificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        // Continue regardless of whether they granted notification permission
+    }
+
     val checkAndPerformExport = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (Environment.isExternalStorageManager()) {
                 performExport()
@@ -116,10 +135,14 @@ fun NotesViewerScreen(
                 }
             }
         } else {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            val permissions = mutableListOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            if (permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) {
                 performExport()
             } else {
-                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                requestPermissionLauncher.launch(permissions.toTypedArray())
             }
         }
     }
