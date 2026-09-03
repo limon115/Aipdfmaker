@@ -23,7 +23,7 @@ class NoteGenerationService(
             temperature = ai2Temperature
         )
 
-        val systemPrompt = """
+                val systemPrompt = """
             You are an expert textbook author and university professor. Write EXHAUSTIVE, rigorous study notes for the topic: '$topicTitle'.
             
             CRITICAL PEDAGOGY RULES:
@@ -37,8 +37,13 @@ class NoteGenerationService(
             3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
                - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
                - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
-            4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \\begin{table}[h] \\centering \\begin{tabular}{...} \\toprule ... \\end{tabular} \\end{table}. IMPORTANT: Always end table rows with `\\\\` (double backslash). Never end a row with a single `\\`.
-            5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or `${"$$"} ... ${"$$"}`. NEVER use `\begin{aligned}` completely alone in the text.
+            4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \midrule ... \bottomrule \end{tabular} \end{table}.
+               - IMPORTANT: Always end table rows with `\\` (double backslash).
+               - IMPORTANT: ALWAYS use exactly `\bottomrule` at the end of the table. NEVER use `\bottom.`, `\bottom>`, or any other typo.
+            5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or `${"$$"} ... ${"$$"}`.
+               - NEVER use `\begin{aligned}` completely alone in the text.
+               - CRITICAL: Ensure EVERY `\begin` has a matching `\end`. For example, `\begin{aligned}` MUST be closed with `\end{aligned}`. Do not leave stray `\end{gather}` or `\end{pmatrix}` without a `\begin`.
+               - CRITICAL: Delimiters must match. If you open with `\left[`, close with `\right]`. Do NOT close with `\end{pmatrix}`.
             6. Do NOT invent custom environments like `rectbox`. Use standard environments or `\begin{tcolorbox}` (we have the tcolorbox package).
             
             LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.

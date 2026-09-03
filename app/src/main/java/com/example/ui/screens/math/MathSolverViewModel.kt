@@ -45,7 +45,7 @@ class MathSolverViewModel : ViewModel() {
                     temperature = settings.ai2Temperature
                 )
 
-                val prompt = """
+                                                val prompt = """
                     Act as an expert mathematics tutor. I have a specific math problem for you to solve. Please provide a comprehensive breakdown by strictly following these instructions:
                     
                     1. Related Theory & Fundamentals:
@@ -54,21 +54,28 @@ class MathSolverViewModel : ViewModel() {
                     2. The Solution:
                     Always explain the logical steps before writing out the mathematical calculations.
                     Keep the mathematical equations clean, separate from the descriptive text, and properly formatted.
-                    Never use a TL;DR or summarize the math at the end.
                     
                     3. Variations:
-                    Show me all possible variations of this specific type of math problem that I might encounter. For each variation, provide the complete solution using the exact same formatting rules as above (steps explained first, clean math separate, fundamental formulas only).
+                    Show me all possible variations of this specific type of math problem that I might encounter. For each variation, provide the complete solution.
+
+                    CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
+                    1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
+                    2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
+                    3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
+                       - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
+                       - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
+                    4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \midrule ... \bottomrule \end{tabular} \end{table}.
+                       - IMPORTANT: Always end table rows with `\\` (double backslash).
+                       - IMPORTANT: ALWAYS use exactly `\bottomrule` at the end of the table. NEVER use `\bottom.`, `\bottom>`, or any other typo.
+                    5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or `${"$$"} ... ${"$$"}`.
+                       - NEVER use `\begin{aligned}` completely alone in the text.
+                       - CRITICAL: Ensure EVERY `\begin` has a matching `\end`. For example, `\begin{aligned}` MUST be closed with `\end{aligned}`. Do not leave stray `\end{gather}` or `\end{pmatrix}` without a `\begin`.
+                       - CRITICAL: Delimiters must match. If you open with `\left[`, close with `\right]`. Do NOT close with `\end{pmatrix}`.
                     
                     * Outputs should be in the same language as input by user.
                     
                     Here is the problem:
-                    $problemText
-                    
-                    IMPORTANT LaTeX FORMATTING RULES:
-                    Provide your entire response in valid LaTeX body format (WITHOUT `${'\\'}begin{document}` or `${'\\'}end{document}`, and WITHOUT any preamble). 
-                    Output ONLY the raw content that will be placed inside a LaTeX document body.
-                    Use standard LaTeX math formatting (e.g., `${'$'}` for inline math and `${'\\'}[ ... ${'\\'}]` or `${'\\'}begin{equation}...${'\\'}end{equation}` for block math).
-                    Do NOT wrap your response in markdown code blocks like ```latex ... ```. Just return the raw text.
+                    ${"$"}{problemText}
                 """.trimIndent()
 
                 val aiResponse = try {
