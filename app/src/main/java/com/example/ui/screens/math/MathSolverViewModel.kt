@@ -75,7 +75,7 @@ class MathSolverViewModel : ViewModel() {
                     * Outputs should be in the same language as input by user.
                     
                     Here is the problem:
-                    ${"$"}{problemText}
+                    $problemText
                 """.trimIndent()
 
                 val aiResponse = try {
@@ -107,6 +107,8 @@ class MathSolverViewModel : ViewModel() {
                     \geometry{a4paper, margin=1in}
                     \usepackage{tikz}
                     \usepackage{pgfplots}
+                    \usepackage{circuitikz}
+                    \usepackage{booktabs}
                     \pgfplotsset{compat=1.18}
                     \setmainfont{DejaVu Serif}
                     \newfontfamily\bengalifont[

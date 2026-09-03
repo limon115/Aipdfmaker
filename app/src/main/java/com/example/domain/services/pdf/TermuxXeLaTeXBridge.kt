@@ -59,6 +59,12 @@ object TermuxXeLaTeXBridge {
             val pdfFile = File(outputDir, texFile.nameWithoutExtension + ".pdf")
             Timber.d("Writing PDF to: ${pdfFile.absolutePath}")
             
+            // Check for valid PDF header
+            if (pdfBytes.size < 5 || pdfBytes[0] != '%'.code.toByte() || pdfBytes[1] != 'P'.code.toByte() || pdfBytes[2] != 'D'.code.toByte() || pdfBytes[3] != 'F'.code.toByte() || pdfBytes[4] != '-'.code.toByte()) {
+                val errorStr = String(pdfBytes).take(200)
+                throw Exception("Invalid PDF returned by server. Server output: $errorStr")
+            }
+
             var fileOutputStream: FileOutputStream? = null
             try {
                 fileOutputStream = FileOutputStream(pdfFile)

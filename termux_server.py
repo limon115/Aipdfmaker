@@ -49,7 +49,14 @@ class LatexCompilerHandler(BaseHTTPRequestHandler):
                     print("✅ AI Fixes applied successfully.")
 
                 # 3. Compile the LaTeX (either original, or modified by the script)
-                print("⚙️ Compiling LaTeX...")
+                print("⚙️ Compiling LaTeX (Pass 1)...")
+                subprocess.run(
+                    ['xelatex', '-interaction=nonstopmode', 'main.tex'],
+                    cwd=tempdir,
+                    capture_output=True,
+                    text=True
+                )
+                print("⚙️ Compiling LaTeX (Pass 2)...")
                 process = subprocess.run(
                     ['xelatex', '-interaction=nonstopmode', 'main.tex'],
                     cwd=tempdir,
@@ -60,7 +67,7 @@ class LatexCompilerHandler(BaseHTTPRequestHandler):
                 pdf_path = os.path.join(tempdir, 'main.pdf')
 
                 # Check if the PDF was generated
-                if os.path.exists(pdf_path):
+                if os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 0:
                     print("✅ PDF generated successfully despite any warnings!")
                     with open(pdf_path, 'rb') as pdf_file:
                         pdf_bytes = pdf_file.read()

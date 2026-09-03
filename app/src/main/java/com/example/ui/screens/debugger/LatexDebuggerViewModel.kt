@@ -92,13 +92,21 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
                 )
                 val projectId = db.projectDao().insertProject(project).toInt()
                 
-                val snippet = DocumentSnippetEntity(
+                val snippetLatex = DocumentSnippetEntity(
                     projectId = projectId,
                     topicTitle = "Debugged Code",
-                    jsonContent = debuggedLatex,
+                    jsonContent = _state.value.latexCode,
                     orderIndex = 0
                 )
-                db.documentSnippetDao().insertSnippet(snippet)
+                db.documentSnippetDao().insertSnippet(snippetLatex)
+
+                val snippetScript = DocumentSnippetEntity(
+                    projectId = projectId,
+                    topicTitle = "fix_script",
+                    jsonContent = debuggedLatex,
+                    orderIndex = 1
+                )
+                db.documentSnippetDao().insertSnippet(snippetScript)
                 
                 withContext(Dispatchers.Main) {
                     _state.update { it.copy(isDebugging = false, latexCode = "", logContent = "") }

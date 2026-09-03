@@ -242,14 +242,12 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     
     suspend fun debugLatex(latexCode: String, logContent: String): String {
         val systemPrompt = """You are an automated Python script generator for patching LaTeX files.
-Your ONLY job is to output a valid JSON object containing a Python script.
 The Python script MUST read the file path from `sys.argv[1]`, fix the LaTeX errors via string replacement or regex, and overwrite the file.
 
 CRITICAL RULES:
-1. You MUST respond with ONLY a valid JSON object.
-2. The JSON MUST have exactly two keys: "thought_process" (string, your reasoning) and "python_script" (string, the raw python code).
-3. The python_script string MUST be a valid, raw Python 3 script (starting with import sys).
-4. Do NOT wrap the JSON in markdown blocks. Output pure JSON.
+1. You MUST respond with ONLY the raw Python code, wrapped in a ```python markdown block.
+2. Do NOT output JSON.
+3. The python script MUST be a valid, raw Python 3 script (starting with import sys).
 """.trimIndent()
 
         val userPrompt = """LaTeX Code:
@@ -257,28 +255,20 @@ $latexCode
 
 Compiler Log:
 $logContent""".trimIndent()
-        
+
         val rawResponse = generateContent(
             prompt = userPrompt, 
             customSystemPrompt = systemPrompt, 
-            mimeType = "application/json",
+            mimeType = "text/plain",
             maxTokens = 8192
         )
-        
-        try {
-            val cleanJsonStr = rawResponse.replace("```json", "").replace("```", "").trim()
-            val jsonObj = org.json.JSONObject(cleanJsonStr)
-            return jsonObj.optString("python_script", rawResponse)
-        } catch (e: Exception) {
-            // Fallback if parsing fails
-            com.example.utils.AppLogger.e("LatexDebugger", "Failed to parse JSON response", e)
-            val codeBlockRegex = Regex("```(?:python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
-            val matchResult = codeBlockRegex.find(rawResponse)
-            return if (matchResult != null) {
-                matchResult.groupValues[1].trim()
-            } else {
-                rawResponse
-            }
+
+        val codeBlockRegex = Regex("```(?:python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
+        val matchResult = codeBlockRegex.find(rawResponse)
+        return if (matchResult != null) {
+            matchResult.groupValues[1].trim()
+        } else {
+            rawResponse.trim()
         }
     }
 

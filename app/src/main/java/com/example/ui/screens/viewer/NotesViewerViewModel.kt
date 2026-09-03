@@ -51,10 +51,13 @@ class NotesViewerViewModel(
                 }
 
                 val snippets = snippetDao.getSnippetsForProject(projectId).first()
-                val masterLatex = snippets.joinToString("\n\n") { it.jsonContent }
+                val fixScriptSnippet = snippets.find { it.topicTitle == "fix_script" }
+                val latexSnippets = snippets.filter { it.topicTitle != "fix_script" }
+                val masterLatex = latexSnippets.joinToString("\n\n") { it.jsonContent }
 
                 _state.update { it.copy(
                     latexContent = masterLatex,
+                    fixScript = fixScriptSnippet?.jsonContent,
                     isLoading = false,
                     project = project,
                     outputFormat = project?.outputFormat ?: "PDF"

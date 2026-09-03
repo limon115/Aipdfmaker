@@ -184,15 +184,10 @@ class LatexCompilerRepository(private val context: Context) {
             }
 
             onProgress(0.6f)
-            val doubleCompileScript = """
-                xelatex -interaction=nonstopmode -halt-on-error main.tex
-                ${fixScript ?: ""}
-            """.trimIndent()
-
             val result = TermuxXeLaTeXBridge.compile(
                 context = context,
                 texFile = texFile,
-                fixScript = doubleCompileScript
+                fixScript = fixScript
             ).getOrElse { error ->
                 throw Exception(
                     "XeLaTeX compilation failed: ${error.message}",
