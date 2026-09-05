@@ -71,6 +71,11 @@ class MathSolverViewModel : ViewModel() {
                        - NEVER use `\begin{aligned}` completely alone in the text.
                        - CRITICAL: Ensure EVERY `\begin` has a matching `\end`. For example, `\begin{aligned}` MUST be closed with `\end{aligned}`. Do not leave stray `\end{gather}` or `\end{pmatrix}` without a `\begin`.
                        - CRITICAL: Delimiters must match. If you open with `\left[`, close with `\right]`. Do NOT close with `\end{pmatrix}`.
+                    6. HEADINGS: You MUST use actual structural commands for headings like `\section{Topic}`, `\subsection{Subtopic}`. NEVER write bare text in braces like `{Topic}` as a heading.
+                    7. SCRIPT CONSISTENCY: When writing in Bengali, strictly stick to pure Bengali and English characters. ABSOLUTELY DO NOT insert Arabic, Gujarati, or Devanagari characters (e.g., avoid inserting wrong script glyphs into Bengali words).
+                    8. TIKZ VALIDITY: Avoid zero-length draw commands (e.g., `\draw (2,2) -- (2,2)`). Ensure every path has actual length.
+                    9. ENVIRONMENT BALANCING: You MUST meticulously balance every `\begin` with its corresponding `\end`. Do NOT leave `\begin{tikzpicture}` without `\end{tikzpicture}`. Do NOT add stray `\end{center}` without a matching `\begin{center}`.
+                    10. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
                     
                     * Outputs should be in the same language as input by user.
                     
