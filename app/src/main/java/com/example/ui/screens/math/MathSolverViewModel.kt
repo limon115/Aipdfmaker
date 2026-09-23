@@ -19,10 +19,19 @@ import java.io.File
 import java.io.FileOutputStream
 import timber.log.Timber
 
+import com.example.domain.services.worker.MathSolverWorker
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+
 sealed class MathSolverState {
     object Idle : MathSolverState()
     object Processing : MathSolverState()
     object CompilingPdf : MathSolverState()
+    object EnqueuedInBackground : MathSolverState()
     data class Success(val pdfFile: File) : MathSolverState()
     data class Error(val message: String) : MathSolverState()
 }
@@ -168,6 +177,31 @@ class MathSolverViewModel : ViewModel() {
                 _state.value = MathSolverState.Error(e.localizedMessage ?: "Unknown Error")
             }
         }
+    }
+
+    fun solveProblemInBackground(context: Context, problemText: String) {
+        if (problemText.isBlank()) return
+        _state.value = MathSolverState.EnqueuedInBackground
+
+        val inputData = Data.Builder()
+            .putString(MathSolverWorker.KEY_PROBLEM_TEXT, problemText)
+            .build()
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<MathSolverWorker>()
+            .setConstraints(constraints)
+            .setInputData(inputData)
+            .build()
+
+        val workManager = WorkManager.getInstance(context)
+        workManager.enqueueUniqueWork(
+            "MathSolver_${System.currentTimeMillis()}",
+            ExistingWorkPolicy.KEEP,
+            workRequest
+        )
     }
 
     fun resetState() {

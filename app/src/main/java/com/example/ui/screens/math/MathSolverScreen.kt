@@ -27,6 +27,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import java.io.File
 
+import androidx.compose.material.icons.filled.Notifications
+import com.example.ui.components.glass.GlassButton
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MathSolverScreen(
@@ -115,26 +118,155 @@ fun MathSolverScreen(
 
             when (state) {
                 is MathSolverState.Idle -> {
-                    Button(
-                        onClick = { viewModel.solveProblem(context, problemText) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        enabled = problemText.isNotBlank(),
-                        shape = RoundedCornerShape(16.dp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Solve & Generate PDF", style = MaterialTheme.typography.titleMedium)
+                        Button(
+                            onClick = { viewModel.solveProblem(context, problemText) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
+                            enabled = problemText.isNotBlank(),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text("Solve & Generate PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+
+                        GlassButton(
+                            onClick = { viewModel.solveProblemInBackground(context, problemText) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
+                            enabled = problemText.isNotBlank(),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Run in Background",
+                                    tint = androidx.compose.ui.graphics.Color.White
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Solve in Background",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
                 is MathSolverState.Processing -> {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("AI is solving the problem...")
+                    Spacer(modifier = Modifier.height(20.dp))
+                    GlassButton(
+                        onClick = { viewModel.solveProblemInBackground(context, problemText) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Run in Background",
+                                tint = androidx.compose.ui.graphics.Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Switch to Background Task",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
                 is MathSolverState.CompilingPdf -> {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Compiling LaTeX to PDF...")
+                    Spacer(modifier = Modifier.height(20.dp))
+                    GlassButton(
+                        onClick = { viewModel.solveProblemInBackground(context, problemText) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Run in Background",
+                                tint = androidx.compose.ui.graphics.Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Switch to Background Task",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+                is MathSolverState.EnqueuedInBackground -> {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Background Task Active",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                "Running in Background",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Your math solution is generating in the background. A notification will appear when the PDF is ready.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            GlassButton(
+                                onClick = {
+                                    problemText = ""
+                                    viewModel.resetState()
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    "Solve Another Problem",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
                 is MathSolverState.Success -> {
                     val pdfFile = (state as MathSolverState.Success).pdfFile
