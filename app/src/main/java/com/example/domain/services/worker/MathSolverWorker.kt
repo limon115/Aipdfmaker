@@ -61,12 +61,29 @@ class MathSolverWorker(
             val dataStore = AiSettingsDataStore(context)
             val settings = dataStore.aiSettingsFlow.first()
 
-            val aiClient = AiNetworkClient(
-                provider = settings.ai2Provider.name,
-                apiKey = settings.ai2ApiKey.ifBlank { BuildConfig.GEMINI_API_KEY },
-                model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
-                temperature = settings.ai2Temperature
-            )
+            val candidateKeys = listOf(
+                settings.ai2ApiKey,
+                settings.ai1ApiKey,
+                settings.ai3ApiKey,
+                BuildConfig.GEMINI_API_KEY
+            ).filter { it.isNotBlank() && it != "placeholder" }.distinct()
+
+            val effectiveKeys = if (candidateKeys.isNotEmpty()) candidateKeys else listOf(BuildConfig.GEMINI_API_KEY)
+
+            val providerName = when {
+                settings.ai2ApiKey.isNotBlank() -> settings.ai2Provider.name
+                settings.ai1ApiKey.isNotBlank() -> settings.ai1Provider.name
+                settings.ai3ApiKey.isNotBlank() -> settings.ai3Provider.name
+                else -> settings.ai2Provider.name
+            }
+
+            val targetModel = settings.ai2Model.ifBlank {
+                settings.ai1Model.ifBlank {
+                    settings.ai3Model.ifBlank {
+                        "gemini-1.5-flash"
+                    }
+                }
+            }
 
             val prompt = """
                 Act as an expert mathematics tutor. I have a specific math problem for you to solve. Please provide a comprehensive breakdown by strictly following these instructions:
@@ -106,14 +123,36 @@ class MathSolverWorker(
                 $problemText
             """.trimIndent()
 
-            val aiResponse = try {
-                aiClient.generateContent(prompt)
-            } catch (e: Exception) {
+            var aiResponse: String? = null
+            var lastError: Exception? = null
+
+            for (key in effectiveKeys) {
+                try {
+                    val aiClient = AiNetworkClient(
+                        provider = providerName,
+                        apiKey = key,
+                        model = targetModel,
+                        temperature = settings.ai2Temperature
+                    )
+                    val response = aiClient.generateContent(prompt)
+                    if (response.isNotBlank()) {
+                        aiResponse = response
+                        break
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    lastError = e
+                    AppLogger.w("MathSolverWorker", "Attempt with key failed: ${e.message}")
+                }
+            }
+
+            if (aiResponse.isNullOrBlank()) {
                 if (runAttemptCount < 3) {
-                    AppLogger.w("MathSolverWorker", "AI generation encountered error (attempt $runAttemptCount): ${e.message}, retrying...")
+                    AppLogger.w("MathSolverWorker", "AI generation encountered error (attempt $runAttemptCount): ${lastError?.message}, retrying...")
                     return Result.retry()
                 }
-                val errorMsg = "AI Generation Failed: ${e.message}"
+                val errorMsg = "AI Generation Failed: ${lastError?.message ?: "Empty AI response"}"
                 showErrorNotification("Math Solution", errorMsg)
                 return Result.failure(workDataOf(KEY_ERROR to errorMsg))
             }

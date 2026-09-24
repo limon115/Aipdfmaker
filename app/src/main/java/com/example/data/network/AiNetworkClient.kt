@@ -328,42 +328,67 @@ $effectiveLog""".trimIndent()
         val estimatedTokens = (prompt.length + (sysPrompt?.length ?: 0)) / 4
         enforceRateLimit(estimatedTokens)
         com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
-        val targetModel = model.ifBlank { "gemini-1.5-flash" }
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
 
-        val requestPayload = GeminiRequest(
-            contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
-            systemInstruction = sysPrompt?.let { GeminiSystemInstruction(listOf(GeminiPart(it))) },
-            generationConfig = GeminiGenConfig(temperature, mimeType, schema, maxTokens)
-        )
+        val candidateModels = listOf(
+            model.ifBlank { "gemini-1.5-flash" },
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-8b"
+        ).distinct()
 
         var lastException: Exception? = null
-        for (attempt in 1..3) {
-            try {
-                com.example.utils.AppLogger.d("AiNetwork", "Sending Gemini request to $targetModel (${prompt.length} chars) - attempt $attempt/3")
-                val response: HttpResponse = ktorClient.post(url) {
-                    contentType(ContentType.Application.Json)
-                    setBody(requestPayload)
-                }
-                val jsonResponse = jsonFormat.decodeFromString<GeminiResponse>(response.bodyAsText())
-                com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
-                val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
-                return extractJson(rawText)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: ClientRequestException) {
-                val err = "API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}"
-                com.example.utils.AppLogger.e("AiNetwork", err, e)
-                throw Exception(err)
-            } catch (e: Exception) {
-                lastException = e
-                com.example.utils.AppLogger.w("AiNetwork", "Gemini attempt $attempt failed with network error: ${e.message}")
-                if (attempt < 3) {
-                    kotlinx.coroutines.delay(1500L * attempt)
+
+        for (targetModel in candidateModels) {
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=$cleanKey"
+            val requestPayload = GeminiRequest(
+                contents = listOf(GeminiContent(parts = listOf(GeminiPart(prompt)))),
+                systemInstruction = sysPrompt?.let { GeminiSystemInstruction(listOf(GeminiPart(it))) },
+                generationConfig = GeminiGenConfig(temperature, mimeType, schema, maxTokens)
+            )
+
+            for (attempt in 1..3) {
+                try {
+                    com.example.utils.AppLogger.d("AiNetwork", "Sending Gemini request to $targetModel (${prompt.length} chars) - attempt $attempt/3")
+                    val response: HttpResponse = ktorClient.post(url) {
+                        contentType(ContentType.Application.Json)
+                        setBody(requestPayload)
+                    }
+                    val jsonResponse = jsonFormat.decodeFromString<GeminiResponse>(response.bodyAsText())
+                    com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
+                    val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                        ?: throw IllegalStateException("Empty response from Gemini")
+                    return extractJson(rawText)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: ClientRequestException) {
+                    val statusCode = e.response.status.value
+                    val errorBody = try { e.response.bodyAsText().take(120) } catch (_: Exception) { "" }
+                    val err = "API Error $statusCode: $errorBody"
+                    com.example.utils.AppLogger.e("AiNetwork", err, e)
+                    lastException = Exception(err)
+
+                    if (statusCode == 429 || statusCode == 408) {
+                        com.example.domain.services.ai.AiUsageTracker.trackRateLimitError()
+                        if (attempt < 3) {
+                            kotlinx.coroutines.delay(2000L * attempt * attempt)
+                            continue
+                        }
+                    }
+                    if (statusCode == 404) {
+                        break
+                    }
+                    throw Exception(err)
+                } catch (e: Exception) {
+                    lastException = e
+                    com.example.utils.AppLogger.w("AiNetwork", "Gemini $targetModel attempt $attempt failed with network error: ${e.message}")
+                    if (attempt < 3) {
+                        kotlinx.coroutines.delay(1500L * attempt)
+                    }
                 }
             }
         }
-        val err = "Network Error: ${lastException?.message?.take(50)}"
+
+        val err = lastException?.message ?: "Network Error: Unknown failure connecting to Gemini"
         com.example.utils.AppLogger.e("AiNetwork", err, lastException)
         throw Exception(err)
     }
@@ -390,8 +415,18 @@ $effectiveLog""".trimIndent()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: ClientRequestException) {
-                val err = "API Error ${e.response.status.value}"
+                val statusCode = e.response.status.value
+                val errorBody = try { e.response.bodyAsText().take(120) } catch (_: Exception) { "" }
+                val err = "API Error $statusCode: $errorBody"
                 com.example.utils.AppLogger.e("AiNetwork", err, e)
+                lastException = Exception(err)
+
+                if (statusCode == 429 || statusCode == 408) {
+                    if (attempt < 3) {
+                        kotlinx.coroutines.delay(2000L * attempt * attempt)
+                        continue
+                    }
+                }
                 throw Exception(err)
             } catch (e: Exception) {
                 lastException = e
