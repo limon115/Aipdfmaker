@@ -99,6 +99,8 @@ class MathSolverViewModel : ViewModel() {
 
                 val aiResponse = try {
                     aiClient.generateContent(prompt)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     _state.value = MathSolverState.Error("AI Generation Failed: ${e.message}")
                     return@launch
@@ -158,6 +160,8 @@ class MathSolverViewModel : ViewModel() {
                     fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
                     fileOutputStream.flush()
                     Timber.d("LaTeX file writing complete.")
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to write LaTeX file")
                     throw e
@@ -189,6 +193,8 @@ class MathSolverViewModel : ViewModel() {
                         try {
                             generatedPdf.copyTo(finalSharedPdfFile, overwrite = true)
                             Timber.i("Saved PDF to shared storage: ${finalSharedPdfFile.absolutePath}")
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Timber.e(e, "Failed to copy PDF to shared storage")
                         }
@@ -218,6 +224,8 @@ class MathSolverViewModel : ViewModel() {
                             )
                             db.documentSnippetDao().insertSnippet(snippet)
                             Timber.i("Inserted Math Solution project with ID: $projectId into database")
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Timber.e(e, "Failed to insert math solution project into database")
                         }
@@ -230,6 +238,9 @@ class MathSolverViewModel : ViewModel() {
                 } else {
                     _state.value = MathSolverState.Error("LaTeX Compilation Failed:\n${compileResult.exceptionOrNull()?.message}")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                Timber.d("solveProblem job cancelled cleanly")
+                throw e
             } catch (e: Exception) {
                 _state.value = MathSolverState.Error(e.localizedMessage ?: "Unknown Error")
             }

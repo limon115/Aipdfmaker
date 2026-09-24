@@ -347,6 +347,8 @@ $effectiveLog""".trimIndent()
             com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
             val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
             return extractJson(rawText)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: ClientRequestException) {
             val err = "API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}"
             com.example.utils.AppLogger.e("AiNetwork", err, e)
@@ -374,6 +376,8 @@ $effectiveLog""".trimIndent()
             com.example.utils.AppLogger.d("AiNetwork", "OpenAI request successful")
             val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
             return extractJson(rawText)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: ClientRequestException) {
             val err = "API Error ${e.response.status.value}"
             com.example.utils.AppLogger.e("AiNetwork", err, e)
