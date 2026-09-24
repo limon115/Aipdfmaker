@@ -58,8 +58,8 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun debugLatex(onSuccess: (Int) -> Unit) {
-        if (_state.value.latexCode.isBlank() || _state.value.logContent.isBlank()) {
-            _state.update { it.copy(error = "Please provide both LaTeX code and log content.") }
+        if (_state.value.latexCode.isBlank()) {
+            _state.update { it.copy(error = "Please enter or upload LaTeX code to debug.") }
             return
         }
 
@@ -79,13 +79,14 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
                     logContent = _state.value.logContent
                 )
                 
+                val safeTitle = "Debugged_LaTeX_${System.currentTimeMillis() % 100000}"
                 val project = ProjectEntity(
-                    title = "Debugged LaTeX Project",
+                    title = safeTitle,
                     course = "LaTeX Debugger",
-                    chapter = "Debug",
+                    chapter = "Debugged Document",
                     noteStyle = "Debugged",
                     outputFormat = "PDF",
-                    status = "Debugged",
+                    status = "Completed",
                     pageCount = 1,
                     lastUpdated = System.currentTimeMillis(),
                     sourceText = _state.value.latexCode
@@ -95,18 +96,10 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
                 val snippetLatex = DocumentSnippetEntity(
                     projectId = projectId,
                     topicTitle = "Debugged Code",
-                    jsonContent = _state.value.latexCode,
+                    jsonContent = debuggedLatex,
                     orderIndex = 0
                 )
                 db.documentSnippetDao().insertSnippet(snippetLatex)
-
-                val snippetScript = DocumentSnippetEntity(
-                    projectId = projectId,
-                    topicTitle = "fix_script",
-                    jsonContent = debuggedLatex,
-                    orderIndex = 1
-                )
-                db.documentSnippetDao().insertSnippet(snippetScript)
                 
                 withContext(Dispatchers.Main) {
                     _state.update { it.copy(isDebugging = false, latexCode = "", logContent = "") }
@@ -115,7 +108,7 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
                 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    _state.update { it.copy(isDebugging = false, error = e.localizedMessage) }
+                    _state.update { it.copy(isDebugging = false, error = e.localizedMessage ?: "LaTeX Debugging failed.") }
                 }
             }
         }

@@ -241,20 +241,23 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
 
     
     suspend fun debugLatex(latexCode: String, logContent: String): String {
-        val systemPrompt = """You are an automated Python script generator for patching LaTeX files.
-The Python script MUST read the file path from `sys.argv[1]`, fix the LaTeX errors via string replacement or regex, and overwrite the file.
+        val effectiveLog = logContent.ifBlank { "No log provided. Perform syntax check and fix unclosed environments, broken syntax, or missing packages." }
+
+        val systemPrompt = """You are an expert LaTeX debugging and repair specialist.
+Your goal is to analyze the broken LaTeX code and compiler log, diagnose all errors, and output the COMPLETELY FIXED, WORKING LaTeX document code.
 
 CRITICAL RULES:
-1. You MUST respond with ONLY the raw Python code, wrapped in a ```python markdown block.
-2. Do NOT output JSON.
-3. The python script MUST be a valid, raw Python 3 script (starting with import sys).
+1. You MUST return ONLY the fully corrected LaTeX code inside a ```latex markdown code block.
+2. Fix all unclosed environments, missing backslashes, missing packages, TikZ/circuitikz syntax errors, and table formatting bugs.
+3. Do NOT include markdown explanations, intro notes, or conversational text outside the code block.
+4. Ensure every \begin{...} has a matching \end{...}.
 """.trimIndent()
 
         val userPrompt = """LaTeX Code:
 $latexCode
 
 Compiler Log:
-$logContent""".trimIndent()
+$effectiveLog""".trimIndent()
 
         val rawResponse = generateContent(
             prompt = userPrompt, 
@@ -263,12 +266,14 @@ $logContent""".trimIndent()
             maxTokens = 8192
         )
 
-        val codeBlockRegex = Regex("```(?:python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
+        val codeBlockRegex = Regex("```(?:latex|python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
         val matchResult = codeBlockRegex.find(rawResponse)
         return if (matchResult != null) {
             matchResult.groupValues[1].trim()
         } else {
-            rawResponse.trim()
+            rawResponse.replace(Regex("^```(?:latex|python)?", RegexOption.IGNORE_CASE), "")
+                .replace(Regex("```$", RegexOption.IGNORE_CASE), "")
+                .trim()
         }
     }
 

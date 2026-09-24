@@ -129,7 +129,7 @@ fun LatexDebuggerScreen(
                     GlassTextField(
                         value = state.logContent,
                         onValueChange = viewModel::updateLogContent,
-                        placeholder = { Text("Paste compiler log here...") },
+                        placeholder = { Text("Paste compiler log here (optional)...") },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 300.dp),
                         singleLine = false
                     )
@@ -139,7 +139,7 @@ fun LatexDebuggerScreen(
             Button(
                 onClick = { viewModel.debugLatex(onSuccess = onNavigateToViewer) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                enabled = !state.isDebugging && state.latexCode.isNotBlank() && state.logContent.isNotBlank()
+                enabled = !state.isDebugging && state.latexCode.isNotBlank()
             ) {
                 if (state.isDebugging) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
