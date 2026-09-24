@@ -243,14 +243,14 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
     suspend fun debugLatex(latexCode: String, logContent: String): String {
         val effectiveLog = logContent.ifBlank { "No log provided. Perform syntax check and fix unclosed environments, broken syntax, or missing packages." }
 
-        val systemPrompt = """You are an expert LaTeX debugging and repair specialist.
-Your goal is to analyze the broken LaTeX code and compiler log, diagnose all errors, and output the COMPLETELY FIXED, WORKING LaTeX document code.
+        val systemPrompt = """You are an automated Python script generator for patching LaTeX files.
+The Python script MUST read the file path from `sys.argv[1]`, fix the LaTeX errors via string replacement or regex, and overwrite the target file.
 
 CRITICAL RULES:
-1. You MUST return ONLY the fully corrected LaTeX code inside a ```latex markdown code block.
-2. Fix all unclosed environments, missing backslashes, missing packages, TikZ/circuitikz syntax errors, and table formatting bugs.
-3. Do NOT include markdown explanations, intro notes, or conversational text outside the code block.
-4. Ensure every \begin{...} has a matching \end{...}.
+1. You MUST respond with ONLY valid Python 3 code inside a ```python markdown code block.
+2. The python script MUST start with `import sys`.
+3. Read target file path using `target_file = sys.argv[1]`.
+4. Do NOT output conversational text, explanations, or JSON outside the code block.
 """.trimIndent()
 
         val userPrompt = """LaTeX Code:
@@ -266,12 +266,12 @@ $effectiveLog""".trimIndent()
             maxTokens = 8192
         )
 
-        val codeBlockRegex = Regex("```(?:latex|python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
+        val codeBlockRegex = Regex("```(?:python)?(.*?)```", RegexOption.DOT_MATCHES_ALL)
         val matchResult = codeBlockRegex.find(rawResponse)
         return if (matchResult != null) {
             matchResult.groupValues[1].trim()
         } else {
-            rawResponse.replace(Regex("^```(?:latex|python)?", RegexOption.IGNORE_CASE), "")
+            rawResponse.replace(Regex("^```(?:python)?", RegexOption.IGNORE_CASE), "")
                 .replace(Regex("```$", RegexOption.IGNORE_CASE), "")
                 .trim()
         }
