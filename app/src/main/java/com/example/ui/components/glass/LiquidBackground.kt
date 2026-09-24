@@ -32,7 +32,7 @@ fun LiquidBackground(
 
     val infiniteTransition = rememberInfiniteTransition(label = "liquid_bg")
     
-    val phase1 by infiniteTransition.animateFloat(
+    val phase1State = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
         animationSpec = infiniteRepeatable(
@@ -42,7 +42,7 @@ fun LiquidBackground(
         label = "phase1"
     )
 
-    val phase2 by infiniteTransition.animateFloat(
+    val phase2State = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
         animationSpec = infiniteRepeatable(
@@ -52,7 +52,7 @@ fun LiquidBackground(
         label = "phase2"
     )
 
-    val phase3 by infiniteTransition.animateFloat(
+    val phase3State = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
         animationSpec = infiniteRepeatable(
@@ -67,16 +67,20 @@ fun LiquidBackground(
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // Draw the liquid blobs
+        // Draw the liquid blobs with deferred state reads inside Canvas draw block to prevent recomposition
         Canvas(modifier = Modifier.fillMaxSize()) {
+            val p1 = phase1State.value
+            val p2 = phase2State.value
+            val p3 = phase3State.value
+
             val width = size.width
             val height = size.height
             val minDim = minOf(width, height)
             val radius = minDim * 0.7f
 
             // Blob 1: Top Left moving in a figure-8
-            val cx1 = width * 0.3f + (width * 0.2f) * kotlin.math.sin(phase1)
-            val cy1 = height * 0.3f + (height * 0.2f) * kotlin.math.cos(phase1 * 0.5f)
+            val cx1 = width * 0.3f + (width * 0.2f) * kotlin.math.sin(p1)
+            val cy1 = height * 0.3f + (height * 0.2f) * kotlin.math.cos(p1 * 0.5f)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color1, Color.Transparent),
@@ -88,8 +92,8 @@ fun LiquidBackground(
             )
 
             // Blob 2: Center Right moving circularly
-            val cx2 = width * 0.7f + (width * 0.25f) * kotlin.math.cos(phase2)
-            val cy2 = height * 0.5f + (height * 0.25f) * kotlin.math.sin(phase2)
+            val cx2 = width * 0.7f + (width * 0.25f) * kotlin.math.cos(p2)
+            val cy2 = height * 0.5f + (height * 0.25f) * kotlin.math.sin(p2)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color2, Color.Transparent),
@@ -101,8 +105,8 @@ fun LiquidBackground(
             )
 
             // Blob 3: Bottom Left moving
-            val cx3 = width * 0.2f + (width * 0.3f) * kotlin.math.sin(phase3)
-            val cy3 = height * 0.8f + (height * 0.2f) * kotlin.math.cos(phase3)
+            val cx3 = width * 0.2f + (width * 0.3f) * kotlin.math.sin(p3)
+            val cy3 = height * 0.8f + (height * 0.2f) * kotlin.math.cos(p3)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color3, Color.Transparent),

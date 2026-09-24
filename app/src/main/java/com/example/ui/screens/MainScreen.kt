@@ -107,20 +107,20 @@ fun MainScreen() {
             startDestination = BottomNavItem.Home.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
-                slideInHorizontally(initialOffsetX = { 60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                slideInHorizontally(initialOffsetX = { 50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
-                slideOutHorizontally(targetOffsetX = { -60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                fadeOut(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                slideOutHorizontally(targetOffsetX = { -50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
-                slideInHorizontally(initialOffsetX = { -60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                slideInHorizontally(initialOffsetX = { -50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
-                slideOutHorizontally(targetOffsetX = { 60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                fadeOut(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                slideOutHorizontally(targetOffsetX = { 50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             }
         ) {
             composable(BottomNavItem.Home.route) {

@@ -46,21 +46,10 @@ fun GlassSurface(
 
     Box(
         modifier = modifier
-            .graphicsLayer {
-                clip = true
-                this.shape = shape
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
+            .clip(shape)
             .background(bgGradient)
             .border(1.dp, borderGradient, shape)
     ) {
-        // Subtle internal blur to frost the background behind the surface
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .blur(16.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                .background(Color.Transparent)
-        )
         content()
     }
 }

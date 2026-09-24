@@ -53,11 +53,7 @@ fun GlassCard(
 
     Box(
         modifier = modifier
-            .graphicsLayer {
-                clip = true
-                this.shape = shape
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
+            .clip(shape)
             .background(bgGlow)
             .border(1.dp, shimmerBorder, shape)
     ) {
@@ -97,11 +93,7 @@ fun GlassCard(
 
     Box(
         modifier = modifier
-            .graphicsLayer {
-                clip = true
-                this.shape = shape
-                compositingStrategy = CompositingStrategy.Offscreen
-            }
+            .clip(shape)
             .background(bgGlow)
             .border(1.dp, shimmerBorder, shape)
             .clickable(enabled = enabled, onClick = onClick)
