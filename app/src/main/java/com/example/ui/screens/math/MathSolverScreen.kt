@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import java.io.File
 
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Cancel
 import com.example.ui.components.glass.GlassButton
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -166,29 +167,45 @@ fun MathSolverScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("AI is solving the problem...")
                     Spacer(modifier = Modifier.height(20.dp))
-                    GlassButton(
-                        onClick = { viewModel.solveProblemInBackground(context, problemText) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(16.dp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        GlassButton(
+                            onClick = { viewModel.solveProblemInBackground(context, problemText) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Run in Background",
-                                tint = androidx.compose.ui.graphics.Color.White
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Run in Background",
+                                    tint = androidx.compose.ui.graphics.Color.White
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Switch to Background Task",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.cancelSolving(context) },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Task")
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Switch to Background Task",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = androidx.compose.ui.graphics.Color.White,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text("Cancel Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -197,29 +214,45 @@ fun MathSolverScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Compiling LaTeX to PDF...")
                     Spacer(modifier = Modifier.height(20.dp))
-                    GlassButton(
-                        onClick = { viewModel.solveProblemInBackground(context, problemText) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(16.dp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        GlassButton(
+                            onClick = { viewModel.solveProblemInBackground(context, problemText) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Run in Background",
-                                tint = androidx.compose.ui.graphics.Color.White
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Run in Background",
+                                    tint = androidx.compose.ui.graphics.Color.White
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Switch to Background Task",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.cancelSolving(context) },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Task")
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Switch to Background Task",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = androidx.compose.ui.graphics.Color.White,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text("Cancel Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -250,20 +283,36 @@ fun MathSolverScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(20.dp))
-                            GlassButton(
-                                onClick = {
-                                    problemText = ""
-                                    viewModel.resetState()
-                                },
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text(
-                                    "Solve Another Problem",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = androidx.compose.ui.graphics.Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                GlassButton(
+                                    onClick = {
+                                        problemText = ""
+                                        viewModel.resetState()
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text(
+                                        "Solve Another Problem",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = { viewModel.cancelSolving(context) },
+                                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(Icons.Default.Cancel, contentDescription = "Cancel Background Task")
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Cancel Background Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

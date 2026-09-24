@@ -32,10 +32,17 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
     
     private val db = AppDatabase.getDatabase(application)
     private val dataStore = AiSettingsDataStore(application)
+    private var debugJob: kotlinx.coroutines.Job? = null
 
     fun updateLatexCode(code: String) { _state.update { it.copy(latexCode = code) } }
     fun updateLogContent(log: String) { _state.update { it.copy(logContent = log) } }
     fun dismissError() { _state.update { it.copy(error = null) } }
+
+    fun cancelDebugging() {
+        debugJob?.cancel()
+        debugJob = null
+        _state.update { it.copy(isDebugging = false) }
+    }
 
     fun loadFileContent(uri: Uri, isLatex: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -65,7 +72,8 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
 
         _state.update { it.copy(isDebugging = true, error = null) }
         
-        viewModelScope.launch(Dispatchers.IO) {
+        debugJob?.cancel()
+        debugJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val settings = dataStore.aiSettingsFlow.first()
                 val provider = settings.ai3Provider.name

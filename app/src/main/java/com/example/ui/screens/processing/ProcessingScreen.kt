@@ -162,18 +162,35 @@ fun ProcessingScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            com.example.ui.components.glass.GlassCard(
-                onClick = onNavigateBack,
-                modifier = Modifier.wrapContentSize(),
-                shape = RoundedCornerShape(32.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)) {
-                    Text(
-                        text = "Run in Background",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
+                com.example.ui.components.glass.GlassCard(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.wrapContentSize(),
+                    shape = RoundedCornerShape(32.dp)
+                ) {
+                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
+                        Text(
+                            text = "Run in Background",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        viewModel.cancelProcessing(context, projectId)
+                        onNavigateBack()
+                    },
+                    shape = RoundedCornerShape(32.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text("Cancel", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 }
             }
 

@@ -130,4 +130,15 @@ class NoteGenerationViewModel : ViewModel() {
         // Start observing
         resumeObservation(context, projectId)
     }
+
+    fun cancelGeneration(context: Context, projectId: Int) {
+        try {
+            val workManager = WorkManager.getInstance(context)
+            workManager.cancelUniqueWork("NoteGen_${projectId}")
+            _state.value.workId?.let { workManager.cancelWorkById(it) }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        _state.update { it.copy(hasError = true, errorMessage = "Generation canceled by user.") }
+    }
 }

@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -136,17 +138,35 @@ fun LatexDebuggerScreen(
                 }
             }
 
-            Button(
-                onClick = { viewModel.debugLatex(onSuccess = onNavigateToViewer) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                enabled = !state.isDebugging && state.latexCode.isNotBlank()
-            ) {
-                if (state.isDebugging) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
+            if (state.isDebugging) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                    Text("AI is debugging your LaTeX code...", style = MaterialTheme.typography.bodyMedium)
+                    OutlinedButton(
+                        onClick = { viewModel.cancelDebugging() },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Cancel, contentDescription = "Cancel Debugging")
+                        Spacer(Modifier.width(8.dp))
+                        Text("Cancel Debugging", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                Button(
+                    onClick = { viewModel.debugLatex(onSuccess = onNavigateToViewer) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    enabled = state.latexCode.isNotBlank(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
                     Icon(Icons.Default.BugReport, contentDescription = "Debug")
                     Spacer(Modifier.width(8.dp))
-                    Text("Debug & Rewrite Code")
+                    Text("Debug & Rewrite Code", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

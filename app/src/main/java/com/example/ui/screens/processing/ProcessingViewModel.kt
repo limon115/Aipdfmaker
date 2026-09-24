@@ -53,12 +53,14 @@ class ProcessingViewModel : ViewModel() {
 
     private var hasStarted = false
     private val jsonFormat = Json { ignoreUnknownKeys = true; isLenient = true }
+    private var processingJob: kotlinx.coroutines.Job? = null
 
     fun startProcessing(context: Context, projectId: Int) {
         if (hasStarted) return
         hasStarted = true
 
-        viewModelScope.launch(Dispatchers.IO) {
+        processingJob?.cancel()
+        processingJob = viewModelScope.launch(Dispatchers.IO) {
             com.example.utils.AppLogger.i("ProcessingVM", "Starting processing for project $projectId")
 
             // Step 1: OCR Processing
@@ -143,5 +145,17 @@ class ProcessingViewModel : ViewModel() {
                 percentage = percentage
             )
         }
+    }
+
+    fun cancelProcessing(context: Context, projectId: Int) {
+        processingJob?.cancel()
+        processingJob = null
+        try {
+            val workManager = WorkManager.getInstance(context)
+            workManager.cancelUniqueWork("BlueprintGen_$projectId")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        updateStepState(1, StepState.FAILED, 0)
     }
 }

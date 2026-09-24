@@ -40,9 +40,13 @@ class MathSolverViewModel : ViewModel() {
     private val _state = MutableStateFlow<MathSolverState>(MathSolverState.Idle)
     val state: StateFlow<MathSolverState> = _state.asStateFlow()
 
+    private var solveJob: kotlinx.coroutines.Job? = null
+    private var lastWorkUniqueName: String? = null
+
     fun solveProblem(context: Context, problemText: String) {
+        solveJob?.cancel()
         _state.value = MathSolverState.Processing
-        viewModelScope.launch(Dispatchers.IO) {
+        solveJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dataStore = AiSettingsDataStore(context)
                 val settings = dataStore.aiSettingsFlow.first()
@@ -181,7 +185,11 @@ class MathSolverViewModel : ViewModel() {
 
     fun solveProblemInBackground(context: Context, problemText: String) {
         if (problemText.isBlank()) return
+        solveJob?.cancel()
         _state.value = MathSolverState.EnqueuedInBackground
+
+        val workName = "MathSolver_${System.currentTimeMillis()}"
+        lastWorkUniqueName = workName
 
         val inputData = Data.Builder()
             .putString(MathSolverWorker.KEY_PROBLEM_TEXT, problemText)
@@ -194,17 +202,32 @@ class MathSolverViewModel : ViewModel() {
         val workRequest = OneTimeWorkRequestBuilder<MathSolverWorker>()
             .setConstraints(constraints)
             .setInputData(inputData)
+            .addTag("MathSolverTag")
             .build()
 
         val workManager = WorkManager.getInstance(context)
         workManager.enqueueUniqueWork(
-            "MathSolver_${System.currentTimeMillis()}",
+            workName,
             ExistingWorkPolicy.KEEP,
             workRequest
         )
     }
 
+    fun cancelSolving(context: Context) {
+        solveJob?.cancel()
+        solveJob = null
+        try {
+            val workManager = WorkManager.getInstance(context)
+            lastWorkUniqueName?.let { workManager.cancelUniqueWork(it) }
+            workManager.cancelAllWorkByTag("MathSolverTag")
+        } catch (e: Exception) {
+            Timber.w(e, "Error cancelling MathSolver work")
+        }
+        _state.value = MathSolverState.Idle
+    }
+
     fun resetState() {
+        solveJob?.cancel()
         _state.value = MathSolverState.Idle
     }
 }

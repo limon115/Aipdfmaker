@@ -103,20 +103,38 @@ fun NoteGenerationScreen(
             ) {
                 Column {
                     if (!state.isFinished && !state.hasError) {
-                        OutlinedButton(
-                            onClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                } else {
-                                    onNavigateHome()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Run in Background", style = MaterialTheme.typography.titleMedium)
+                            OutlinedButton(
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        onNavigateHome()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text("Run in Background", style = MaterialTheme.typography.titleSmall)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.cancelGeneration(context, projectId)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("Cancel", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
