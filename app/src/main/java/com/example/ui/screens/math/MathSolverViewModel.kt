@@ -1,32 +1,25 @@
 package com.example.ui.screens.math
 
 import android.content.Context
-import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.BuildConfig
-import com.example.data.datastore.AiSettingsDataStore
-import com.example.data.network.AiNetworkClient
-import com.example.domain.services.pdf.TermuxXeLaTeXBridge
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import timber.log.Timber
-
 import androidx.lifecycle.asFlow
-import com.example.domain.services.worker.MathSolverWorker
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.example.domain.services.worker.MathSolverWorker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.io.File
+import timber.log.Timber
 
 sealed class MathSolverState {
     object Idle : MathSolverState()
@@ -41,219 +34,48 @@ class MathSolverViewModel : ViewModel() {
     private val _state = MutableStateFlow<MathSolverState>(MathSolverState.Idle)
     val state: StateFlow<MathSolverState> = _state.asStateFlow()
 
-    private var solveJob: kotlinx.coroutines.Job? = null
-    private var lastWorkUniqueName: String? = null
+    private var observeJob: Job? = null
+    private var isBackgroundMode = false
+    private var currentProblemText: String = ""
 
     fun solveProblem(context: Context, problemText: String) {
-        solveJob?.cancel()
-        _state.value = MathSolverState.Processing(0.25f, "AI is analyzing problem & generating solution...")
-        solveJob = viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val dataStore = AiSettingsDataStore(context)
-                val settings = dataStore.aiSettingsFlow.first()
-
-                val aiClient = AiNetworkClient(
-                    provider = settings.ai2Provider.name,
-                    apiKey = settings.ai2ApiKey.ifBlank { BuildConfig.GEMINI_API_KEY },
-                    model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
-                    temperature = settings.ai2Temperature
-                )
-
-                                                val prompt = """
-                    Act as an expert mathematics tutor. I have a specific math problem for you to solve. Please provide a comprehensive breakdown by strictly following these instructions:
-                    
-                    1. Related Theory & Fundamentals:
-                    Explain all the core theories, concepts, and fundamental formulas related to this problem. Strictly use fundamental core formulas for your proofs and explanations. Do not use derived memory tricks or shortcuts unless you ask for my permission first.
-                    
-                    2. The Solution:
-                    Always explain the logical steps before writing out the mathematical calculations.
-                    Keep the mathematical equations clean, separate from the descriptive text, and properly formatted.
-                    
-                    3. Variations:
-                    Show me all possible variations of this specific type of math problem that I might encounter. For each variation, provide the complete solution.
-
-                    CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
-                    1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
-                    2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
-                    3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
-                       - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
-                       - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
-                    4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \midrule ... \bottomrule \end{tabular} \end{table}.
-                       - IMPORTANT: Always end table rows with `\\` (double backslash).
-                       - IMPORTANT: ALWAYS use exactly `\bottomrule` at the end of the table. NEVER use `\bottom.`, `\bottom>`, or any other typo.
-                    5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or `${"$$"} ... ${"$$"}`.
-                       - NEVER use `\begin{aligned}` completely alone in the text.
-                       - CRITICAL: Ensure EVERY `\begin` has a matching `\end`. For example, `\begin{aligned}` MUST be closed with `\end{aligned}`. Do not leave stray `\end{gather}` or `\end{pmatrix}` without a `\begin`.
-                       - CRITICAL: Delimiters must match. If you open with `\left[`, close with `\right]`. Do NOT close with `\end{pmatrix}`.
-                    6. HEADINGS: You MUST use actual structural commands for headings like `\section{Topic}`, `\subsection{Subtopic}`. NEVER write bare text in braces like `{Topic}` as a heading.
-                    7. SCRIPT CONSISTENCY: When writing in Bengali, strictly stick to pure Bengali and English characters. ABSOLUTELY DO NOT insert Arabic, Gujarati, or Devanagari characters (e.g., avoid inserting wrong script glyphs into Bengali words).
-                    8. TIKZ VALIDITY: Avoid zero-length draw commands (e.g., `\draw (2,2) -- (2,2)`). Ensure every path has actual length.
-                    9. ENVIRONMENT BALANCING: You MUST meticulously balance every `\begin` with its corresponding `\end`. Do NOT leave `\begin{tikzpicture}` without `\end{tikzpicture}`. Do NOT add stray `\end{center}` without a matching `\begin{center}`.
-                    10. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
-                    
-                    * Outputs should be in the same language as input by user.
-                    
-                    Here is the problem:
-                    $problemText
-                """.trimIndent()
-
-                val aiResponse = try {
-                    aiClient.generateContent(prompt)
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    _state.value = MathSolverState.Error("AI Generation Failed: ${e.message}")
-                    return@launch
-                }
-                
-                val cleanLatex = aiResponse.removePrefix("```latex").replace("```latex\\n", "").removePrefix("```").removeSuffix("```").trim()
-
-                _state.value = MathSolverState.CompilingPdf(0.75f, "Compiling LaTeX solution to PDF via XeLaTeX...")
-                
-                val safeName = "Math_Solution_${System.currentTimeMillis()}"
-                val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-                val baseDir = File(documentsDir, "aipdfs/$safeName")
-                if (!baseDir.exists()) {
-                    baseDir.mkdirs()
-                }
-
-                val fullLatex = """
-                    \documentclass{article}
-                    \usepackage{amsmath}
-                    \usepackage{amsfonts}
-                    \usepackage{amssymb}
-                    \usepackage{fontspec}
-                    \usepackage[Bengali]{ucharclasses}
-                    \usepackage{geometry}
-                    \geometry{a4paper, margin=1in}
-                    \usepackage{tikz}
-                    \usepackage{pgfplots}
-                    \usepackage{circuitikz}
-                    \usepackage{booktabs}
-                    \pgfplotsset{compat=1.18}
-                    \setmainfont{DejaVu Serif}
-                    \newfontfamily\bengalifont[
-                        Path=/data/data/com.termux/files/home/,
-                        Script=Bengali,
-                        Language=Bengali,
-                        AutoFakeBold=1.5,
-                        AutoFakeSlant=0.2
-                    ]{solaiman.ttf}
-                    \setTransitionsFor{Bengali}{\bengalifont}{}
-                    \setTransitionsFor{Devanagari}{\bengalifont}{}
-                    \setTransitionsFor{BasicLatin}{\rmfamily}{}
-                    \title{Math Solution}
-                    \author{AI Tutor}
-                    \date{\today}
-                    \begin{document}
-                    \XeTeXinterchartokenstate=1
-                    \maketitle
-                    $cleanLatex
-                    \end{document}
-                """.trimIndent()
-
-                val texFile = File(baseDir, "solution.tex")
-                Timber.i("Writing LaTeX file to: ${texFile.absolutePath}")
-                var fileOutputStream: FileOutputStream? = null
-                try {
-                    fileOutputStream = FileOutputStream(texFile)
-                    fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
-                    fileOutputStream.flush()
-                    Timber.d("LaTeX file writing complete.")
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to write LaTeX file")
-                    throw e
-                } finally {
-                    fileOutputStream?.close()
-                }
-
-                Timber.i("Calling TermuxXeLaTeXBridge.compile...")
-                val compileResult = TermuxXeLaTeXBridge.compile(context = context, texFile = texFile)
-
-                if (compileResult.isSuccess) {
-                    val generatedPdf = compileResult.getOrNull()
-                    if (generatedPdf != null && generatedPdf.exists()) {
-                        val cleanProblem = problemText.lines()
-                            .firstOrNull { it.isNotBlank() }
-                            ?.replace(Regex("[^a-zA-Z0-9]"), "_")
-                            ?.replace(Regex("_+"), "_")
-                            ?.trim('_')
-                            ?.take(30)
-                            ?.ifEmpty { "Solution" } ?: "Solution"
-                        val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
-                        val descriptiveName = "Math_Solution_${cleanProblem}_${timestamp}"
-
-                        val sharedOutputDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "AiPdfMaker")
-                        if (!sharedOutputDir.exists()) {
-                            sharedOutputDir.mkdirs()
-                        }
-                        val finalSharedPdfFile = File(sharedOutputDir, "$descriptiveName.pdf")
-                        try {
-                            generatedPdf.copyTo(finalSharedPdfFile, overwrite = true)
-                            Timber.i("Saved PDF to shared storage: ${finalSharedPdfFile.absolutePath}")
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to copy PDF to shared storage")
-                        }
-
-                        try {
-                            val db = com.example.data.database.AppDatabase.getDatabase(context)
-                            val firstLine = problemText.lines().firstOrNull { it.isNotBlank() }?.take(40) ?: "Math Solution"
-                            val projectTitle = "Math: $firstLine"
-                            val project = com.example.data.database.ProjectEntity(
-                                title = projectTitle,
-                                course = "AI Math Solver",
-                                chapter = "Step-by-step Solution",
-                                description = problemText,
-                                noteStyle = "Math Solution",
-                                outputFormat = "PDF",
-                                status = "Completed",
-                                pageCount = 1,
-                                lastUpdated = System.currentTimeMillis(),
-                                sourceText = problemText
-                            )
-                            val projectId = db.projectDao().insertProject(project).toInt()
-                            val snippet = com.example.data.database.DocumentSnippetEntity(
-                                projectId = projectId,
-                                topicTitle = "Math Solution",
-                                jsonContent = fullLatex,
-                                orderIndex = 0
-                            )
-                            db.documentSnippetDao().insertSnippet(snippet)
-                            Timber.i("Inserted Math Solution project with ID: $projectId into database")
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to insert math solution project into database")
-                        }
-
-                        val targetPdf = if (finalSharedPdfFile.exists()) finalSharedPdfFile else generatedPdf
-                        _state.value = MathSolverState.Success(targetPdf)
-                    } else {
-                        _state.value = MathSolverState.Error("PDF was generated but not found.")
-                    }
-                } else {
-                    _state.value = MathSolverState.Error("LaTeX Compilation Failed:\n${compileResult.exceptionOrNull()?.message}")
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                Timber.d("solveProblem job cancelled cleanly")
-                throw e
-            } catch (e: Exception) {
-                _state.value = MathSolverState.Error(e.localizedMessage ?: "Unknown Error")
-            }
-        }
+        if (problemText.isBlank()) return
+        isBackgroundMode = false
+        currentProblemText = problemText
+        startOrObserveWorker(context, problemText)
     }
 
     fun solveProblemInBackground(context: Context, problemText: String) {
         if (problemText.isBlank()) return
-        solveJob?.cancel()
-        _state.value = MathSolverState.EnqueuedInBackground(0.20f, "Enqueuing background solver task...")
 
-        val workName = "MathSolver_${System.currentTimeMillis()}"
-        lastWorkUniqueName = workName
+        val currentState = _state.value
+        // If the task is already running (e.g. user clicked "Run in background" while solving),
+        // seamlessly continue without cancelling or restarting. Finish that task!
+        if (currentState is MathSolverState.Processing || currentState is MathSolverState.CompilingPdf) {
+            isBackgroundMode = true
+            val currentProgress = when (currentState) {
+                is MathSolverState.Processing -> currentState.progress
+                is MathSolverState.CompilingPdf -> currentState.progress
+                else -> 0.50f
+            }
+            val currentStatus = when (currentState) {
+                is MathSolverState.Processing -> currentState.statusText
+                is MathSolverState.CompilingPdf -> currentState.statusText
+                else -> "Math Solver job running in background..."
+            }
+            _state.value = MathSolverState.EnqueuedInBackground(currentProgress, currentStatus)
+            return
+        }
+
+        isBackgroundMode = true
+        currentProblemText = problemText
+        startOrObserveWorker(context, problemText)
+    }
+
+    private fun startOrObserveWorker(context: Context, problemText: String) {
+        observeJob?.cancel()
+        val workManager = WorkManager.getInstance(context)
+        val workName = "MathSolver_Active"
 
         val inputData = Data.Builder()
             .putString(MathSolverWorker.KEY_PROBLEM_TEXT, problemText)
@@ -269,49 +91,78 @@ class MathSolverViewModel : ViewModel() {
             .addTag("MathSolverTag")
             .build()
 
-        val workManager = WorkManager.getInstance(context)
         workManager.enqueueUniqueWork(
             workName,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             workRequest
         )
 
-        solveJob = viewModelScope.launch(Dispatchers.Main) {
-            workManager.getWorkInfoByIdLiveData(workRequest.id).asFlow().collect { workInfo ->
-                if (workInfo != null) {
-                    val progress = workInfo.progress.getFloat("PROGRESS", 0.5f)
-                    val status = workInfo.progress.getString("STATUS") ?: "Math Solver job running in background..."
-                    
-                    when (workInfo.state) {
-                        androidx.work.WorkInfo.State.RUNNING, androidx.work.WorkInfo.State.ENQUEUED -> {
-                            _state.value = MathSolverState.EnqueuedInBackground(progress, status)
-                        }
-                        androidx.work.WorkInfo.State.SUCCEEDED -> {
-                            val pdfPath = workInfo.outputData.getString(MathSolverWorker.KEY_PDF_PATH)
-                            if (pdfPath != null) {
-                                val file = File(pdfPath)
-                                if (file.exists()) {
-                                    _state.value = MathSolverState.Success(file)
+        if (isBackgroundMode) {
+            _state.value = MathSolverState.EnqueuedInBackground(0.20f, "Enqueuing background solver task...")
+        } else {
+            _state.value = MathSolverState.Processing(0.25f, "AI is analyzing problem & generating solution...")
+        }
+
+        observeJob = viewModelScope.launch(Dispatchers.Main) {
+            try {
+                workManager.getWorkInfoByIdLiveData(workRequest.id).asFlow().collect { workInfo ->
+                    if (workInfo != null) {
+                        val progress = workInfo.progress.getFloat("PROGRESS", 0.25f)
+                        val status = workInfo.progress.getString("STATUS") ?: "AI is analyzing problem & generating solution..."
+
+                        when (workInfo.state) {
+                            WorkInfo.State.RUNNING, WorkInfo.State.ENQUEUED -> {
+                                if (isBackgroundMode) {
+                                    _state.value = MathSolverState.EnqueuedInBackground(progress, status)
+                                } else {
+                                    if (progress >= 0.70f) {
+                                        _state.value = MathSolverState.CompilingPdf(progress, status)
+                                    } else {
+                                        _state.value = MathSolverState.Processing(progress, status)
+                                    }
                                 }
                             }
+                            WorkInfo.State.SUCCEEDED -> {
+                                val pdfPath = workInfo.outputData.getString(MathSolverWorker.KEY_PDF_PATH)
+                                if (pdfPath != null) {
+                                    val file = File(pdfPath)
+                                    if (file.exists()) {
+                                        _state.value = MathSolverState.Success(file)
+                                    } else {
+                                        _state.value = MathSolverState.Error("PDF was generated but not found.")
+                                    }
+                                } else {
+                                    _state.value = MathSolverState.Error("Task completed, but output PDF path was missing.")
+                                }
+                            }
+                            WorkInfo.State.FAILED -> {
+                                val error = workInfo.outputData.getString(MathSolverWorker.KEY_ERROR) ?: "Task failed due to a network or compilation error."
+                                _state.value = MathSolverState.Error(error)
+                            }
+                            WorkInfo.State.CANCELLED -> {
+                                _state.value = MathSolverState.Idle
+                            }
+                            else -> {}
                         }
-                        androidx.work.WorkInfo.State.FAILED -> {
-                            val error = workInfo.outputData.getString(MathSolverWorker.KEY_ERROR) ?: "Background task failed."
-                            _state.value = MathSolverState.Error(error)
-                        }
-                        else -> {}
                     }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                Timber.d("MathSolver observeJob cancelled")
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "Error observing MathSolverWorker")
             }
         }
     }
 
     fun cancelSolving(context: Context) {
-        solveJob?.cancel()
-        solveJob = null
+        observeJob?.cancel()
+        observeJob = null
+        isBackgroundMode = false
+        currentProblemText = ""
         try {
             val workManager = WorkManager.getInstance(context)
-            lastWorkUniqueName?.let { workManager.cancelUniqueWork(it) }
+            workManager.cancelUniqueWork("MathSolver_Active")
             workManager.cancelAllWorkByTag("MathSolverTag")
         } catch (e: Exception) {
             Timber.w(e, "Error cancelling MathSolver work")
@@ -320,7 +171,10 @@ class MathSolverViewModel : ViewModel() {
     }
 
     fun resetState() {
-        solveJob?.cancel()
+        observeJob?.cancel()
+        observeJob = null
+        isBackgroundMode = false
+        currentProblemText = ""
         _state.value = MathSolverState.Idle
     }
 }

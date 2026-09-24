@@ -337,27 +337,35 @@ $effectiveLog""".trimIndent()
             generationConfig = GeminiGenConfig(temperature, mimeType, schema, maxTokens)
         )
 
-        com.example.utils.AppLogger.d("AiNetwork", "Sending Gemini request to $targetModel (${prompt.length} chars)")
-        try {
-            val response: HttpResponse = ktorClient.post(url) {
-                contentType(ContentType.Application.Json)
-                setBody(requestPayload)
+        var lastException: Exception? = null
+        for (attempt in 1..3) {
+            try {
+                com.example.utils.AppLogger.d("AiNetwork", "Sending Gemini request to $targetModel (${prompt.length} chars) - attempt $attempt/3")
+                val response: HttpResponse = ktorClient.post(url) {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestPayload)
+                }
+                val jsonResponse = jsonFormat.decodeFromString<GeminiResponse>(response.bodyAsText())
+                com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
+                val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
+                return extractJson(rawText)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: ClientRequestException) {
+                val err = "API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}"
+                com.example.utils.AppLogger.e("AiNetwork", err, e)
+                throw Exception(err)
+            } catch (e: Exception) {
+                lastException = e
+                com.example.utils.AppLogger.w("AiNetwork", "Gemini attempt $attempt failed with network error: ${e.message}")
+                if (attempt < 3) {
+                    kotlinx.coroutines.delay(1500L * attempt)
+                }
             }
-            val jsonResponse = jsonFormat.decodeFromString<GeminiResponse>(response.bodyAsText())
-            com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
-            val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: throw IllegalStateException("Empty response from Gemini")
-            return extractJson(rawText)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: ClientRequestException) {
-            val err = "API Error ${e.response.status.value}: ${e.response.bodyAsText().take(50)}"
-            com.example.utils.AppLogger.e("AiNetwork", err, e)
-            throw Exception(err)
-        } catch (e: Exception) {
-            val err = "Network Error: ${e.message?.take(50)}"
-            com.example.utils.AppLogger.e("AiNetwork", err, e)
-            throw Exception(err)
         }
+        val err = "Network Error: ${lastException?.message?.take(50)}"
+        com.example.utils.AppLogger.e("AiNetwork", err, lastException)
+        throw Exception(err)
     }
 
     private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null): String {
@@ -365,28 +373,37 @@ $effectiveLog""".trimIndent()
         enforceRateLimit(estimatedTokens)
         com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
         val requestPayload = OpenAiRequest(reqModel, messages, temp, maxTokens)
-        com.example.utils.AppLogger.d("AiNetwork", "Sending OpenAI request to $reqModel (${messages.size} messages)")
-        try {
-            val response: HttpResponse = ktorClient.post(baseUrl) {
-                contentType(ContentType.Application.Json)
-                if (cleanKey.isNotEmpty() && !provider.lowercase().contains("ollama")) header(HttpHeaders.Authorization, "Bearer $cleanKey")
-                setBody(requestPayload)
+        
+        var lastException: Exception? = null
+        for (attempt in 1..3) {
+            try {
+                com.example.utils.AppLogger.d("AiNetwork", "Sending OpenAI request to $reqModel (${messages.size} messages) - attempt $attempt/3")
+                val response: HttpResponse = ktorClient.post(baseUrl) {
+                    contentType(ContentType.Application.Json)
+                    if (cleanKey.isNotEmpty() && !provider.lowercase().contains("ollama")) header(HttpHeaders.Authorization, "Bearer $cleanKey")
+                    setBody(requestPayload)
+                }
+                val jsonResponse = jsonFormat.decodeFromString<OpenAiResponse>(response.bodyAsText())
+                com.example.utils.AppLogger.d("AiNetwork", "OpenAI request successful")
+                val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
+                return extractJson(rawText)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: ClientRequestException) {
+                val err = "API Error ${e.response.status.value}"
+                com.example.utils.AppLogger.e("AiNetwork", err, e)
+                throw Exception(err)
+            } catch (e: Exception) {
+                lastException = e
+                com.example.utils.AppLogger.w("AiNetwork", "OpenAI attempt $attempt failed with network error: ${e.message}")
+                if (attempt < 3) {
+                    kotlinx.coroutines.delay(1500L * attempt)
+                }
             }
-            val jsonResponse = jsonFormat.decodeFromString<OpenAiResponse>(response.bodyAsText())
-            com.example.utils.AppLogger.d("AiNetwork", "OpenAI request successful")
-            val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
-            return extractJson(rawText)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: ClientRequestException) {
-            val err = "API Error ${e.response.status.value}"
-            com.example.utils.AppLogger.e("AiNetwork", err, e)
-            throw Exception(err)
-        } catch (e: Exception) {
-            val err = "Network Error: ${e.message}"
-            com.example.utils.AppLogger.e("AiNetwork", err, e)
-            throw Exception(err)
         }
+        val err = "Network Error: ${lastException?.message}"
+        com.example.utils.AppLogger.e("AiNetwork", err, lastException)
+        throw Exception(err)
     }
 
     

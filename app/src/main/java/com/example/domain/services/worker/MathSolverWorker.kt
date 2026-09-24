@@ -109,6 +109,10 @@ class MathSolverWorker(
             val aiResponse = try {
                 aiClient.generateContent(prompt)
             } catch (e: Exception) {
+                if (runAttemptCount < 3) {
+                    AppLogger.w("MathSolverWorker", "AI generation encountered error (attempt $runAttemptCount): ${e.message}, retrying...")
+                    return Result.retry()
+                }
                 val errorMsg = "AI Generation Failed: ${e.message}"
                 showErrorNotification("Math Solution", errorMsg)
                 return Result.failure(workDataOf(KEY_ERROR to errorMsg))
