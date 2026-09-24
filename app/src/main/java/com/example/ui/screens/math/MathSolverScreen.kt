@@ -163,159 +163,34 @@ fun MathSolverScreen(
                     }
                 }
                 is MathSolverState.Processing -> {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("AI is solving the problem...")
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        GlassButton(
-                            onClick = { viewModel.solveProblemInBackground(context, problemText) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Run in Background",
-                                    tint = androidx.compose.ui.graphics.Color.White
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Switch to Background Task",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = androidx.compose.ui.graphics.Color.White,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.cancelSolving(context) },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Task")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Cancel Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    val procState = state as MathSolverState.Processing
+                    MathSolverProgressCard(
+                        progress = procState.progress,
+                        statusText = procState.statusText,
+                        title = "Solving Math Problem",
+                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText) },
+                        onCancel = { viewModel.cancelSolving(context) }
+                    )
                 }
                 is MathSolverState.CompilingPdf -> {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Compiling LaTeX to PDF...")
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        GlassButton(
-                            onClick = { viewModel.solveProblemInBackground(context, problemText) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Run in Background",
-                                    tint = androidx.compose.ui.graphics.Color.White
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Switch to Background Task",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = androidx.compose.ui.graphics.Color.White,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.cancelSolving(context) },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Task")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Cancel Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    val compileState = state as MathSolverState.CompilingPdf
+                    MathSolverProgressCard(
+                        progress = compileState.progress,
+                        statusText = compileState.statusText,
+                        title = "Compiling PDF Solution",
+                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText) },
+                        onCancel = { viewModel.cancelSolving(context) }
+                    )
                 }
                 is MathSolverState.EnqueuedInBackground -> {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Background Task Active",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                "Running in Background",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Your math solution is generating in the background. A notification will appear when the PDF is ready.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                GlassButton(
-                                    onClick = {
-                                        problemText = ""
-                                        viewModel.resetState()
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Text(
-                                        "Solve Another Problem",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = androidx.compose.ui.graphics.Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = { viewModel.cancelSolving(context) },
-                                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                                ) {
-                                    Icon(Icons.Default.Cancel, contentDescription = "Cancel Background Task")
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Cancel Background Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
+                    val bgState = state as MathSolverState.EnqueuedInBackground
+                    MathSolverProgressCard(
+                        progress = bgState.progress,
+                        statusText = bgState.statusText,
+                        title = "Running in Background",
+                        onSwitchBackground = null,
+                        onCancel = { viewModel.cancelSolving(context) }
+                    )
                 }
                 is MathSolverState.Success -> {
                     val pdfFile = (state as MathSolverState.Success).pdfFile

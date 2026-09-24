@@ -51,6 +51,7 @@ class MathSolverWorker(
         }
 
         try {
+            setProgress(workDataOf("PROGRESS" to 0.25f, "STATUS" to "AI is analyzing problem & generating solution..."))
             setForeground(createForegroundInfo("AI is solving the math problem..."))
         } catch (e: Exception) {
             AppLogger.w("MathSolverWorker", "Failed to set foreground service info: ${e.message}")
@@ -116,6 +117,7 @@ class MathSolverWorker(
             val cleanLatex = aiResponse.removePrefix("```latex").replace("```latex\n", "").removePrefix("```").removeSuffix("```").trim()
 
             try {
+                setProgress(workDataOf("PROGRESS" to 0.75f, "STATUS" to "Compiling LaTeX code to PDF via XeLaTeX..."))
                 setForeground(createForegroundInfo("Compiling LaTeX solution to PDF..."))
             } catch (e: Exception) {
                 AppLogger.w("MathSolverWorker", "Failed to set foreground status: ${e.message}")

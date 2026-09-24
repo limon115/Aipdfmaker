@@ -19,6 +19,7 @@ import java.io.File
 import java.io.FileOutputStream
 import timber.log.Timber
 
+import androidx.lifecycle.asFlow
 import com.example.domain.services.worker.MathSolverWorker
 import androidx.work.Constraints
 import androidx.work.Data
@@ -29,9 +30,9 @@ import androidx.work.WorkManager
 
 sealed class MathSolverState {
     object Idle : MathSolverState()
-    object Processing : MathSolverState()
-    object CompilingPdf : MathSolverState()
-    object EnqueuedInBackground : MathSolverState()
+    data class Processing(val progress: Float = 0.25f, val statusText: String = "AI is analyzing problem & generating solution...") : MathSolverState()
+    data class CompilingPdf(val progress: Float = 0.75f, val statusText: String = "Compiling LaTeX solution to PDF via XeLaTeX...") : MathSolverState()
+    data class EnqueuedInBackground(val progress: Float = 0.50f, val statusText: String = "Math Solver job running in background...") : MathSolverState()
     data class Success(val pdfFile: File) : MathSolverState()
     data class Error(val message: String) : MathSolverState()
 }
@@ -45,7 +46,7 @@ class MathSolverViewModel : ViewModel() {
 
     fun solveProblem(context: Context, problemText: String) {
         solveJob?.cancel()
-        _state.value = MathSolverState.Processing
+        _state.value = MathSolverState.Processing(0.25f, "AI is analyzing problem & generating solution...")
         solveJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dataStore = AiSettingsDataStore(context)
@@ -105,7 +106,7 @@ class MathSolverViewModel : ViewModel() {
                 
                 val cleanLatex = aiResponse.removePrefix("```latex").replace("```latex\\n", "").removePrefix("```").removeSuffix("```").trim()
 
-                _state.value = MathSolverState.CompilingPdf
+                _state.value = MathSolverState.CompilingPdf(0.75f, "Compiling LaTeX solution to PDF via XeLaTeX...")
                 
                 val safeName = "Math_Solution_${System.currentTimeMillis()}"
                 val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
@@ -186,7 +187,7 @@ class MathSolverViewModel : ViewModel() {
     fun solveProblemInBackground(context: Context, problemText: String) {
         if (problemText.isBlank()) return
         solveJob?.cancel()
-        _state.value = MathSolverState.EnqueuedInBackground
+        _state.value = MathSolverState.EnqueuedInBackground(0.20f, "Enqueuing background solver task...")
 
         val workName = "MathSolver_${System.currentTimeMillis()}"
         lastWorkUniqueName = workName
@@ -211,6 +212,35 @@ class MathSolverViewModel : ViewModel() {
             ExistingWorkPolicy.KEEP,
             workRequest
         )
+
+        solveJob = viewModelScope.launch(Dispatchers.Main) {
+            workManager.getWorkInfoByIdLiveData(workRequest.id).asFlow().collect { workInfo ->
+                if (workInfo != null) {
+                    val progress = workInfo.progress.getFloat("PROGRESS", 0.5f)
+                    val status = workInfo.progress.getString("STATUS") ?: "Math Solver job running in background..."
+                    
+                    when (workInfo.state) {
+                        androidx.work.WorkInfo.State.RUNNING, androidx.work.WorkInfo.State.ENQUEUED -> {
+                            _state.value = MathSolverState.EnqueuedInBackground(progress, status)
+                        }
+                        androidx.work.WorkInfo.State.SUCCEEDED -> {
+                            val pdfPath = workInfo.outputData.getString(MathSolverWorker.KEY_PDF_PATH)
+                            if (pdfPath != null) {
+                                val file = File(pdfPath)
+                                if (file.exists()) {
+                                    _state.value = MathSolverState.Success(file)
+                                }
+                            }
+                        }
+                        androidx.work.WorkInfo.State.FAILED -> {
+                            val error = workInfo.outputData.getString(MathSolverWorker.KEY_ERROR) ?: "Background task failed."
+                            _state.value = MathSolverState.Error(error)
+                        }
+                        else -> {}
+                    }
+                }
+            }
+        }
     }
 
     fun cancelSolving(context: Context) {
