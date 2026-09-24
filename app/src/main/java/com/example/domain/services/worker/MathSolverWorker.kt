@@ -53,7 +53,7 @@ class MathSolverWorker(
         try {
             setForeground(createForegroundInfo("AI is solving the math problem..."))
         } catch (e: Exception) {
-            AppLogger.w("MathSolverWorker", "Failed to set foreground service info", e)
+            AppLogger.w("MathSolverWorker", "Failed to set foreground service info: ${e.message}")
         }
 
         try {
@@ -118,7 +118,7 @@ class MathSolverWorker(
             try {
                 setForeground(createForegroundInfo("Compiling LaTeX solution to PDF..."))
             } catch (e: Exception) {
-                AppLogger.w("MathSolverWorker", "Failed to set foreground status", e)
+                AppLogger.w("MathSolverWorker", "Failed to set foreground status: ${e.message}")
             }
 
             val safeName = "Math_Solution_${System.currentTimeMillis()}"
