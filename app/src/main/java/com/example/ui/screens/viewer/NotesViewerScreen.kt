@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -167,9 +168,21 @@ fun NotesViewerScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    if (state.latexContent.isNotBlank()) {
+                        IconButton(onClick = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("LaTeX Code", state.latexContent)
+                            clipboard.setPrimaryClip(clip)
+                            android.widget.Toast.makeText(context, "LaTeX code copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy LaTeX Code", tint = MaterialTheme.colorScheme.onBackground)
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = Color.Black
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },

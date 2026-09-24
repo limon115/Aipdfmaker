@@ -88,6 +88,33 @@ fun LatexDebuggerScreen(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
             )
 
+            val sampleErrors = remember {
+                listOf(
+                    "Missing $" to Pair("\\documentclass{article}\n\\begin{document}\nEquation x^2 + y^2 = r^2 without math mode.\n\\end{document}", "! Missing $ inserted."),
+                    "Undefined Control Sequence" to Pair("\\documentclass{article}\n\\begin{document}\n\\unknowntestcommand{hello}\n\\end{document}", "! Undefined control sequence \\unknowntestcommand."),
+                    "Unbalanced Environment" to Pair("\\documentclass{article}\n\\begin{document}\n\\begin{equation}\n E = mc^2\n\\end{document}", "! \\begin{equation} ended by \\end{document}.")
+                )
+            }
+
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                items(sampleErrors) { (label, codeAndLog) ->
+                    AssistChip(
+                        onClick = {
+                            viewModel.updateLatexCode(codeAndLog.first)
+                            viewModel.updateLogContent(codeAndLog.second)
+                        },
+                        label = { Text("Sample: $label", style = MaterialTheme.typography.labelSmall) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+            }
+
             GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -96,10 +123,17 @@ fun LatexDebuggerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("LaTeX Code (.tex)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        TextButton(onClick = { texLauncher.launch("*/*") }) {
-                            Icon(Icons.Default.UploadFile, contentDescription = "Upload .tex")
-                            Spacer(Modifier.width(4.dp))
-                            Text("Upload")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (state.latexCode.isNotBlank()) {
+                                TextButton(onClick = { viewModel.updateLatexCode("") }) {
+                                    Text("Clear", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                            TextButton(onClick = { texLauncher.launch("*/*") }) {
+                                Icon(Icons.Default.UploadFile, contentDescription = "Upload .tex")
+                                Spacer(Modifier.width(4.dp))
+                                Text("Upload")
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))

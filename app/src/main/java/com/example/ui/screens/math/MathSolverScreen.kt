@@ -107,6 +107,31 @@ fun MathSolverScreen(
             )
             Spacer(modifier = Modifier.height(24.dp))
 
+            val sampleProblems = remember {
+                listOf(
+                    "Solve: d²y/dx² + 4y = 0",
+                    "Calculate integral: ∫ (x³ + 2x) dx",
+                    "Find derivative: f(x) = sin(x²)",
+                    "Eigenvalues of matrix [[1, 2], [2, 1]]"
+                )
+            }
+
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                items(sampleProblems) { sample ->
+                    AssistChip(
+                        onClick = { problemText = sample },
+                        label = { Text(sample, style = MaterialTheme.typography.labelSmall) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+            }
+
             GlassTextField(
                 value = problemText,
                 onValueChange = { problemText = it },
@@ -117,7 +142,19 @@ fun MathSolverScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            if (problemText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { problemText = "" }) {
+                        Text("Clear Input", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             when (state) {
                 is MathSolverState.Idle -> {
