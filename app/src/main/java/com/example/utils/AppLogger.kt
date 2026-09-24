@@ -33,9 +33,10 @@ object AppLogger {
         addLog("I", tag, message)
     }
 
-    fun w(tag: String, message: String) {
-        Log.w(tag, message)
-        addLog("W", tag, message)
+    fun w(tag: String, message: String, throwable: Throwable? = null) {
+        Log.w(tag, message, throwable)
+        val fullMessage = if (throwable != null) "$message\n${throwable.stackTraceToString()}" else message
+        addLog("W", tag, fullMessage)
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
