@@ -176,8 +176,60 @@ class MathSolverWorker(
             if (compileResult.isSuccess) {
                 val generatedPdf = compileResult.getOrNull()
                 if (generatedPdf != null && generatedPdf.exists()) {
-                    showSuccessNotification("Math Solution", generatedPdf)
-                    return Result.success(workDataOf(KEY_PDF_PATH to generatedPdf.absolutePath))
+                    val cleanProblem = problemText.lines()
+                        .firstOrNull { it.isNotBlank() }
+                        ?.replace(Regex("[^a-zA-Z0-9]"), "_")
+                        ?.replace(Regex("_+"), "_")
+                        ?.trim('_')
+                        ?.take(30)
+                        ?.ifEmpty { "Solution" } ?: "Solution"
+                    val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+                    val descriptiveName = "Math_Solution_${cleanProblem}_${timestamp}"
+
+                    val sharedOutputDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "AiPdfMaker")
+                    if (!sharedOutputDir.exists()) {
+                        sharedOutputDir.mkdirs()
+                    }
+                    val finalSharedPdfFile = File(sharedOutputDir, "$descriptiveName.pdf")
+                    try {
+                        generatedPdf.copyTo(finalSharedPdfFile, overwrite = true)
+                        AppLogger.i("MathSolverWorker", "Saved PDF to shared storage: ${finalSharedPdfFile.absolutePath}")
+                    } catch (e: Exception) {
+                        AppLogger.e("MathSolverWorker", "Failed to copy PDF to shared storage: ${e.message}")
+                    }
+
+                    try {
+                        val db = com.example.data.database.AppDatabase.getDatabase(context)
+                        val firstLine = problemText.lines().firstOrNull { it.isNotBlank() }?.take(40) ?: "Math Solution"
+                        val projectTitle = "Math: $firstLine"
+                        val project = com.example.data.database.ProjectEntity(
+                            title = projectTitle,
+                            course = "AI Math Solver",
+                            chapter = "Step-by-step Solution",
+                            description = problemText,
+                            noteStyle = "Math Solution",
+                            outputFormat = "PDF",
+                            status = "Completed",
+                            pageCount = 1,
+                            lastUpdated = System.currentTimeMillis(),
+                            sourceText = problemText
+                        )
+                        val projectId = db.projectDao().insertProject(project).toInt()
+                        val snippet = com.example.data.database.DocumentSnippetEntity(
+                            projectId = projectId,
+                            topicTitle = "Math Solution",
+                            jsonContent = fullLatex,
+                            orderIndex = 0
+                        )
+                        db.documentSnippetDao().insertSnippet(snippet)
+                        AppLogger.i("MathSolverWorker", "Inserted Math Solution project with ID: $projectId into database")
+                    } catch (e: Exception) {
+                        AppLogger.e("MathSolverWorker", "Failed to insert math solution project into database: ${e.message}")
+                    }
+
+                    val targetPdf = if (finalSharedPdfFile.exists()) finalSharedPdfFile else generatedPdf
+                    showSuccessNotification("Math Solution", targetPdf)
+                    return Result.success(workDataOf(KEY_PDF_PATH to targetPdf.absolutePath))
                 } else {
                     val errorMsg = "PDF was generated but not found."
                     showErrorNotification("Math Solution", errorMsg)
