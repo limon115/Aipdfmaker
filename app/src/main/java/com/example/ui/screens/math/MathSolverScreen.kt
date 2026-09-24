@@ -30,6 +30,8 @@ import java.io.File
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Cancel
 import com.example.ui.components.glass.GlassButton
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -265,5 +267,108 @@ private fun openPdf(context: android.content.Context, file: File) {
         context.startActivity(Intent.createChooser(intent, "Open Math Solution"))
     } catch (e: Exception) {
         e.printStackTrace()
+    }
+}
+
+@Composable
+private fun MathSolverProgressCard(
+    progress: Float,
+    statusText: String,
+    title: String,
+    onSwitchBackground: (() -> Unit)?,
+    onCancel: () -> Unit
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+        label = "progressAnimation"
+    )
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp)),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    statusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "${(animatedProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (onSwitchBackground != null) {
+                    GlassButton(
+                        onClick = onSwitchBackground,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Run in Background", tint = androidx.compose.ui.graphics.Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Switch to Background Task",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.Cancel, contentDescription = "Cancel Task")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Cancel Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
