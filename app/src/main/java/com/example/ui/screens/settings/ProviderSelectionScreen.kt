@@ -45,7 +45,7 @@ fun ProviderSelectionScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            items(AiProvider.values()) { provider ->
+            items(AiProvider.values(), key = { provider -> provider.name }) { provider ->
                 ProviderRow(
                     provider = provider,
                     isSelected = provider == currentProvider,

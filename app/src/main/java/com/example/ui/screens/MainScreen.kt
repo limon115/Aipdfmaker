@@ -28,6 +28,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -102,7 +105,23 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = BottomNavItem.Home.route,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            enterTransition = {
+                fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                slideInHorizontally(initialOffsetX = { 60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                slideOutHorizontally(targetOffsetX = { -60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                slideInHorizontally(initialOffsetX = { -60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                slideOutHorizontally(targetOffsetX = { 60 }, animationSpec = tween(300, easing = FastOutSlowInEasing))
+            }
         ) {
             composable(BottomNavItem.Home.route) {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -407,57 +426,50 @@ fun MainScreenContent(
                             tonalElevation = 0.dp,
                             windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
                         ) {
-                            NavigationBarItem(
-                                icon = { Icon(if (currentRoute == BottomNavItem.Home.route) BottomNavItem.Home.selectedIcon else BottomNavItem.Home.unselectedIcon, contentDescription = BottomNavItem.Home.title) },
-                                label = { Text(BottomNavItem.Home.title) },
-                                selected = currentRoute == BottomNavItem.Home.route,
+                            val homeSelected = currentRoute == BottomNavItem.Home.route
+                            AnimatedBottomNavItem(
+                                selected = homeSelected,
                                 onClick = { onNavigate(BottomNavItem.Home.route) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                icon = {
+                                    Icon(
+                                        if (homeSelected) BottomNavItem.Home.selectedIcon else BottomNavItem.Home.unselectedIcon,
+                                        contentDescription = BottomNavItem.Home.title
+                                    )
+                                },
+                                label = { Text(BottomNavItem.Home.title) }
                             )
-                            NavigationBarItem(
-                                icon = { Icon(Icons.Default.Add, contentDescription = "Add Project") },
-                                label = { Text("New") },
+
+                            AnimatedBottomNavItem(
                                 selected = false,
                                 onClick = onNavigateToNewProject,
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                icon = { Icon(Icons.Default.Add, contentDescription = "Add Project") },
+                                label = { Text("New") }
                             )
-                            NavigationBarItem(
-                                icon = { Icon(if (currentRoute == BottomNavItem.Dashboard.route) BottomNavItem.Dashboard.selectedIcon else BottomNavItem.Dashboard.unselectedIcon, contentDescription = BottomNavItem.Dashboard.title) },
-                                label = { Text(BottomNavItem.Dashboard.title) },
-                                selected = currentRoute == BottomNavItem.Dashboard.route,
+
+                            val dashSelected = currentRoute == BottomNavItem.Dashboard.route
+                            AnimatedBottomNavItem(
+                                selected = dashSelected,
                                 onClick = { onNavigate(BottomNavItem.Dashboard.route) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                icon = {
+                                    Icon(
+                                        if (dashSelected) BottomNavItem.Dashboard.selectedIcon else BottomNavItem.Dashboard.unselectedIcon,
+                                        contentDescription = BottomNavItem.Dashboard.title
+                                    )
+                                },
+                                label = { Text(BottomNavItem.Dashboard.title) }
                             )
-                            NavigationBarItem(
-                                icon = { Icon(if (currentRoute == BottomNavItem.Settings.route) BottomNavItem.Settings.selectedIcon else BottomNavItem.Settings.unselectedIcon, contentDescription = BottomNavItem.Settings.title) },
-                                label = { Text(BottomNavItem.Settings.title) },
-                                selected = currentRoute == BottomNavItem.Settings.route,
+
+                            val settingsSelected = currentRoute == BottomNavItem.Settings.route
+                            AnimatedBottomNavItem(
+                                selected = settingsSelected,
                                 onClick = { onNavigate(BottomNavItem.Settings.route) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                icon = {
+                                    Icon(
+                                        if (settingsSelected) BottomNavItem.Settings.selectedIcon else BottomNavItem.Settings.unselectedIcon,
+                                        contentDescription = BottomNavItem.Settings.title
+                                    )
+                                },
+                                label = { Text(BottomNavItem.Settings.title) }
                             )
                         }
                     }
@@ -473,4 +485,57 @@ fun CenteredText(text: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = text, style = MaterialTheme.typography.titleLarge)
     }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.AnimatedBottomNavItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+    label: @Composable () -> Unit
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.22f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "navIconScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (selected) 1.0f else 0.65f,
+        animationSpec = tween(durationMillis = 200),
+        label = "navItemAlpha"
+    )
+
+    NavigationBarItem(
+        selected = selected,
+        onClick = onClick,
+        icon = {
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                icon()
+            }
+        },
+        label = {
+            Box(
+                modifier = Modifier.graphicsLayer { this.alpha = alpha }
+            ) {
+                label()
+            }
+        },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    )
 }

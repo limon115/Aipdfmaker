@@ -56,7 +56,7 @@ fun AppLogsScreen(onNavigateBack: () -> Unit) {
                 .background(Color(0xFF1E1E1E)),
             contentPadding = PaddingValues(8.dp)
         ) {
-            items(logs) { log ->
+            items(logs, key = { log -> "${log.timestamp}_${log.message.hashCode()}" }) { log ->
                 val color = when (log.level) {
                     "E" -> Color(0xFFFF6B68)
                     "W" -> Color(0xFFFFC107)

@@ -164,7 +164,7 @@ fun InputSourceScreen(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(sources) { source ->
+                items(sources, key = { source -> source.route }) { source ->
                     SourceCard(
                         item = source,
                         onClick = { 

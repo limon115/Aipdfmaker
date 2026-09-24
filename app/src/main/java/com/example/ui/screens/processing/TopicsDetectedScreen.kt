@@ -105,7 +105,7 @@ fun TopicsDetectedScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    itemsIndexed(topics) { index, topic ->
+                    itemsIndexed(topics, key = { index, topic -> topic.title.ifEmpty { index.toString() } }) { index, topic ->
                         TopicRow(index = index + 1, topic = topic)
                     }
                     item {
