@@ -205,10 +205,10 @@ fun AiConfigCard(
     var modelDropdownExpanded by remember { mutableStateOf(false) }
 
     val recommendedModels = when (provider) {
-        AiProvider.GOOGLE_GEMINI -> listOf("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-pro-exp", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b")
+        AiProvider.GOOGLE_GEMINI -> listOf("gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b", "gemini-2.0-pro-exp")
         AiProvider.OPENAI -> listOf("o1", "o3-mini", "o1-mini", "gpt-4.5-preview", "gpt-4o", "gpt-4o-mini")
         AiProvider.ANTHROPIC_CLAUDE -> listOf("claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229")
-        AiProvider.OPENROUTER -> listOf("deepseek/deepseek-r1", "deepseek/deepseek-chat", "anthropic/claude-3.7-sonnet", "google/gemini-2.5-pro", "meta-llama/llama-3.3-70b-instruct", "openai/o3-mini")
+        AiProvider.OPENROUTER -> listOf("deepseek/deepseek-r1", "deepseek/deepseek-chat", "anthropic/claude-3.7-sonnet", "google/gemini-2.0-flash", "meta-llama/llama-3.3-70b-instruct", "openai/o3-mini")
         AiProvider.LM_STUDIO -> listOf("deepseek-r1", "llama-3.3-70b-instruct", "phi-4", "qwen-2.5-coder")
         AiProvider.OLLAMA -> listOf("deepseek-r1", "llama3.3", "phi4", "qwen2.5", "gemma2")
         else -> listOf("default-model")

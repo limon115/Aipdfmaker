@@ -329,12 +329,16 @@ $effectiveLog""".trimIndent()
         enforceRateLimit(estimatedTokens)
         com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
 
-        val candidateModels = listOf(
+        val rawCandidateModels = listOf(
             model.ifBlank { "gemini-1.5-flash" },
-            "gemini-1.5-flash",
             "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
             "gemini-1.5-flash-8b"
         ).distinct()
+        val candidateModels = rawCandidateModels.map {
+            if (it.contains("2.5")) "gemini-1.5-flash" else it
+        }.distinct()
 
         var lastException: Exception? = null
 
@@ -374,7 +378,8 @@ $effectiveLog""".trimIndent()
                             continue
                         }
                     }
-                    if (statusCode == 404) {
+                    if (statusCode == 404 || statusCode == 400) {
+                        // Current model might not exist, be deprecated, or require different params; try next candidate model
                         break
                     }
                     throw Exception(err)

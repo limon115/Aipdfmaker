@@ -74,10 +74,29 @@ class NoteGenerationWorker(
 
         val dataStore = AiSettingsDataStore(context)
         val settings = dataStore.aiSettingsFlow.first()
+        val candidateKeys = listOf(
+            settings.ai2ApiKey,
+            settings.ai1ApiKey,
+            settings.ai3ApiKey,
+            com.example.BuildConfig.GEMINI_API_KEY
+        ).filter { it.isNotBlank() && it != "placeholder" }.distinct()
+        val effectiveApiKey = candidateKeys.firstOrNull() ?: com.example.BuildConfig.GEMINI_API_KEY
+        val effectiveModel = settings.ai2Model.ifBlank {
+            settings.ai1Model.ifBlank {
+                settings.ai3Model.ifBlank { "gemini-1.5-flash" }
+            }
+        }
+        val effectiveProvider = when {
+            settings.ai2ApiKey.isNotBlank() -> settings.ai2Provider.name
+            settings.ai1ApiKey.isNotBlank() -> settings.ai1Provider.name
+            settings.ai3ApiKey.isNotBlank() -> settings.ai3Provider.name
+            else -> settings.ai2Provider.name
+        }
+
         val dummyClient = AiNetworkClient(
-            provider = settings.ai2Provider.name,
-            apiKey = settings.ai2ApiKey.ifBlank { com.example.BuildConfig.GEMINI_API_KEY },
-            model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
+            provider = effectiveProvider,
+            apiKey = effectiveApiKey,
+            model = effectiveModel,
             temperature = settings.ai2Temperature
         )
         val cache = AiResponseCache(context)
@@ -112,9 +131,9 @@ class NoteGenerationWorker(
                     topicTitle = topic.title,
                     blueprintContext = blueprintJson,
                     relevantContext = relevantContextForTopic,
-                    ai2Provider = settings.ai2Provider.name,
-                    ai2Model = settings.ai2Model.ifBlank { "gemini-1.5-flash" },
-                    ai2ApiKey = settings.ai2ApiKey.ifBlank { com.example.BuildConfig.GEMINI_API_KEY },
+                    ai2Provider = effectiveProvider,
+                    ai2Model = effectiveModel,
+                    ai2ApiKey = effectiveApiKey,
                     ai2Temperature = settings.ai2Temperature
                 )
 
