@@ -111,15 +111,14 @@ fun MainScreen() {
                 slideInHorizontally(initialOffsetX = { 50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
-                slideOutHorizontally(targetOffsetX = { -50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                ExitTransition.None
             },
             popEnterTransition = {
                 fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
                 slideInHorizontally(initialOffsetX = { -50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
                 slideOutHorizontally(targetOffsetX = { 50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
             }
         ) {

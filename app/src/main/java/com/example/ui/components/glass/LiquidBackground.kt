@@ -77,9 +77,9 @@ fun LiquidBackground(
             val minDim = minOf(width, height)
             val radius = minDim * 0.75f
 
-            // Blob 1: Top Left figure-8
+            // Blob 1: Top Left orbital
             val cx1 = width * 0.32f + (width * 0.22f) * kotlin.math.sin(p1)
-            val cy1 = height * 0.28f + (height * 0.22f) * kotlin.math.cos(p1 * 0.5f)
+            val cy1 = height * 0.28f + (height * 0.22f) * kotlin.math.cos(p1)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color1, Color.Transparent),
@@ -117,8 +117,8 @@ fun LiquidBackground(
             )
 
             // Blob 4: Bottom Right ambient violet balance
-            val cx4 = width * 0.80f + (width * 0.18f) * kotlin.math.sin(p2 * 0.7f)
-            val cy4 = height * 0.85f + (height * 0.18f) * kotlin.math.cos(p1 * 0.7f)
+            val cx4 = width * 0.80f + (width * 0.18f) * kotlin.math.sin(p2)
+            val cy4 = height * 0.85f + (height * 0.18f) * kotlin.math.cos(p1)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(color4, Color.Transparent),
