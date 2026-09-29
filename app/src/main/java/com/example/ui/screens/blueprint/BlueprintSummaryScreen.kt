@@ -46,7 +46,7 @@ fun BlueprintSummaryScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = Color.Black
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
@@ -55,7 +55,6 @@ fun BlueprintSummaryScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
                     .padding(16.dp)
             ) {
                 Button(
@@ -91,7 +90,7 @@ fun BlueprintSummaryScreen(
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF8F9FA)
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent
                     ),
                     shape = RoundedCornerShape(12.dp),
                     elevation = CardDefaults.cardElevation(0.dp)
@@ -101,13 +100,13 @@ fun BlueprintSummaryScreen(
                             text = "Course: ${safeState.courseName}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Chapter: ${safeState.chapterName}",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.DarkGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -225,12 +224,12 @@ fun MetricCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

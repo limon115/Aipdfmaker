@@ -238,7 +238,7 @@ fun ChecklistRow(item: ChecklistItem) {
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape)
-                            .border(2.dp, Color.LightGray, CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     )
                 }
                 StepState.FAILED -> {
@@ -246,10 +246,10 @@ fun ChecklistRow(item: ChecklistItem) {
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(CircleShape)
-                            .background(Color.Red), // Error Red
+                            .background(MaterialTheme.colorScheme.error),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("!", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("!", color = MaterialTheme.colorScheme.onError, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -258,7 +258,7 @@ fun ChecklistRow(item: ChecklistItem) {
         Text(
             text = item.title,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (item.state == StepState.PENDING) Color.Gray else if (item.state == StepState.FAILED) Color.Red else Color.Black,
+            color = if (item.state == StepState.PENDING) MaterialTheme.colorScheme.onSurfaceVariant else if (item.state == StepState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (item.state == StepState.IN_PROGRESS || item.state == StepState.FAILED) FontWeight.Bold else FontWeight.Normal
         )
     }

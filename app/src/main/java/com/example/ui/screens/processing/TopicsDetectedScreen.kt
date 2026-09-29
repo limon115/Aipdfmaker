@@ -44,7 +44,7 @@ fun TopicsDetectedScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                    titleContentColor = Color.Black
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
@@ -53,7 +53,6 @@ fun TopicsDetectedScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
                     .padding(16.dp)
             ) {
                 Button(
@@ -131,6 +130,7 @@ fun TopicsDetectedScreen(
 
 @Composable
 fun TopicRow(index: Int, topic: com.example.domain.models.Topic) {
+    val isDark = com.example.ui.theme.AppTheme.colors.isDark
     com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
@@ -147,12 +147,12 @@ fun TopicRow(index: Int, topic: com.example.domain.models.Topic) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE8F5E9)), // Light Green
+                    .background(if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) else Color(0xFFE8F5E9)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = index.toString(),
-                    color = Color(0xFF2E7D32), // Dark Green
+                    color = if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -164,19 +164,19 @@ fun TopicRow(index: Int, topic: com.example.domain.models.Topic) {
                     text = topic.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Est. duration: ${topic.durationMinutes} min",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Icon(
                 imageVector = Icons.Default.DragIndicator,
                 contentDescription = "Reorder",
-                tint = Color.LightGray
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

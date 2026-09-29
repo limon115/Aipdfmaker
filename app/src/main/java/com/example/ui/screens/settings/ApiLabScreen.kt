@@ -354,7 +354,11 @@ fun ErrorDiagnosticsCard(code: String, message: String, onRetry: () -> Unit) {
     val isAuthError = code == "401" || code == "403"
     
     val isDark = com.example.ui.theme.AppTheme.colors.isDark
-    val containerColor = if (isNetwork || isRateLimit) Color(0xFFFFF3E0) else Color(0xFFFFEBEE)
+    val containerColor = if (isDark) {
+        if (isNetwork || isRateLimit) Color(0xFF3E2723) else Color(0xFF3C1518)
+    } else {
+        if (isNetwork || isRateLimit) Color(0xFFFFF3E0) else Color(0xFFFFEBEE)
+    }
     val contentColor = if (isDark) {
         if (isNetwork || isRateLimit) Color(0xFFFFB74D) else Color(0xFFE57373)
     } else {

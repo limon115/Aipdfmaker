@@ -191,7 +191,6 @@ fun NotesViewerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
                     .padding(16.dp)
             ) {
                 Button(
@@ -224,7 +223,8 @@ fun NotesViewerScreen(
                         Text(
                             text = state.latexContent,
                             style = MaterialTheme.typography.bodySmall,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -242,10 +242,10 @@ fun NotesViewerScreen(
             Column(
                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .background(Color.White, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
                     .padding(32.dp)
             ) {
-                Text("Generating PDF...", color = Color.Black, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Generating PDF...", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 if (state.exportProgress > 0f) {
                     androidx.compose.material3.LinearProgressIndicator(
@@ -258,7 +258,7 @@ fun NotesViewerScreen(
                     Text(
                         "${(state.exportProgress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 } else {
                     CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)

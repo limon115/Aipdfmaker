@@ -305,11 +305,12 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                    val isDark = com.example.ui.theme.AppTheme.colors.isDark
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = when (project.status) {
-                            "Completed" -> Color(0xFF4CAF50).copy(alpha = 0.15f)
-                            "Debugged" -> Color(0xFF9C27B0).copy(alpha = 0.15f)
+                            "Completed" -> if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) else Color(0xFF4CAF50).copy(alpha = 0.15f)
+                            "Debugged" -> if (isDark) Color(0xFF4A148C).copy(alpha = 0.5f) else Color(0xFF9C27B0).copy(alpha = 0.15f)
                             else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         }
                     ) {
@@ -319,8 +320,8 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = when (project.status) {
-                                "Completed" -> Color(0xFF2E7D32)
-                                "Debugged" -> Color(0xFF7B1FA2)
+                                "Completed" -> if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
+                                "Debugged" -> if (isDark) Color(0xFFCE93D8) else Color(0xFF7B1FA2)
                                 else -> MaterialTheme.colorScheme.primary
                             }
                         )
