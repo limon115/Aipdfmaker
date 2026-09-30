@@ -515,7 +515,7 @@ class MathSolverWorker(
                     \[
                         a = b \iff a + c = b + c \quad \text{and} \quad a \cdot c = b \cdot c \quad (c \neq 0)
                     \]
-                    \item \textbf{Quadratic Roots Formula:} For general second-order equations $ax^2 + bx + c = 0$:
+                    \item \textbf{Quadratic Roots Formula:} For general second-order equations ${'$'}ax^2 + bx + c = 0${'$'}:
                     \[
                         x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
                     \]
