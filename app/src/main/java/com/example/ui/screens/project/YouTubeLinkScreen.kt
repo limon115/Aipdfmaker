@@ -48,27 +48,85 @@ fun YouTubeLinkScreen(
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "YouTube Video URL",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                TextButton(onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                    if (clipText.contains("youtube") || clipText.contains("youtu.be")) {
+                        youtubeUrl = clipText
+                        Toast.makeText(context, "Pasted YouTube link", Toast.LENGTH_SHORT).show()
+                    } else if (clipText.isNotBlank()) {
+                        youtubeUrl = clipText
+                    } else {
+                        Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("Paste Clipboard", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             GlassTextField(
                 value = youtubeUrl,
                 onValueChange = { youtubeUrl = it },
-                label = { Text("Paste YouTube Video URL") },
+                placeholder = { Text("https://www.youtube.com/watch?v=...") },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                enabled = !isLoading
+                enabled = !isLoading,
+                trailingIcon = if (youtubeUrl.isNotEmpty() && !isLoading) {
+                    {
+                        IconButton(onClick = { youtubeUrl = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear URL", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else null
             )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Sample:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(8.dp))
+                AssistChip(
+                    onClick = {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        youtubeUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    },
+                    label = { Text("Sample Video URL", style = MaterialTheme.typography.labelSmall) },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    )
+                )
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
             
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Extracting video captions...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
             
@@ -76,6 +134,7 @@ fun YouTubeLinkScreen(
             
             Button(
                 onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                     if (youtubeUrl.isBlank()) {
                         Toast.makeText(context, "Please enter a valid URL", Toast.LENGTH_SHORT).show()
                         return@Button
@@ -91,7 +150,7 @@ fun YouTubeLinkScreen(
                         } else {
                             Toast.makeText(
                                 context,
-                                "Could not extract captions. Video might not have them.",
+                                "Could not extract captions. Video might not have public captions.",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -106,7 +165,7 @@ fun YouTubeLinkScreen(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Fetch Transcript", style = MaterialTheme.typography.titleMedium)
+                Text("Fetch Transcript", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }

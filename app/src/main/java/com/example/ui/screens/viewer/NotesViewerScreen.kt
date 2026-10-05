@@ -208,24 +208,67 @@ fun NotesViewerScreen(
             }
         }
     ) { innerPadding ->
+        var fontSizeScale by remember { mutableFloatStateOf(12f) }
+        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+        val coroutineScope = rememberCoroutineScope()
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
             if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary) // modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
             } else {
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(16.dp)
-                ) {
-                    item {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = state.latexContent,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "LaTeX Source Preview",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                if (fontSizeScale > 8f) fontSizeScale -= 2f
+                            }) {
+                                Text("A-", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                            }
+                            Text(
+                                text = "${fontSizeScale.toInt()}sp",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            IconButton(onClick = {
+                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                if (fontSizeScale < 24f) fontSizeScale += 2f
+                            }) {
+                                Text("A+", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        item {
+                            Text(
+                                text = state.latexContent,
+                                fontSize = androidx.compose.ui.unit.TextUnit(fontSizeScale, androidx.compose.ui.unit.TextUnitType.Sp),
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -267,7 +310,7 @@ fun NotesViewerScreen(
             }
         }
     }
-    }
+}
 }
 
 @Composable

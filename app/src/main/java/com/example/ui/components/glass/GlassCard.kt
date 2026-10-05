@@ -80,6 +80,13 @@ fun GlassCard(
 ) {
     val isDark = AppTheme.colors.isDark
     val isPressed by interactionSource.collectIsPressedAsState()
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    androidx.compose.runtime.LaunchedEffect(isPressed) {
+        if (isPressed) {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+        }
+    }
     
     val cardScale by animateFloatAsState(
         targetValue = if (isPressed) 0.982f else 1.0f,

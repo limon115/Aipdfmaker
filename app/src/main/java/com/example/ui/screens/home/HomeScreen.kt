@@ -119,6 +119,13 @@ fun HomeScreenContent(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             placeholder = { Text("Search projects...") },
+                            trailingIcon = if (searchQuery.isNotEmpty()) {
+                                {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            } else null,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             singleLine = true
                         )
@@ -152,6 +159,7 @@ fun HomeScreenContent(
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
+        val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -173,7 +181,10 @@ fun HomeScreenContent(
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        onClick = { 
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                            selectedTab = index 
+                        },
                         text = {
                             Text(
                                 text = title,
@@ -330,6 +341,7 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
             }
 
             // More Options
+            val context = androidx.compose.ui.platform.LocalContext.current
             Box {
                 IconButton(onClick = { expanded = true }) {
                     Icon(
@@ -343,7 +355,17 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
                     onDismissRequest = { expanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Delete") },
+                        text = { Text("Copy Title") },
+                        onClick = {
+                            expanded = false
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Project Title", project.title)
+                            clipboard.setPrimaryClip(clip)
+                            android.widget.Toast.makeText(context, "Title copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                         onClick = { 
                             expanded = false
                             onDelete(project)
