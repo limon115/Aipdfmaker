@@ -36,25 +36,8 @@ class ExportEngine(private val context: Context) {
                     if (isPdf) "PDF" else "LaTeX"
                 )
 
-                val safeName = projectName
-                    .trim()
-                    .replace(Regex("[^a-zA-Z0-9.-]"), "_")
-                    .ifEmpty { "Project" }
-
-                val documentsDir = Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOCUMENTS
-                )
-
-                val baseDir = File(
-                    documentsDir,
-                    "aipdfs/$safeName"
-                )
-
-                if (!baseDir.exists() && !baseDir.mkdirs()) {
-                    throw Exception(
-                        "Unable to create export directory: ${baseDir.absolutePath}"
-                    )
-                }
+                val safeName = com.example.utils.FileUtils.getSafeFileName(projectName, "Project")
+                val baseDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$safeName")
 
                 val fullLatex = """
                     \documentclass{article}

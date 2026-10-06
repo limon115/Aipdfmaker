@@ -76,21 +76,49 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
         }
     }
 
-    fun processPdf(uri: Uri, context: Context, fileName: String?) {
-        updatePdfUri(uri.toString(), fileName)
+    fun processFile(uri: Uri, context: Context, fileName: String?) {
+        val resolvedName = fileName ?: com.example.utils.FileUtils.getDisplayNameFromUri(context, uri)
+        updatePdfUri(uri.toString(), resolvedName)
         _state.update { it.copy(isProcessingPdf = true) }
         viewModelScope.launch {
             try {
-                val pdfRenderer = PdfRendererService(context)
-                val ocrEngine = LocalOcrEngine()
-                val text = pdfRenderer.extractTextFromPdf(uri, ocrEngine)
+                val category = com.example.utils.FileUtils.getFileType(context, uri, resolvedName)
+                val text = when (category) {
+                    com.example.utils.FileUtils.FileCategory.PDF -> {
+                        val pdfRenderer = PdfRendererService(context)
+                        val ocrEngine = LocalOcrEngine()
+                        pdfRenderer.extractTextFromPdf(uri, ocrEngine)
+                    }
+                    com.example.utils.FileUtils.FileCategory.TEXT -> {
+                        val txtReader = com.example.domain.services.file.TxtFileReaderService()
+                        txtReader.readTextFromUri(uri, context)
+                    }
+                    com.example.utils.FileUtils.FileCategory.IMAGE -> {
+                        val ocrEngine = LocalOcrEngine()
+                        ocrEngine.extractTextFromImageUri(uri, context)
+                    }
+                    com.example.utils.FileUtils.FileCategory.UNKNOWN -> {
+                        try {
+                            val txtReader = com.example.domain.services.file.TxtFileReaderService()
+                            txtReader.readTextFromUri(uri, context)
+                        } catch (e: Exception) {
+                            val ocrEngine = LocalOcrEngine()
+                            ocrEngine.extractTextFromImageUri(uri, context)
+                        }
+                    }
+                }
                 _state.update { it.copy(extractedText = text) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                com.example.utils.AppLogger.e("NewProjectViewModel", "Error processing file $resolvedName", e)
+                _state.update { it.copy(extractedText = "Error processing file: ${e.message}") }
             } finally {
                 _state.update { it.copy(isProcessingPdf = false) }
             }
         }
+    }
+
+    fun processPdf(uri: Uri, context: Context, fileName: String?) {
+        processFile(uri, context, fileName)
     }
 
     fun updatePdfUri(uri: String?, fileName: String?) {

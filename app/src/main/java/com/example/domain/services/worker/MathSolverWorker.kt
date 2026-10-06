@@ -165,11 +165,7 @@ class MathSolverWorker(
             }
 
             val safeName = "Math_Solution_${System.currentTimeMillis()}"
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val baseDir = File(documentsDir, "aipdfs/$safeName")
-            if (!baseDir.exists()) {
-                baseDir.mkdirs()
-            }
+            val baseDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$safeName")
 
             val fullLatex = """
                 \documentclass{article}
@@ -223,10 +219,7 @@ class MathSolverWorker(
             val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
             val descriptiveName = "Math_Solution_${cleanProblem}_${timestamp}"
 
-            val sharedOutputDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "AiPdfMaker")
-            if (!sharedOutputDir.exists()) {
-                sharedOutputDir.mkdirs()
-            }
+            val sharedOutputDir = com.example.utils.FileUtils.getExportDirectory(context, "AiPdfMaker")
             val finalSharedPdfFile = File(sharedOutputDir, "$descriptiveName.pdf")
 
             var finalPdfFile: File? = null

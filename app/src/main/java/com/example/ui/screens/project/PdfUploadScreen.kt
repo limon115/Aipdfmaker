@@ -40,20 +40,14 @@ fun PdfUploadScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            var fileName = "Unknown File"
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (cursor.moveToFirst() && nameIndex >= 0) {
-                    fileName = cursor.getString(nameIndex)
-                }
-            }
-            viewModel.processPdf(uri, context, fileName)
+            val fileName = com.example.utils.FileUtils.getDisplayNameFromUri(context, uri)
+            viewModel.processFile(uri, context, fileName)
         }
     }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Upload PDF", fontWeight = FontWeight.Bold) },
+                title = { Text("Upload Document", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -89,7 +83,7 @@ fun PdfUploadScreen(
                         )
                     }
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable { launcher.launch("application/pdf") }
+                    .clickable { launcher.launch("*/*") }
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -100,7 +94,7 @@ fun PdfUploadScreen(
                     if (state.isProcessingPdf) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Processing PDF...", color = MaterialTheme.colorScheme.primary)
+                        Text("Processing document...", color = MaterialTheme.colorScheme.primary)
                     } else if (state.pdfFileName != null) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
@@ -124,7 +118,7 @@ fun PdfUploadScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Select PDF File or drag & drop here",
+                            text = "Select PDF, TXT, or Image document",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center

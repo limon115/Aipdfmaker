@@ -152,16 +152,8 @@ class NoteGenerationWorker(
                     val allSnippets = snippetDao.getSnippetsForProject(projectId).first()
                     val masterLatex = allSnippets.joinToString("\n\n") { it.jsonContent }
                     
-                    val safeName = project.title
-                        .trim()
-                        .replace(Regex("[^a-zA-Z0-9.-]"), "_")
-                        .ifEmpty { "Project" }
-                    val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-                    val baseDir = File(documentsDir, "aipdfs/$safeName")
-                    
-                    if (!baseDir.exists()) {
-                        baseDir.mkdirs()
-                    }
+                    val safeName = com.example.utils.FileUtils.getSafeFileName(project.title, "Project")
+                    val baseDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$safeName")
                     
                     val compilerRepo = LatexCompilerRepository(context)
                     val fullLatex = compilerRepo.buildFullLatex(project, masterLatex)
