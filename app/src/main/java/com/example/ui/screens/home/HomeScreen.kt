@@ -4,6 +4,8 @@ import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
 import com.example.ui.components.PdfIcon
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -68,23 +70,6 @@ fun HomeScreenContent(
     var projectToDelete by remember { mutableStateOf<ProjectEntity?>(null) }
     
     val tabs = listOf("All", "Notes", "Debugged", "Tasks")
-    val filteredProjects = remember(projects, selectedTab, searchQuery) {
-        val tabFiltered = when (selectedTab) {
-            1 -> projects.filter { it.status == "Completed" }
-            2 -> projects.filter { it.status == "Debugged" }
-            3 -> projects.filter { it.status != "Completed" && it.status != "Debugged" }
-            else -> projects
-        }
-        if (searchQuery.isBlank()) {
-            tabFiltered
-        } else {
-            tabFiltered.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                it.course.contains(searchQuery, ignoreCase = true) ||
-                it.description.contains(searchQuery, ignoreCase = true)
-            }
-        }
-    }
 
     if (projectToDelete != null) {
         AlertDialog(
@@ -196,54 +181,94 @@ fun HomeScreenContent(
                 }
             }
             
-            if (filteredProjects.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = if (searchQuery.isNotBlank()) Icons.Default.SearchOff else Icons.Outlined.FolderOpen,
-                                contentDescription = "Empty Projects",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(56.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = if (searchQuery.isNotBlank()) "No Matching Projects Found" else "No Projects Yet",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = if (searchQuery.isNotBlank()) "Try searching for a different title or course keyword." else "Create a new project or solve a math problem to generate your AI notes and PDFs.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    val slideDirection = if (targetState > initialState) {
+                        AnimatedContentTransitionScope.SlideDirection.Left
+                    } else {
+                        AnimatedContentTransitionScope.SlideDirection.Right
+                    }
+                    (slideIntoContainer(
+                        towards = slideDirection,
+                        animationSpec = tween(240, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)))
+                        .togetherWith(
+                            slideOutOfContainer(
+                                towards = slideDirection,
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                        )
+                },
+                label = "HomeScreenSectionContent"
+            ) { currentTab ->
+                val tabFiltered = remember(projects, currentTab, searchQuery) {
+                    val baseFiltered = when (currentTab) {
+                        1 -> projects.filter { it.status == "Completed" }
+                        2 -> projects.filter { it.status == "Debugged" }
+                        3 -> projects.filter { it.status != "Completed" && it.status != "Debugged" }
+                        else -> projects
+                    }
+                    if (searchQuery.isBlank()) {
+                        baseFiltered
+                    } else {
+                        baseFiltered.filter {
+                            it.title.contains(searchQuery, ignoreCase = true) ||
+                            it.course.contains(searchQuery, ignoreCase = true) ||
+                            it.description.contains(searchQuery, ignoreCase = true)
                         }
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(filteredProjects, key = { it.id }) { project ->
-                        ProjectCard(
-                            project = project, 
-                            onDelete = { projectToDelete = it },
-                            onClick = { onNavigateToProject(project.id, project.status) }
-                        )
+
+                if (tabFiltered.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (searchQuery.isNotBlank()) Icons.Default.SearchOff else Icons.Outlined.FolderOpen,
+                                    contentDescription = "Empty Projects",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(56.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (searchQuery.isNotBlank()) "No Matching Projects Found" else "No Projects Yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = if (searchQuery.isNotBlank()) "Try searching for a different title or course keyword." else "Create a new project or solve a math problem to generate your AI notes and PDFs.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(tabFiltered, key = { it.id }) { project ->
+                            ProjectCard(
+                                project = project, 
+                                onDelete = { projectToDelete = it },
+                                onClick = { onNavigateToProject(project.id, project.status) }
+                            )
+                        }
                     }
                 }
             }

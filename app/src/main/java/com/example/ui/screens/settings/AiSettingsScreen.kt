@@ -18,7 +18,9 @@ import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.LaunchedEffect
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -368,6 +370,14 @@ fun AdvancedSettingsSection(
     onTopPChange: (Float) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy
+        ),
+        label = "advancedSettingsArrow"
+    )
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -387,11 +397,16 @@ fun AdvancedSettingsSection(
             Icon(
                 imageVector = Icons.Default.ArrowDropDown,
                 contentDescription = "Toggle Advanced Settings",
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.graphicsLayer { rotationZ = arrowRotation }
             )
         }
 
-        AnimatedVisibility(visible = expanded) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) + fadeIn(tween(180)),
+            exit = shrinkVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) + fadeOut(tween(150))
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

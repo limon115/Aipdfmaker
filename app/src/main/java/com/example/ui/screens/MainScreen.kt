@@ -102,24 +102,87 @@ fun MainScreen() {
             navController.navigate("input_source")
         }
     ) { innerPadding ->
+        val bottomNavRoutes = listOf(
+            BottomNavItem.Home.route,
+            BottomNavItem.Dashboard.route,
+            BottomNavItem.Settings.route
+        )
+
         NavHost(
             navController = navController,
             startDestination = BottomNavItem.Home.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
-                slideInHorizontally(initialOffsetX = { 50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
+                val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
+                if (fromIdx != -1 && toIdx != -1) {
+                    if (toIdx > fromIdx) {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth / 3 },
+                            animationSpec = tween(240, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                    } else {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                            animationSpec = tween(240, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                    }
+                } else {
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth / 4 },
+                        animationSpec = tween(240, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                }
             },
             exitTransition = {
-                ExitTransition.None
+                val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
+                val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
+                if (fromIdx != -1 && toIdx != -1) {
+                    if (toIdx > fromIdx) {
+                        slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                            animationSpec = tween(240, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
+                    } else {
+                        slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> fullWidth / 3 },
+                            animationSpec = tween(240, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
+                    }
+                } else {
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> -fullWidth / 6 },
+                        animationSpec = tween(200, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
+                }
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
-                slideInHorizontally(initialOffsetX = { -50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
+                val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
+                if (fromIdx != -1 && toIdx != -1) {
+                    if (toIdx > fromIdx) {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth / 3 },
+                            animationSpec = tween(240, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                    } else {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                            animationSpec = tween(240, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                    }
+                } else {
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> -fullWidth / 6 },
+                        animationSpec = tween(240, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                }
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-                slideOutHorizontally(targetOffsetX = { 50 }, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> fullWidth / 4 },
+                    animationSpec = tween(240, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
             }
         ) {
             composable(BottomNavItem.Home.route) {
@@ -407,7 +470,18 @@ fun MainScreenContent(
             modifier = modifier,
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             bottomBar = {
-                if (currentRoute in items.map { it.route }) {
+                val isBottomBarVisible = currentRoute in items.map { it.route }
+                AnimatedVisibility(
+                    visible = isBottomBarVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(240, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(200)),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(180, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(150))
+                ) {
                     val colors = com.example.ui.theme.AppTheme.colors
                     com.example.ui.components.glass.GlassSurface(
                         modifier = Modifier.fillMaxWidth(),
@@ -493,28 +567,50 @@ private fun androidx.compose.foundation.layout.RowScope.AnimatedBottomNavItem(
     icon: @Composable () -> Unit,
     label: @Composable () -> Unit
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.22f else 1.0f,
+        targetValue = if (selected) 1.20f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "navIconScale"
     )
+    val translationY by animateFloatAsState(
+        targetValue = if (selected) -2f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "navIconTranslationY"
+    )
     val alpha by animateFloatAsState(
-        targetValue = if (selected) 1.0f else 0.65f,
+        targetValue = if (selected) 1.0f else 0.68f,
         animationSpec = tween(durationMillis = 200),
         label = "navItemAlpha"
+    )
+    val labelScale by animateFloatAsState(
+        targetValue = if (selected) 1.05f else 0.95f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "navLabelScale"
     )
 
     NavigationBarItem(
         selected = selected,
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+            onClick()
+        },
         icon = {
             Box(
                 modifier = Modifier.graphicsLayer {
                     scaleX = scale
                     scaleY = scale
+                    this.translationY = translationY
                     this.alpha = alpha
                 },
                 contentAlignment = Alignment.Center
@@ -524,7 +620,11 @@ private fun androidx.compose.foundation.layout.RowScope.AnimatedBottomNavItem(
         },
         label = {
             Box(
-                modifier = Modifier.graphicsLayer { this.alpha = alpha }
+                modifier = Modifier.graphicsLayer {
+                    this.alpha = alpha
+                    scaleX = labelScale
+                    scaleY = labelScale
+                }
             ) {
                 label()
             }
