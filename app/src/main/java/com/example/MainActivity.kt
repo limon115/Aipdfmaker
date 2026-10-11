@@ -29,10 +29,19 @@ class MainActivity : ComponentActivity() {
       }
   }
 
+  override fun onNewIntent(intent: android.content.Intent) {
+      super.onNewIntent(intent)
+      setIntent(intent)
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     val dataStore = AiSettingsDataStore(applicationContext)
+    val prefs = getSharedPreferences("docmorph_prefs", android.content.Context.MODE_PRIVATE)
+    val hasCompletedOnboarding = prefs.getBoolean("onboarding_completed", false)
+    val hasDeepLink = intent?.data?.scheme == "docmorph"
+    val initialRoute = if (hasCompletedOnboarding || hasDeepLink) "main" else "onboarding"
     
     setContent {
       val settings by dataStore.aiSettingsFlow.collectAsState(initial = null)
@@ -48,7 +57,12 @@ class MainActivity : ComponentActivity() {
           customFontPath = settings?.customFontPath ?: ""
       ) {
         LiquidBackground {
-        DocMorphApp()
+        DocMorphApp(
+            initialRoute = initialRoute,
+            onCompleteOnboarding = {
+                prefs.edit().putBoolean("onboarding_completed", true).apply()
+            }
+        )
       }
       }
     }
@@ -56,18 +70,23 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun DocMorphApp() {
+fun DocMorphApp(
+    initialRoute: String = "onboarding",
+    onCompleteOnboarding: () -> Unit = {}
+) {
   val navController = rememberNavController()
   
-  NavHost(navController = navController, startDestination = "onboarding") {
+  NavHost(navController = navController, startDestination = initialRoute) {
     composable("onboarding") {
       OnboardingScreen(
         onGetStartedClick = {
+          onCompleteOnboarding()
           navController.navigate("main") {
             popUpTo("onboarding") { inclusive = true }
           }
         },
         onSignInClick = {
+          onCompleteOnboarding()
           navController.navigate("main") {
             popUpTo("onboarding") { inclusive = true }
           }
@@ -79,3 +98,4 @@ fun DocMorphApp() {
     }
   }
 }
+

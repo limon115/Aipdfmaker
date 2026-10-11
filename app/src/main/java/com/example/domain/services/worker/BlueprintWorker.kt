@@ -36,33 +36,54 @@ class BlueprintWorker(
                 return Result.failure()
             }
 
-            // Init AI client
+            // Init AI client via robust candidate resolution
             val dataStore = AiSettingsDataStore(context)
             val settings = dataStore.aiSettingsFlow.first()
-            val candidateKeys = listOf(
-                settings.ai1ApiKey,
-                settings.ai2ApiKey,
-                settings.ai3ApiKey,
-                com.example.BuildConfig.GEMINI_API_KEY
-            ).filter { it.isNotBlank() && it != "placeholder" }.distinct()
-            val effectiveKey = candidateKeys.firstOrNull() ?: com.example.BuildConfig.GEMINI_API_KEY
+            val candidates = com.example.data.datastore.resolveCandidates(settings, primarySlot = 1)
 
-            val aiClient = AiNetworkClient(
-                provider = settings.ai1Provider.name,
-                apiKey = effectiveKey,
-                model = settings.ai1Model.ifBlank { "gemini-1.5-flash" },
-                temperature = settings.ai2Temperature
-            )
-            val blueprintService = BlueprintService(aiClient)
+            if (candidates.isEmpty()) {
+                val errorMsg = "No AI API key configured. Please configure your API key in AI Settings."
+                Timber.e("BlueprintWorker: $errorMsg")
+                return Result.failure(androidx.work.workDataOf("error" to errorMsg))
+            }
 
-            val result = blueprintService.generateBlueprint(extractedText)
+            var summary: com.example.domain.models.BlueprintSummary? = null
+            var lastError: Exception? = null
 
-            if (result.isSuccess) {
-                val summary = result.getOrNull()
+            for (candidate in candidates) {
+                try {
+                    Timber.i("BlueprintWorker: Attempting blueprint generation via ${candidate.provider} (${candidate.model})")
+                    val aiClient = AiNetworkClient(
+                        provider = candidate.provider,
+                        apiKey = candidate.apiKey,
+                        model = candidate.model,
+                        temperature = candidate.temperature,
+                        featureName = "Knowledge Blueprint"
+                    )
+                    val blueprintService = BlueprintService(aiClient)
+                    val result = blueprintService.generateBlueprint(extractedText)
+
+                    if (result.isSuccess && result.getOrNull() != null) {
+                        summary = result.getOrNull()
+                        Timber.i("BlueprintWorker: Successfully generated blueprint via ${candidate.provider}")
+                        break
+                    } else {
+                        lastError = result.exceptionOrNull() as? Exception ?: Exception("Generation failed")
+                        Timber.w("BlueprintWorker: Candidate ${candidate.provider} failed: ${lastError.message}")
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    lastError = e
+                    Timber.w(e, "BlueprintWorker: Exception in candidate ${candidate.provider}, trying next candidate")
+                }
+            }
+
+            if (summary != null) {
                 val jsonFormat = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-                val summaryJson = summary?.let { jsonFormat.encodeToString(it) } ?: ""
+                val summaryJson = jsonFormat.encodeToString(summary)
                 
-                // 🛡️ FIX 1: Save JSON to file to avoid 10KB WorkManager crash
+                // Save JSON to file to avoid 10KB WorkManager crash
                 val tempFile = java.io.File(context.cacheDir, "blueprint_${projectId}.json")
                 tempFile.writeText(summaryJson)
 
@@ -72,13 +93,14 @@ class BlueprintWorker(
                     
                 return Result.success(outputData)
             } else {
-                Timber.e("BlueprintWorker: Service failed to generate blueprint")
-                return Result.failure()
+                val errorMsg = lastError?.message ?: "AI failed to generate blueprint from source text."
+                Timber.e("BlueprintWorker: All candidates failed. $errorMsg")
+                return Result.failure(androidx.work.workDataOf("error" to errorMsg))
             }
 
         } catch (e: Exception) {
             Timber.e(e, "BlueprintWorker: Exception during blueprint generation")
-            return Result.failure()
+            return Result.failure(androidx.work.workDataOf("error" to (e.message ?: "Unknown error")))
         }
     }
 }

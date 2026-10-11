@@ -70,6 +70,11 @@ class NotesViewerViewModel(
     }
 
     fun exportDocument(onComplete: (File?, File) -> Unit, onError: (String) -> Unit) {
+        val currentProject = _state.value.project
+        if (currentProject == null) {
+            onError("Project details are still loading. Please wait a moment and try again.")
+            return
+        }
         _state.update { it.copy(isExporting = true, exportProgress = 0f) }
         viewModelScope.launch {
             try {
@@ -77,7 +82,7 @@ class NotesViewerViewModel(
                     onProgress = { progress ->
                         _state.update { it.copy(exportProgress = progress) }
                     },
-                    project = _state.value.project!!,
+                    project = currentProject,
                     latexContent = _state.value.latexContent,
                     fixScript = _state.value.fixScript
                 )

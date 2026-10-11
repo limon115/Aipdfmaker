@@ -74,30 +74,23 @@ class NoteGenerationWorker(
 
         val dataStore = AiSettingsDataStore(context)
         val settings = dataStore.aiSettingsFlow.first()
-        val candidateKeys = listOf(
-            settings.ai2ApiKey,
-            settings.ai1ApiKey,
-            settings.ai3ApiKey,
-            com.example.BuildConfig.GEMINI_API_KEY
-        ).filter { it.isNotBlank() && it != "placeholder" }.distinct()
-        val effectiveApiKey = candidateKeys.firstOrNull() ?: com.example.BuildConfig.GEMINI_API_KEY
-        val effectiveModel = settings.ai2Model.ifBlank {
-            settings.ai1Model.ifBlank {
-                settings.ai3Model.ifBlank { "gemini-1.5-flash" }
-            }
-        }
-        val effectiveProvider = when {
-            settings.ai2ApiKey.isNotBlank() -> settings.ai2Provider.name
-            settings.ai1ApiKey.isNotBlank() -> settings.ai1Provider.name
-            settings.ai3ApiKey.isNotBlank() -> settings.ai3Provider.name
-            else -> settings.ai2Provider.name
+        val candidates = com.example.data.datastore.resolveCandidates(settings, primarySlot = 2)
+
+        if (candidates.isEmpty()) {
+            val errorMsg = "No AI API key found. Please configure your API key in AI Settings."
+            com.example.utils.AppLogger.e("NoteGenWorker", errorMsg)
+            project?.let { projectDao.updateProject(it.copy(status = "Failed", lastUpdated = System.currentTimeMillis())) }
+            showCompletedNotification("Generation failed: No API key configured", projectId)
+            return Result.failure(workDataOf(ERROR to errorMsg))
         }
 
+        val primaryCandidate = candidates.first()
         val dummyClient = AiNetworkClient(
-            provider = effectiveProvider,
-            apiKey = effectiveApiKey,
-            model = effectiveModel,
-            temperature = settings.ai2Temperature
+            provider = primaryCandidate.provider,
+            apiKey = primaryCandidate.apiKey,
+            model = primaryCandidate.model,
+            temperature = primaryCandidate.temperature,
+            featureName = "Note Generation"
         )
         val cache = AiResponseCache(context)
         val service = NoteGenerationService(dummyClient, cache)
@@ -127,15 +120,38 @@ class NoteGenerationWorker(
                 // Retrieve only relevant chunks for this topic
                 val relevantContextForTopic = retriever.retrieveContext(topic.title, chunks, 8000)
                 
-                val html = service.generateDocumentForTopic(
-                    topicTitle = topic.title,
-                    blueprintContext = blueprintJson,
-                    relevantContext = relevantContextForTopic,
-                    ai2Provider = effectiveProvider,
-                    ai2Model = effectiveModel,
-                    ai2ApiKey = effectiveApiKey,
-                    ai2Temperature = settings.ai2Temperature
-                )
+                var topicHtml: String = ""
+                for (candidate in candidates) {
+                    val result = service.generateDocumentForTopic(
+                        topicTitle = topic.title,
+                        blueprintContext = blueprintJson,
+                        relevantContext = relevantContextForTopic,
+                        ai2Provider = candidate.provider,
+                        ai2Model = candidate.model,
+                        ai2ApiKey = candidate.apiKey,
+                        ai2Temperature = candidate.temperature
+                    )
+                    if (result.isNotBlank() && !result.contains("Mock Notes for")) {
+                        topicHtml = result
+                        break
+                    }
+                    com.example.utils.AppLogger.w("NoteGenWorker", "Candidate ${candidate.provider} produced mock/empty note, trying next candidate")
+                }
+
+                if (topicHtml.isBlank()) {
+                    // Fallback to primary candidate's output
+                    topicHtml = service.generateDocumentForTopic(
+                        topicTitle = topic.title,
+                        blueprintContext = blueprintJson,
+                        relevantContext = relevantContextForTopic,
+                        ai2Provider = primaryCandidate.provider,
+                        ai2Model = primaryCandidate.model,
+                        ai2ApiKey = primaryCandidate.apiKey,
+                        ai2Temperature = primaryCandidate.temperature
+                    )
+                }
+
+                val html = topicHtml
 
                 val snippet = DocumentSnippetEntity(
                     projectId = projectId,

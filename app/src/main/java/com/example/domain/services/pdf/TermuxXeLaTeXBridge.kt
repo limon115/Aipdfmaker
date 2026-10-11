@@ -44,16 +44,15 @@ object TermuxXeLaTeXBridge {
                 .post(requestBody)
                 .build()
 
-            val response = client.newCall(request).execute()
-            
-            if (!response.isSuccessful) {
-                val errorMsg = response.body?.string() ?: "Unknown Server Error"
-                Timber.e("Termux Server Error (HTTP ${response.code}): $errorMsg")
-                throw Exception("Termux Compilation Failed:\n$errorMsg")
+            val pdfBytes = client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorMsg = response.body?.string() ?: "Unknown Server Error"
+                    Timber.e("Termux Server Error (HTTP ${response.code}): $errorMsg")
+                    throw Exception("Termux Compilation Failed:\n$errorMsg")
+                }
+                Timber.d("Termux Server returned success (HTTP 200). Reading PDF bytes...")
+                response.body?.bytes() ?: throw Exception("Empty PDF response from server.")
             }
-            
-            Timber.d("Termux Server returned success (HTTP 200). Reading PDF bytes...")
-            val pdfBytes = response.body?.bytes() ?: throw Exception("Empty PDF response from server.")
             Timber.d("Received PDF bytes length: ${pdfBytes.size}")
             
             val pdfFile = File(outputDir, texFile.nameWithoutExtension + ".pdf")

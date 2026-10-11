@@ -145,19 +145,8 @@ class LatexCompilerRepository(private val context: Context) {
         fixScript: String? = null
     ): Result<Pair<File, File>> = withContext(Dispatchers.IO) {
         runCatching {
-            val safeName = project.title
-                .trim()
-                .replace(Regex("[^a-zA-Z0-9.-]"), "_")
-                .ifEmpty { "Project" }
-
-            val documentsDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOCUMENTS
-            )
-
-            val baseDir = File(
-                documentsDir,
-                "aipdfs/$safeName"
-            )
+            val safeName = com.example.utils.FileUtils.getSafeFileName(project.title, "Project")
+            val baseDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$safeName")
 
             if (!baseDir.exists() && !baseDir.mkdirs()) {
                 throw Exception(

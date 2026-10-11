@@ -81,39 +81,44 @@ class PdfRendererService(private val context: Context) {
     }
 
     private suspend fun renderPdfPagesForOcr(uri: Uri, ocrEngine: LocalOcrEngine, maxPages: Int = 15): String {
-        val bitmaps = mutableListOf<Bitmap>()
+        val textBuilder = StringBuilder()
         try {
             val pfd: ParcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return ""
             pfd.use { descriptor ->
                 val renderer = PdfRenderer(descriptor)
-                val pagesToRender = minOf(renderer.pageCount, maxPages)
-                for (i in 0 until pagesToRender) {
-                    val page = renderer.openPage(i)
-                    // Render at 2x resolution for OCR quality
-                    val width = page.width * 2
-                    val height = page.height * 2
-                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    canvas.drawColor(Color.WHITE)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    page.close()
-                    bitmaps.add(bitmap)
-                }
-                renderer.close()
-            }
+                try {
+                    val pagesToRender = minOf(renderer.pageCount, maxPages)
+                    for (i in 0 until pagesToRender) {
+                        val page = renderer.openPage(i)
+                        var bitmap: Bitmap? = null
+                        try {
+                            // Render at 2x resolution for OCR quality
+                            val width = page.width * 2
+                            val height = page.height * 2
+                            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            val canvas = Canvas(bitmap)
+                            canvas.drawColor(Color.WHITE)
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-            if (bitmaps.isNotEmpty()) {
-                return ocrEngine.extractTextFromBitmaps(bitmaps)
+                            val pageText = ocrEngine.extractTextFromBitmap(bitmap)
+                            if (pageText.isNotBlank() && !pageText.startsWith("Error")) {
+                                textBuilder.append(pageText).append("\n\n")
+                            }
+                        } catch (e: Exception) {
+                            AppLogger.w("PdfRendererService", "Failed to render or OCR page $i: ${e.message}")
+                        } finally {
+                            bitmap?.recycle()
+                            page.close()
+                        }
+                    }
+                } finally {
+                    renderer.close()
+                }
             }
+            return textBuilder.toString().trim()
         } catch (e: Exception) {
             AppLogger.e("PdfRendererService", "Native PdfRenderer page rendering failed", e)
-        } finally {
-            bitmaps.forEach { 
-                if (!it.isRecycled) {
-                    it.recycle()
-                }
-            }
         }
-        return ""
+        return textBuilder.toString().trim()
     }
 }

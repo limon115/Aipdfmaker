@@ -14,37 +14,41 @@ class LocalOcrEngine {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     suspend fun extractTextFromBitmap(bitmap: Bitmap): String {
+        return extractTextFromBitmapResult(bitmap).getOrDefault("")
+    }
+
+    suspend fun extractTextFromBitmapResult(bitmap: Bitmap): Result<String> {
         var retries = 0
         while (retries < 30) {
             try {
                 val image = InputImage.fromBitmap(bitmap, 0)
                 val result = recognizer.process(image).await()
-                return result.text
+                return Result.success(result.text)
             } catch (e: Exception) {
                 if (e.message?.contains("Waiting for the text optional module to be downloaded") == true) {
                     retries++
                     kotlinx.coroutines.delay(2000)
                 } else {
-                    e.printStackTrace()
-                    return "Error extracting text: ${e.message}"
+                    com.example.utils.AppLogger.e("LocalOcrEngine", "Error recognizing text from bitmap: ${e.message}", e)
+                    return Result.failure(e)
                 }
             }
         }
-        return "Error: OCR model is still downloading. Please ensure you have internet access and try again later."
+        return Result.failure(IllegalStateException("OCR model download timed out. Please check your internet connection."))
     }
     
     suspend fun extractTextFromBitmaps(bitmaps: List<Bitmap>): String {
-        return try {
-            val textBuilder = StringBuilder()
-            for (bitmap in bitmaps) {
-                val text = extractTextFromBitmap(bitmap)
-                textBuilder.append(text).append("\n")
+        val textBuilder = StringBuilder()
+        for (bitmap in bitmaps) {
+            val res = extractTextFromBitmapResult(bitmap)
+            if (res.isSuccess) {
+                val text = res.getOrDefault("")
+                if (text.isNotBlank()) {
+                    textBuilder.append(text).append("\n\n")
+                }
             }
-            textBuilder.toString()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            "Error extracting text: ${e.message}"
         }
+        return textBuilder.toString().trim()
     }
 
     suspend fun extractTextFromImageUri(uri: Uri, context: Context): String = withContext(Dispatchers.IO) {
@@ -59,11 +63,11 @@ class LocalOcrEngine {
                     retries++
                     kotlinx.coroutines.delay(2000)
                 } else {
-                    e.printStackTrace()
-                    return@withContext "Error extracting text: ${e.message}"
+                    com.example.utils.AppLogger.e("LocalOcrEngine", "Error extracting text from image URI $uri: ${e.message}", e)
+                    throw e
                 }
             }
         }
-        return@withContext "Error: OCR model is still downloading. Please ensure you have internet access and try again later."
+        throw IllegalStateException("OCR model download timed out. Please check your internet connection and try again.")
     }
 }

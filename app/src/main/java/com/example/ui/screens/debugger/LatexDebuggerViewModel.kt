@@ -76,16 +76,45 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
         debugJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val settings = dataStore.aiSettingsFlow.first()
-                val provider = settings.ai3Provider.name
-                val model = settings.ai3Model.ifBlank { "gemini-1.5-pro" }
-                val apiKey = settings.ai3ApiKey.ifBlank { com.example.BuildConfig.GEMINI_API_KEY }
+                val candidates = com.example.data.datastore.resolveCandidates(settings, primarySlot = 3)
 
-                val networkClient = AiNetworkClient(provider, apiKey, model, 0.7f, "AI 3 - Debugger")
-                
-                val debuggedLatex = networkClient.debugLatex(
-                    latexCode = _state.value.latexCode,
-                    logContent = _state.value.logContent
-                )
+                if (candidates.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        _state.update { it.copy(isDebugging = false, error = "No AI API key found. Please configure your API key in AI Settings.") }
+                    }
+                    return@launch
+                }
+
+                var debuggedLatex: String? = null
+                var lastError: Exception? = null
+
+                for (candidate in candidates) {
+                    try {
+                        val networkClient = AiNetworkClient(
+                            provider = candidate.provider,
+                            apiKey = candidate.apiKey,
+                            model = candidate.model,
+                            temperature = candidate.temperature,
+                            featureName = "AI 3 - Debugger"
+                        )
+                        val result = networkClient.debugLatex(
+                            latexCode = _state.value.latexCode,
+                            logContent = _state.value.logContent
+                        )
+                        if (result.isNotBlank()) {
+                            debuggedLatex = result
+                            break
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        lastError = e
+                    }
+                }
+
+                if (debuggedLatex == null) {
+                    throw lastError ?: Exception("Failed to generate debugged LaTeX script.")
+                }
                 
                 val safeTitle = "Debugged_LaTeX_${System.currentTimeMillis() % 100000}"
                 val project = ProjectEntity(

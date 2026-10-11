@@ -6,9 +6,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 object TectonicBridge {
+    private var isLibraryLoaded = false
+
     init {
         try {
             System.loadLibrary("tectonic_jni")
+            isLibraryLoaded = true
         } catch (e: UnsatisfiedLinkError) {
             com.example.utils.AppLogger.e("TectonicBridge", "Could not load tectonic_jni library. Have you compiled the Rust crate and placed .so in jniLibs?", e)
         }
@@ -17,6 +20,9 @@ object TectonicBridge {
 
     suspend fun compileLatex(context: Context, tex: String): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
+            if (!isLibraryLoaded) {
+                throw IllegalStateException("Tectonic native library is not available on this device architecture.")
+            }
             val bundlePath = ensureBundleExtracted(context)
             val outDir = context.cacheDir.absolutePath
             val resultPath = compileToPdf(tex, bundlePath, outDir)

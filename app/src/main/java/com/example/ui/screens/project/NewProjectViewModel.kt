@@ -29,7 +29,8 @@ data class NewProjectState(
     val chapter: String = "",
     val description: String = "",
     val noteStyle: String = "Study Notes (Detailed)",
-    val outputFormat: String = "PDF"
+    val outputFormat: String = "PDF",
+    val errorMessage: String? = null
 )
 
 class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
@@ -107,14 +108,22 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
                         }
                     }
                 }
-                _state.update { it.copy(extractedText = text) }
+                if (text.startsWith("Error") || text.contains("No readable text found")) {
+                    _state.update { it.copy(extractedText = "", errorMessage = text) }
+                } else {
+                    _state.update { it.copy(extractedText = text, errorMessage = null) }
+                }
             } catch (e: Exception) {
                 com.example.utils.AppLogger.e("NewProjectViewModel", "Error processing file $resolvedName", e)
-                _state.update { it.copy(extractedText = "Error processing file: ${e.message}") }
+                _state.update { it.copy(extractedText = "", errorMessage = "Error processing file: ${e.message}") }
             } finally {
                 _state.update { it.copy(isProcessingPdf = false) }
             }
         }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(errorMessage = null) }
     }
 
     fun processPdf(uri: Uri, context: Context, fileName: String?) {

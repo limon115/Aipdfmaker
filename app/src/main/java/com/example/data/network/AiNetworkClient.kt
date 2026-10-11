@@ -318,8 +318,9 @@ $effectiveLog""".trimIndent()
     }
 
     private fun requireKey(cleanKey: String) {
-        if (cleanKey.isEmpty() && !provider.lowercase().contains("ollama") && !provider.lowercase().contains("lm studio")) {
-            throw IllegalArgumentException("API Key is empty!")
+        val isLocal = provider.lowercase().contains("ollama") || provider.lowercase().contains("lm studio")
+        if ((cleanKey.isEmpty() || cleanKey == "placeholder") && !isLocal) {
+            throw IllegalArgumentException("A valid API Key is required. Please configure your API key in AI Settings.")
         }
     }
 

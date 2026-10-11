@@ -49,23 +49,23 @@ class GitHubArtifactService(private val context: Context) {
             }
 
             val request = requestBuilder.build()
-            val response = httpClient.newCall(request).execute()
-
-            if (!response.isSuccessful) {
-                val code = response.code
-                val errBody = response.body?.string() ?: ""
-                AppLogger.w(TAG, "GitHub API returned error $code: $errBody")
-                if (code == 401 || code == 403) {
+            val bodyString = httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val code = response.code
+                    val errBody = response.body?.string() ?: ""
+                    AppLogger.w(TAG, "GitHub API returned error $code: $errBody")
+                    if (code == 401 || code == 403) {
+                        return@withContext Result.failure(
+                            IllegalStateException("GitHub API authorization error ($code). If using a token, ensure it has repository/actions read permissions.")
+                        )
+                    }
                     return@withContext Result.failure(
-                        IllegalStateException("GitHub API authorization error ($code). If using a token, ensure it has repository/actions read permissions.")
+                        IllegalStateException("GitHub API error ($code): ${response.message}")
                     )
                 }
-                return@withContext Result.failure(
-                    IllegalStateException("GitHub API error ($code): ${response.message}")
-                )
+                response.body?.string() ?: ""
             }
 
-            val bodyString = response.body?.string() ?: ""
             val json = JSONObject(bodyString)
             val artifactsArray = json.optJSONArray("artifacts")
 

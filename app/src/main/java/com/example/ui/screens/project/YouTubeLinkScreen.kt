@@ -149,11 +149,8 @@ fun YouTubeLinkScreen(
                             viewModel.updateExtractedText(text)
                             onNavigateNext()
                         } else {
-                            Toast.makeText(
-                                context,
-                                "Could not extract captions. Video might not have public captions.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            val msg = result.exceptionOrNull()?.message ?: "Could not extract captions. Video might not have public captions."
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         }
                     }
                 },
