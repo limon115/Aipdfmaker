@@ -207,8 +207,9 @@ fun AppUpdateCard(
                         GlassTextField(
                             value = tokenInput,
                             onValueChange = { tokenInput = it },
-                            placeholder = "ghp_xxxxxxxxxxxxxxxxxxxx",
+                            placeholder = { Text("ghp_xxxxxxxxxxxxxxxxxxxx") },
                             modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
                             visualTransformation = if (isTokenVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 IconButton(onClick = { isTokenVisible = !isTokenVisible }) {
