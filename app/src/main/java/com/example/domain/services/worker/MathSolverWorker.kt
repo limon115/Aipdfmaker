@@ -17,6 +17,7 @@ import androidx.work.workDataOf
 import com.example.BuildConfig
 import com.example.data.datastore.AiSettingsDataStore
 import com.example.data.network.AiNetworkClient
+import com.example.domain.models.AiProvider
 import com.example.domain.services.pdf.PdfNotificationManager
 import com.example.domain.services.pdf.TermuxXeLaTeXBridge
 import com.example.utils.AppLogger
@@ -64,28 +65,98 @@ class MathSolverWorker(
             val dataStore = AiSettingsDataStore(context)
             val settings = dataStore.aiSettingsFlow.first()
 
-            val candidateKeys = listOf(
-                settings.ai2ApiKey,
-                settings.ai1ApiKey,
-                settings.ai3ApiKey,
-                BuildConfig.GEMINI_API_KEY
-            ).filter { it.isNotBlank() && it != "placeholder" }.distinct()
+            data class AiCandidate(
+                val provider: String,
+                val apiKey: String,
+                val model: String,
+                val temperature: Float
+            )
 
-            val effectiveKeys = if (candidateKeys.isNotEmpty()) candidateKeys else listOf(BuildConfig.GEMINI_API_KEY)
-
-            val providerName = when {
-                settings.ai2ApiKey.isNotBlank() -> settings.ai2Provider.name
-                settings.ai1ApiKey.isNotBlank() -> settings.ai1Provider.name
-                settings.ai3ApiKey.isNotBlank() -> settings.ai3Provider.name
-                else -> settings.ai2Provider.name
+            fun defaultModelForProvider(provider: AiProvider): String {
+                return when (provider) {
+                    AiProvider.GOOGLE_GEMINI -> "gemini-1.5-flash"
+                    AiProvider.OPENAI -> "gpt-4o-mini"
+                    AiProvider.ANTHROPIC_CLAUDE -> "claude-3-5-haiku-20241022"
+                    AiProvider.OPENROUTER -> "meta-llama/llama-3.1-8b-instruct:free"
+                    AiProvider.OLLAMA -> "llama3"
+                    AiProvider.LM_STUDIO -> "local-model"
+                    AiProvider.CUSTOM -> "gpt-4o-mini"
+                }
             }
 
-            val targetModel = settings.ai2Model.ifBlank {
-                settings.ai1Model.ifBlank {
-                    settings.ai3Model.ifBlank {
-                        "gemini-1.5-flash"
-                    }
-                }
+            val candidates = mutableListOf<AiCandidate>()
+
+            // 1. AI #2 (Note Generator / Math Solver primary slot)
+            if (settings.ai2ApiKey.isNotBlank() && settings.ai2ApiKey != "placeholder") {
+                candidates.add(
+                    AiCandidate(
+                        provider = settings.ai2Provider.name,
+                        apiKey = settings.ai2ApiKey,
+                        model = settings.ai2Model.ifBlank { defaultModelForProvider(settings.ai2Provider) },
+                        temperature = settings.ai2Temperature
+                    )
+                )
+            } else if (settings.ai2Provider == AiProvider.OLLAMA || settings.ai2Provider == AiProvider.LM_STUDIO) {
+                candidates.add(
+                    AiCandidate(
+                        provider = settings.ai2Provider.name,
+                        apiKey = "",
+                        model = settings.ai2Model.ifBlank { defaultModelForProvider(settings.ai2Provider) },
+                        temperature = settings.ai2Temperature
+                    )
+                )
+            }
+
+            // 2. AI #1 (Blueprint slot fallback)
+            if (settings.ai1ApiKey.isNotBlank() && settings.ai1ApiKey != "placeholder") {
+                candidates.add(
+                    AiCandidate(
+                        provider = settings.ai1Provider.name,
+                        apiKey = settings.ai1ApiKey,
+                        model = settings.ai1Model.ifBlank { defaultModelForProvider(settings.ai1Provider) },
+                        temperature = settings.ai2Temperature
+                    )
+                )
+            } else if (settings.ai1Provider == AiProvider.OLLAMA || settings.ai1Provider == AiProvider.LM_STUDIO) {
+                candidates.add(
+                    AiCandidate(
+                        provider = settings.ai1Provider.name,
+                        apiKey = "",
+                        model = settings.ai1Model.ifBlank { defaultModelForProvider(settings.ai1Provider) },
+                        temperature = settings.ai2Temperature
+                    )
+                )
+            }
+
+            // 3. AI #3 (LaTeX Debugger slot fallback)
+            if (settings.ai3ApiKey.isNotBlank() && settings.ai3ApiKey != "placeholder") {
+                candidates.add(
+                    AiCandidate(
+                        provider = settings.ai3Provider.name,
+                        apiKey = settings.ai3ApiKey,
+                        model = settings.ai3Model.ifBlank { defaultModelForProvider(settings.ai3Provider) },
+                        temperature = settings.ai2Temperature
+                    )
+                )
+            }
+
+            // 4. BuildConfig Gemini API Key if defined and non-placeholder
+            if (BuildConfig.GEMINI_API_KEY.isNotBlank() && BuildConfig.GEMINI_API_KEY != "placeholder") {
+                candidates.add(
+                    AiCandidate(
+                        provider = AiProvider.GOOGLE_GEMINI.name,
+                        apiKey = BuildConfig.GEMINI_API_KEY,
+                        model = "gemini-1.5-flash",
+                        temperature = settings.ai2Temperature
+                    )
+                )
+            }
+
+            if (candidates.isEmpty()) {
+                val errorMsg = "No AI API key found. Please configure your Gemini or OpenAI API key in AI Settings."
+                AppLogger.e("MathSolverWorker", errorMsg)
+                showErrorNotification("Math Solution", errorMsg)
+                return Result.failure(workDataOf(KEY_ERROR to errorMsg))
             }
 
             val prompt = """
@@ -129,33 +200,48 @@ class MathSolverWorker(
             var aiResponse: String? = null
             var lastError: Exception? = null
 
-            for (key in effectiveKeys) {
+            for (candidate in candidates) {
                 try {
+                    AppLogger.i("MathSolverWorker", "Attempting solve with provider ${candidate.provider}, model ${candidate.model}")
                     val aiClient = AiNetworkClient(
-                        provider = providerName,
-                        apiKey = key,
-                        model = targetModel,
-                        temperature = settings.ai2Temperature
+                        provider = candidate.provider,
+                        apiKey = candidate.apiKey,
+                        model = candidate.model,
+                        temperature = candidate.temperature,
+                        featureName = "Math Solver"
                     )
                     val response = aiClient.generateContent(prompt)
                     if (response.isNotBlank()) {
                         aiResponse = response
+                        AppLogger.i("MathSolverWorker", "Successfully generated AI math solution via ${candidate.provider}")
                         break
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     lastError = e
-                    AppLogger.w("MathSolverWorker", "Attempt with key failed: ${e.message}")
+                    AppLogger.w("MathSolverWorker", "Attempt with ${candidate.provider} (${candidate.model}) failed: ${e.message}")
                 }
             }
 
             if (aiResponse.isNullOrBlank()) {
-                AppLogger.w("MathSolverWorker", "AI generation returned an error (${lastError?.message}). Finishing task with offline comprehensive mathematical solution engine.")
-                aiResponse = generateOfflineMathSolution(problemText, lastError?.message)
+                val errorMsg = "AI generation failed: ${lastError?.message ?: "Empty response from AI"}. Please verify your API key and connection."
+                AppLogger.e("MathSolverWorker", errorMsg, lastError)
+                showErrorNotification("Math Solution", errorMsg)
+                return Result.failure(workDataOf(KEY_ERROR to errorMsg))
             }
 
-            val cleanLatex = aiResponse.removePrefix("```latex").replace("```latex\n", "").removePrefix("```").removeSuffix("```").trim()
+            var cleanLatex = aiResponse.trim()
+            if (cleanLatex.startsWith("```")) {
+                val firstLineEnd = cleanLatex.indexOf('\n')
+                if (firstLineEnd != -1) {
+                    cleanLatex = cleanLatex.substring(firstLineEnd + 1)
+                }
+            }
+            if (cleanLatex.endsWith("```")) {
+                cleanLatex = cleanLatex.substringBeforeLast("```")
+            }
+            cleanLatex = cleanLatex.trim()
 
             try {
                 setProgress(workDataOf("PROGRESS" to 0.75f, "STATUS" to "Compiling LaTeX code to PDF..."))

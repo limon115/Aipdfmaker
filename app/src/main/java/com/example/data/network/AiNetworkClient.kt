@@ -293,7 +293,15 @@ $effectiveLog""".trimIndent()
             val messages = mutableListOf<OpenAiMessage>()
             if (customSystemPrompt != null) messages.add(OpenAiMessage("system", customSystemPrompt))
             messages.add(OpenAiMessage("user", prompt))
-            return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, messages, temperature, maxTokens)
+            return sendKtorRequest(
+                baseUrl = getOpenAiBaseUrl(),
+                cleanKey = cleanKey,
+                reqModel = model.ifBlank { "gpt-4o-mini" },
+                messages = messages,
+                temp = temperature,
+                maxTokens = maxTokens,
+                isJson = (mimeType == "application/json")
+            )
         }
     }
 
@@ -304,7 +312,7 @@ $effectiveLog""".trimIndent()
             sendGeminiRequest(cleanKey, "Reply with 'Test'")
             return true
         } else {
-            sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, listOf(OpenAiMessage("user", "Reply with 'Test'")), 0f, 5)
+            sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model.ifBlank { "gpt-4o-mini" }, listOf(OpenAiMessage("user", "Reply with 'Test'")), 0f, 5, isJson = false)
             return true
         }
     }
@@ -321,7 +329,7 @@ $effectiveLog""".trimIndent()
 
     private suspend fun generateWithOpenAiCompatible(extractedText: String, cleanKey: String): String {
         val messages = listOf(OpenAiMessage("system", systemPrompt), OpenAiMessage("user", extractedText))
-        return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model, messages, temperature)
+        return sendKtorRequest(getOpenAiBaseUrl(), cleanKey, model, messages, temperature, isJson = true)
     }
 
     private suspend fun sendGeminiRequest(cleanKey: String, prompt: String, sysPrompt: String? = null, mimeType: String? = null, schema: JsonObject? = null, maxTokens: Int? = null): String {
@@ -361,7 +369,7 @@ $effectiveLog""".trimIndent()
                     com.example.utils.AppLogger.d("AiNetwork", "Gemini request successful")
                     val rawText = jsonResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
                         ?: throw IllegalStateException("Empty response from Gemini")
-                    return extractJson(rawText)
+                    return if (mimeType == "application/json") extractJson(rawText) else rawText.trim()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: ClientRequestException) {
@@ -398,7 +406,7 @@ $effectiveLog""".trimIndent()
         throw Exception(err)
     }
 
-    private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null): String {
+    private suspend fun sendKtorRequest(baseUrl: String, cleanKey: String, reqModel: String, messages: List<OpenAiMessage>, temp: Float, maxTokens: Int? = null, isJson: Boolean = false): String {
         val estimatedTokens = messages.sumOf { (it.content ?: "").length } / 4
         enforceRateLimit(estimatedTokens)
         com.example.domain.services.ai.AiUsageTracker.trackRequest(featureName, estimatedTokens)
@@ -416,7 +424,7 @@ $effectiveLog""".trimIndent()
                 val jsonResponse = jsonFormat.decodeFromString<OpenAiResponse>(response.bodyAsText())
                 com.example.utils.AppLogger.d("AiNetwork", "OpenAI request successful")
                 val rawText = jsonResponse.choices.firstOrNull()?.message?.content ?: throw IllegalStateException("Empty response from Provider")
-                return extractJson(rawText)
+                return if (isJson) extractJson(rawText) else rawText.trim()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: ClientRequestException) {
