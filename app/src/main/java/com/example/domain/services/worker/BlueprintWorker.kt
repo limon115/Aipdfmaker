@@ -39,7 +39,7 @@ class BlueprintWorker(
             // Init AI client via robust candidate resolution
             val dataStore = AiSettingsDataStore(context)
             val settings = dataStore.aiSettingsFlow.first()
-            val candidates = com.example.data.datastore.resolveCandidates(settings, primarySlot = 1)
+            val candidates = settings.resolveCandidates(primarySlot = 1)
 
             if (candidates.isEmpty()) {
                 val errorMsg = "No AI API key configured. Please configure your API key in AI Settings."

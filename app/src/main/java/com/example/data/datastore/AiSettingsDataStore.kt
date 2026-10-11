@@ -128,7 +128,85 @@ data class AiSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val customFontPath: String = "",
     val githubToken: String = ""
-)
+) {
+    fun resolveCandidates(
+        primarySlot: Int = 1,
+        buildConfigApiKey: String = com.example.BuildConfig.GEMINI_API_KEY
+    ): List<AiCandidate> {
+        val candidates = mutableListOf<AiCandidate>()
+
+        fun addSlotIfConfigured(slot: Int) {
+            when (slot) {
+                1 -> {
+                    val isLocal = ai1Provider == AiProvider.OLLAMA || ai1Provider == AiProvider.LM_STUDIO
+                    val hasKey = ai1ApiKey.isNotBlank() && ai1ApiKey != "placeholder"
+                    if (hasKey || isLocal) {
+                        candidates.add(
+                            AiCandidate(
+                                provider = ai1Provider.name,
+                                apiKey = if (isLocal && !hasKey) "" else ai1ApiKey,
+                                model = ai1Model.ifBlank { defaultModelForProvider(ai1Provider) },
+                                temperature = ai2Temperature
+                            )
+                        )
+                    }
+                }
+                2 -> {
+                    val isLocal = ai2Provider == AiProvider.OLLAMA || ai2Provider == AiProvider.LM_STUDIO
+                    val hasKey = ai2ApiKey.isNotBlank() && ai2ApiKey != "placeholder"
+                    if (hasKey || isLocal) {
+                        candidates.add(
+                            AiCandidate(
+                                provider = ai2Provider.name,
+                                apiKey = if (isLocal && !hasKey) "" else ai2ApiKey,
+                                model = ai2Model.ifBlank { defaultModelForProvider(ai2Provider) },
+                                temperature = ai2Temperature
+                            )
+                        )
+                    }
+                }
+                3 -> {
+                    val isLocal = ai3Provider == AiProvider.OLLAMA || ai3Provider == AiProvider.LM_STUDIO
+                    val hasKey = ai3ApiKey.isNotBlank() && ai3ApiKey != "placeholder"
+                    if (hasKey || isLocal) {
+                        candidates.add(
+                            AiCandidate(
+                                provider = ai3Provider.name,
+                                apiKey = if (isLocal && !hasKey) "" else ai3ApiKey,
+                                model = ai3Model.ifBlank { defaultModelForProvider(ai3Provider) },
+                                temperature = ai2Temperature
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        val slotOrder = when (primarySlot) {
+            1 -> listOf(1, 2, 3)
+            2 -> listOf(2, 1, 3)
+            3 -> listOf(3, 1, 2)
+            else -> listOf(1, 2, 3)
+        }
+
+        for (slot in slotOrder) {
+            addSlotIfConfigured(slot)
+        }
+
+        if (buildConfigApiKey.isNotBlank() && buildConfigApiKey != "placeholder") {
+            candidates.add(
+                AiCandidate(
+                    provider = AiProvider.GOOGLE_GEMINI.name,
+                    apiKey = buildConfigApiKey,
+                    model = "gemini-1.5-flash",
+                    temperature = ai2Temperature
+                )
+            )
+        }
+
+        return candidates
+    }
+}
 
 data class AiCandidate(
     val provider: String,
@@ -149,81 +227,9 @@ fun defaultModelForProvider(provider: AiProvider): String {
     }
 }
 
-fun AiSettings.resolveCandidates(
+fun resolveCandidates(
+    settings: AiSettings,
     primarySlot: Int = 1,
     buildConfigApiKey: String = com.example.BuildConfig.GEMINI_API_KEY
-): List<AiCandidate> {
-    val candidates = mutableListOf<AiCandidate>()
-
-    fun addSlotIfConfigured(slot: Int) {
-        when (slot) {
-            1 -> {
-                val isLocal = ai1Provider == AiProvider.OLLAMA || ai1Provider == AiProvider.LM_STUDIO
-                val hasKey = ai1ApiKey.isNotBlank() && ai1ApiKey != "placeholder"
-                if (hasKey || isLocal) {
-                    candidates.add(
-                        AiCandidate(
-                            provider = ai1Provider.name,
-                            apiKey = if (isLocal && !hasKey) "" else ai1ApiKey,
-                            model = ai1Model.ifBlank { defaultModelForProvider(ai1Provider) },
-                            temperature = ai2Temperature
-                        )
-                    )
-                }
-            }
-            2 -> {
-                val isLocal = ai2Provider == AiProvider.OLLAMA || ai2Provider == AiProvider.LM_STUDIO
-                val hasKey = ai2ApiKey.isNotBlank() && ai2ApiKey != "placeholder"
-                if (hasKey || isLocal) {
-                    candidates.add(
-                        AiCandidate(
-                            provider = ai2Provider.name,
-                            apiKey = if (isLocal && !hasKey) "" else ai2ApiKey,
-                            model = ai2Model.ifBlank { defaultModelForProvider(ai2Provider) },
-                            temperature = ai2Temperature
-                        )
-                    )
-                }
-            }
-            3 -> {
-                val isLocal = ai3Provider == AiProvider.OLLAMA || ai3Provider == AiProvider.LM_STUDIO
-                val hasKey = ai3ApiKey.isNotBlank() && ai3ApiKey != "placeholder"
-                if (hasKey || isLocal) {
-                    candidates.add(
-                        AiCandidate(
-                            provider = ai3Provider.name,
-                            apiKey = if (isLocal && !hasKey) "" else ai3ApiKey,
-                            model = ai3Model.ifBlank { defaultModelForProvider(ai3Provider) },
-                            temperature = ai2Temperature
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    val slotOrder = when (primarySlot) {
-        1 -> listOf(1, 2, 3)
-        2 -> listOf(2, 1, 3)
-        3 -> listOf(3, 1, 2)
-        else -> listOf(1, 2, 3)
-    }
-
-    for (slot in slotOrder) {
-        addSlotIfConfigured(slot)
-    }
-
-    if (buildConfigApiKey.isNotBlank() && buildConfigApiKey != "placeholder") {
-        candidates.add(
-            AiCandidate(
-                provider = AiProvider.GOOGLE_GEMINI.name,
-                apiKey = buildConfigApiKey,
-                model = "gemini-1.5-flash",
-                temperature = ai2Temperature
-            )
-        )
-    }
-
-    return candidates
-}
+): List<AiCandidate> = settings.resolveCandidates(primarySlot, buildConfigApiKey)
 

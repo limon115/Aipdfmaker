@@ -65,7 +65,7 @@ class MathSolverWorker(
             val dataStore = AiSettingsDataStore(context)
             val settings = dataStore.aiSettingsFlow.first()
 
-            val candidates = com.example.data.datastore.resolveCandidates(settings, primarySlot = 2)
+            val candidates = settings.resolveCandidates(primarySlot = 2)
 
             if (candidates.isEmpty()) {
                 val errorMsg = "No AI API key found. Please configure your Gemini or OpenAI API key in AI Settings."

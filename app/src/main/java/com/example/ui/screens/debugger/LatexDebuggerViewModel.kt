@@ -76,7 +76,7 @@ class LatexDebuggerViewModel(application: Application) : AndroidViewModel(applic
         debugJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val settings = dataStore.aiSettingsFlow.first()
-                val candidates = com.example.data.datastore.resolveCandidates(settings, primarySlot = 3)
+                val candidates = settings.resolveCandidates(primarySlot = 3)
 
                 if (candidates.isEmpty()) {
                     withContext(Dispatchers.Main) {
