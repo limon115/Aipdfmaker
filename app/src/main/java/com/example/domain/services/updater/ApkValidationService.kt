@@ -146,9 +146,11 @@ class ApkValidationService(private val context: Context) {
             if (hasMatchingKey) {
                 SignatureMatchResult(true, "Signatures match.")
             } else {
+                val installedPrefix = currentHashes.firstOrNull()?.take(16) ?: "unknown"
+                val archivePrefix = archiveHashes.firstOrNull()?.take(16) ?: "unknown"
                 SignatureMatchResult(
                     false,
-                    "Signature mismatch! Installed: ${currentHashes.firstOrNull()?.take(16)}... vs APK: ${archiveHashes.firstOrNull()?.take(16)}..."
+                    "Signature mismatch! Installed: $installedPrefix... vs APK: $archivePrefix...\nAndroid requires identical signing keys to update. If your installed version was built with a different keystore, reinstall the app once to align certificates."
                 )
             }
         } catch (e: Exception) {

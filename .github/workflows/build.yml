@@ -27,9 +27,9 @@ jobs:
       - name: Generate Gradle Wrapper (Cloud Execution)
         run: gradle wrapper --gradle-version 9.3.1
 
-      - name: Generate Debug Keystore Dynamically
+      - name: Verify Debug Keystore
         run: |
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug"
+          test -f debug.keystore || (echo "Error: debug.keystore is missing from repository root" && exit 1)
 
       - name: Grant Execute Permissions
         run: chmod +x gradlew || true
