@@ -1,6 +1,7 @@
 package com.example.ui.screens.settings
 
 import com.example.ui.components.glass.GlassTextField
+import com.example.ui.screens.updater.AppUpdateCard
 
 
 import androidx.compose.material.icons.filled.ArrowForward
@@ -173,6 +174,9 @@ fun AiSettingsScreen(
 
             
             BatteryOptimizationCard()
+            
+            // App Updates Section
+            AppUpdateCard()
             
             // Developer Tools Section
             DeveloperToolsCard(

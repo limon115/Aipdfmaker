@@ -34,6 +34,7 @@ class AiSettingsDataStore(private val context: Context) {
         val AI2_TOP_P = floatPreferencesKey("ai2_top_p")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
+        val GITHUB_TOKEN = stringPreferencesKey("github_token")
     }
 
     val aiSettingsFlow: Flow<AiSettings> = context.dataStore.data
@@ -52,7 +53,8 @@ class AiSettingsDataStore(private val context: Context) {
                 ai3Model = preferences[AI3_MODEL] ?: "",
                 ai3ApiKey = preferences[AI3_API_KEY] ?: "",
                 themeMode = runCatching { ThemeMode.valueOf(preferences[THEME_MODE] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM),
-                customFontPath = preferences[CUSTOM_FONT_PATH] ?: ""
+                customFontPath = preferences[CUSTOM_FONT_PATH] ?: "",
+                githubToken = preferences[GITHUB_TOKEN] ?: ""
             )
         }
 
@@ -105,6 +107,10 @@ class AiSettingsDataStore(private val context: Context) {
     suspend fun updateCustomFontPath(path: String) {
         context.dataStore.edit { it[CUSTOM_FONT_PATH] = path }
     }
+
+    suspend fun updateGithubToken(token: String) {
+        context.dataStore.edit { it[GITHUB_TOKEN] = token }
+    }
 }
 data class AiSettings(
     val ai1Provider: AiProvider = AiProvider.GOOGLE_GEMINI,
@@ -120,5 +126,6 @@ data class AiSettings(
     val ai3Model: String = "",
     val ai3ApiKey: String = "",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val customFontPath: String = ""
+    val customFontPath: String = "",
+    val githubToken: String = ""
 )

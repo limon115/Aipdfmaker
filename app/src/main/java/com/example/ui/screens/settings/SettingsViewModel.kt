@@ -68,6 +68,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateThemeMode(themeMode) }
     }
 
+    fun updateGithubToken(token: String) {
+        viewModelScope.launch { dataStore.updateGithubToken(token) }
+    }
+
     fun saveCustomFont(uri: android.net.Uri) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
