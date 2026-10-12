@@ -44,7 +44,8 @@ data class ProcessingState(
     ),
     val blueprintSummary: BlueprintSummary? = null,
     val isFinished: Boolean = false,
-    val workState: WorkInfo.State? = null
+    val workState: WorkInfo.State? = null,
+    val errorMessage: String? = null
 )
 
 class ProcessingViewModel : ViewModel() {
@@ -120,6 +121,8 @@ class ProcessingViewModel : ViewModel() {
                                     workManager.getWorkInfoByIdLiveData(workRequest.id).removeObserver(this)
                                 }
                                 WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
+                                    val error = workInfo.outputData.getString("error") ?: "Processing failed"
+                                    _state.update { it.copy(errorMessage = error) }
                                     updateStepState(1, StepState.FAILED, 75)
                                     // Remove observer when done!
                                     workManager.getWorkInfoByIdLiveData(workRequest.id).removeObserver(this)
@@ -133,6 +136,12 @@ class ProcessingViewModel : ViewModel() {
                 })
             }
         }
+    }
+
+    fun retry(context: Context, projectId: Int) {
+        hasStarted = false
+        _state.update { ProcessingState() }
+        startProcessing(context, projectId)
     }
 
     private fun updateStepState(index: Int, state: StepState, percentage: Int) {

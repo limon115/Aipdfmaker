@@ -152,55 +152,81 @@ fun ProcessingScreen(
 
             // Cycling Status Text with Animation
             AnimatedContent(
-                targetState = statusIndex,
+                targetState = if (state.workState == WorkInfo.State.FAILED) "failed" else statusIndex.toString(),
                 transitionSpec = {
                     fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500))
                 },
                 label = "status_text"
-            ) { targetIndex ->
+            ) { _ ->
                 val textToShow = when (state.workState) {
-                    WorkInfo.State.FAILED -> "Processing failed."
+                    WorkInfo.State.FAILED -> state.errorMessage ?: "Processing failed."
                     WorkInfo.State.SUCCEEDED -> "Blueprint complete."
-                    else -> statusTexts[targetIndex]
+                    else -> statusTexts[statusIndex]
                 }
                 Text(
                     text = textToShow,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                    color = if (state.workState == WorkInfo.State.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                com.example.ui.components.glass.GlassCard(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.wrapContentSize(),
-                    shape = RoundedCornerShape(32.dp)
+            if (state.workState == WorkInfo.State.FAILED) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
-                        Text(
-                            text = "Run in Background",
-                            color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
+                    Button(
+                        onClick = { viewModel.retry(context, projectId) },
+                        shape = RoundedCornerShape(32.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Text("Retry", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = onNavigateBack,
+                        shape = RoundedCornerShape(32.dp),
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Text("Go Back", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                     }
                 }
-
-                OutlinedButton(
-                    onClick = {
-                        viewModel.cancelProcessing(context, projectId)
-                        onNavigateBack()
-                    },
-                    shape = RoundedCornerShape(32.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.height(48.dp)
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Cancel", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    com.example.ui.components.glass.GlassCard(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.wrapContentSize(),
+                        shape = RoundedCornerShape(32.dp)
+                    ) {
+                        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
+                            Text(
+                                text = "Run in Background",
+                                color = MaterialTheme.colorScheme.onBackground,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.cancelProcessing(context, projectId)
+                            onNavigateBack()
+                        },
+                        shape = RoundedCornerShape(32.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Text("Cancel", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 

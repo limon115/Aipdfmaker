@@ -21,8 +21,10 @@ class BlueprintWorker(
     override suspend fun doWork(): Result {
         val projectId = inputData.getInt("project_id", -1)
         if (projectId == -1) {
-            Timber.e("BlueprintWorker: Invalid project ID")
-            return Result.failure()
+            val errorMsg = "Invalid project ID"
+            Timber.e("BlueprintWorker: $errorMsg")
+            com.example.utils.AppLogger.e("BlueprintWorker", errorMsg)
+            return Result.failure(androidx.work.workDataOf("error" to errorMsg))
         }
 
         try {
@@ -32,8 +34,10 @@ class BlueprintWorker(
             val extractedText = project?.sourceText ?: ""
 
             if (extractedText.isBlank()) {
-                Timber.e("BlueprintWorker: Extracted text is empty")
-                return Result.failure()
+                val errorMsg = "No source text found for this project. Please import or enter notes first."
+                Timber.e("BlueprintWorker: $errorMsg")
+                com.example.utils.AppLogger.e("BlueprintWorker", errorMsg)
+                return Result.failure(androidx.work.workDataOf("error" to errorMsg))
             }
 
             // Init AI client via robust candidate resolution
@@ -41,41 +45,47 @@ class BlueprintWorker(
             val settings = dataStore.aiSettingsFlow.first()
             val candidates = settings.resolveCandidates(primarySlot = 1)
 
-            if (candidates.isEmpty()) {
-                val errorMsg = "No AI API key configured. Please configure your API key in AI Settings."
-                Timber.e("BlueprintWorker: $errorMsg")
-                return Result.failure(androidx.work.workDataOf("error" to errorMsg))
-            }
-
             var summary: com.example.domain.models.BlueprintSummary? = null
-            var lastError: Exception? = null
 
-            for (candidate in candidates) {
-                try {
-                    Timber.i("BlueprintWorker: Attempting blueprint generation via ${candidate.provider} (${candidate.model})")
-                    val aiClient = AiNetworkClient(
-                        provider = candidate.provider,
-                        apiKey = candidate.apiKey,
-                        model = candidate.model,
-                        temperature = candidate.temperature,
-                        featureName = "Knowledge Blueprint"
-                    )
-                    val blueprintService = BlueprintService(aiClient)
-                    val result = blueprintService.generateBlueprint(extractedText)
+            if (candidates.isEmpty()) {
+                com.example.utils.AppLogger.w("BlueprintWorker", "No AI API key configured for Blueprint Builder. Generating smart offline structured blueprint.")
+                summary = BlueprintService.generateFallbackBlueprint(extractedText)
+            } else {
+                var lastError: Exception? = null
 
-                    if (result.isSuccess && result.getOrNull() != null) {
-                        summary = result.getOrNull()
-                        Timber.i("BlueprintWorker: Successfully generated blueprint via ${candidate.provider}")
-                        break
-                    } else {
-                        lastError = result.exceptionOrNull() as? Exception ?: Exception("Generation failed")
-                        Timber.w("BlueprintWorker: Candidate ${candidate.provider} failed: ${lastError.message}")
+                for (candidate in candidates) {
+                    try {
+                        com.example.utils.AppLogger.i("BlueprintWorker", "Attempting blueprint generation via ${candidate.provider} (${candidate.model})")
+                        val aiClient = AiNetworkClient(
+                            provider = candidate.provider,
+                            apiKey = candidate.apiKey,
+                            model = candidate.model,
+                            temperature = candidate.temperature,
+                            featureName = "Knowledge Blueprint"
+                        )
+                        val blueprintService = BlueprintService(aiClient)
+                        val result = blueprintService.generateBlueprint(extractedText)
+
+                        if (result.isSuccess && result.getOrNull() != null) {
+                            summary = result.getOrNull()
+                            com.example.utils.AppLogger.i("BlueprintWorker", "Successfully generated blueprint via ${candidate.provider}")
+                            break
+                        } else {
+                            lastError = result.exceptionOrNull() as? Exception ?: Exception("Generation failed")
+                            com.example.utils.AppLogger.w("BlueprintWorker", "Candidate ${candidate.provider} failed: ${lastError.message}")
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        lastError = e
+                        com.example.utils.AppLogger.w("BlueprintWorker", "Exception in candidate ${candidate.provider}: ${e.message}, trying next candidate")
                     }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    lastError = e
-                    Timber.w(e, "BlueprintWorker: Exception in candidate ${candidate.provider}, trying next candidate")
+                }
+
+                // If all AI candidates fail (e.g. invalid key, quota limit, network unreachable), gracefully fallback!
+                if (summary == null) {
+                    com.example.utils.AppLogger.w("BlueprintWorker", "All AI candidates failed (${lastError?.message}). Using smart offline structured blueprint fallback.")
+                    summary = BlueprintService.generateFallbackBlueprint(extractedText)
                 }
             }
 
@@ -93,14 +103,15 @@ class BlueprintWorker(
                     
                 return Result.success(outputData)
             } else {
-                val errorMsg = lastError?.message ?: "AI failed to generate blueprint from source text."
-                Timber.e("BlueprintWorker: All candidates failed. $errorMsg")
+                val errorMsg = "Failed to construct blueprint from source text."
+                com.example.utils.AppLogger.e("BlueprintWorker", errorMsg)
                 return Result.failure(androidx.work.workDataOf("error" to errorMsg))
             }
 
         } catch (e: Exception) {
-            Timber.e(e, "BlueprintWorker: Exception during blueprint generation")
-            return Result.failure(androidx.work.workDataOf("error" to (e.message ?: "Unknown error")))
+            val errorMsg = e.message ?: "Unknown exception during blueprint generation"
+            com.example.utils.AppLogger.e("BlueprintWorker", "Exception during blueprint generation", e)
+            return Result.failure(androidx.work.workDataOf("error" to errorMsg))
         }
     }
 }
