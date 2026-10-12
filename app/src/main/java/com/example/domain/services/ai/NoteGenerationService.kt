@@ -51,6 +51,14 @@ class NoteGenerationService(
             10. ENVIRONMENT BALANCING: You MUST meticulously balance every `\begin` with its corresponding `\end`. Do NOT leave `\begin{tikzpicture}` without `\end{tikzpicture}`. Do NOT add stray `\end{center}` without a matching `\begin{center}`.
             11. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
             
+            **STRICT XELATEX RULES FOR THIS GENERATION:**
+            1. **Bengali in Math:** NEVER put Bengali characters directly inside math mode (${'$'}...${'$'} or ${"$$"}...${"$$"}). You MUST wrap all Bengali text inside equations with `\text{...}` (e.g., ${'$'}P(A) = \text{স্বাধীন ঘটনা}${'$'}).
+            2. **No Floats in Boxes:** NEVER use floating environments (`\begin{table}` or `\begin{figure}`) inside a `tcolorbox`, `minipage`, or other boxes. Just use `\begin{center}` and `\begin{tabular}` directly. If a caption is needed inside a box, use `\captionof{table}{...}`.
+            3. **Environment Hygiene:** Double-check that every single `\begin{...}` has a matching `\end{...}`. Do not leave tables or lists unclosed.
+            4. **Valid Math Commands:** Do not use text-mode formatting commands like `\b` inside math mode. Use `\mathbf{...}` for bold math text.
+            5. **No Stray Line Breaks:** Do not use `\\` to create new paragraphs or vertical space in standard text (it causes "There's no line here to end" errors). Use a blank line for a new paragraph or `\vspace{}`.
+            6. **Script Consistency:** Output only English and Bengali text. Do not generate Arabic, Tamil, or other non-Latin scripts.
+            
             LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
         """.trimIndent()
 
