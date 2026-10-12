@@ -93,9 +93,10 @@ fun PdfUploadScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     if (state.isProcessingPdf) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Processing document...", color = MaterialTheme.colorScheme.primary)
+                        com.example.ui.components.WavyLoadingIndicator(
+                            message = "Processing PDF document...",
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
                     } else if (state.errorMessage != null) {
                         Icon(
                             imageVector = Icons.Default.ErrorOutline,

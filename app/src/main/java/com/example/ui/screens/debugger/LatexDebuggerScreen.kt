@@ -175,22 +175,35 @@ fun LatexDebuggerScreen(
             }
 
             if (state.isDebugging) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                com.example.ui.components.glass.GlassCard(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(36.dp))
-                    Text("AI is debugging your LaTeX code...", style = MaterialTheme.typography.bodyMedium)
-                    OutlinedButton(
-                        onClick = { viewModel.cancelDebugging() },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(Icons.Default.Cancel, contentDescription = "Cancel Debugging")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Cancel Debugging", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "AI is debugging your LaTeX code...",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        com.example.ui.components.WavyLinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(16.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        OutlinedButton(
+                            onClick = { viewModel.cancelDebugging() },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Debugging")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Cancel Debugging", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {

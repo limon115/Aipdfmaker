@@ -122,13 +122,10 @@ fun YouTubeLinkScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Extracting video captions...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
+                com.example.ui.components.WavyLoadingCard(
+                    message = "Extracting Video Captions...",
+                    subMessage = "Downloading captions & processing transcript"
+                )
             }
             
             Spacer(modifier = Modifier.weight(1f))

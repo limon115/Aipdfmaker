@@ -150,14 +150,11 @@ fun InputSourceScreen(
             )
             
             if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                com.example.ui.components.WavyLoadingCard(
+                    message = "Importing Document...",
+                    subMessage = "Extracting text and preparing workspace",
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
             }
 
             LazyColumn(

@@ -7,11 +7,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -19,8 +21,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.glass.GlassCard
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -129,7 +134,8 @@ fun WavyLinearProgressIndicator(
 }
 
 /**
- * Indeterminate wavy progress indicator.
+ * Indeterminate wavy linear progress indicator.
+ * Smoothly animates a sine wave across the track continuously.
  */
 @Composable
 fun WavyLinearProgressIndicator(
@@ -192,6 +198,234 @@ fun WavyLinearProgressIndicator(
                 cap = StrokeCap.Round,
                 join = StrokeJoin.Round
             )
+        )
+    }
+}
+
+/**
+ * Modern wavy circular progress indicator for icons, badges, or small circular loaders.
+ */
+@Composable
+fun WavyCircularProgressIndicator(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+    strokeWidth: Dp = 3.dp,
+    waveAmplitude: Dp = 1.5.dp,
+    waveCount: Int = 6
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "WavyCircularTransition")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "WavyCircularPhase"
+    )
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "WavyCircularRotation"
+    )
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val strokeWidthPx = strokeWidth.toPx()
+        val ampPx = waveAmplitude.toPx()
+        val baseRadius = (minOf(size.width, size.height) / 2f) - ampPx - strokeWidthPx
+        if (baseRadius <= 0f) return@Canvas
+
+        // Subtle track circle
+        drawCircle(
+            color = trackColor,
+            radius = baseRadius,
+            center = center,
+            style = Stroke(width = strokeWidthPx)
+        )
+
+        // Animated wavy ring
+        val path = Path()
+        val steps = 60
+        val rotRad = Math.toRadians(rotation.toDouble()).toFloat()
+
+        for (i in 0..steps) {
+            val angle = (i.toFloat() / steps) * (2 * PI).toFloat()
+            val r = baseRadius + ampPx * sin(waveCount * angle - phase)
+            val currentAngle = angle + rotRad
+            val x = center.x + r * kotlin.math.cos(currentAngle)
+            val y = center.y + r * kotlin.math.sin(currentAngle)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(
+                width = strokeWidthPx,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+    }
+}
+
+/**
+ * Full-screen glassmorphic loading screen featuring a wavy progress bar.
+ */
+@Composable
+fun WavyLoadingScreen(
+    message: String = "Loading...",
+    modifier: Modifier = Modifier,
+    subMessage: String? = null,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .fillMaxWidth()
+        ) {
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 32.dp)
+                ) {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    WavyLinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp),
+                        color = color,
+                        strokeWidth = 4.dp,
+                        waveAmplitude = 4.dp,
+                        wavePeriod = 24.dp
+                    )
+
+                    if (subMessage != null) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = subMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Standalone glassmorphic card with a wavy progress bar.
+ */
+@Composable
+fun WavyLoadingCard(
+    message: String,
+    modifier: Modifier = Modifier,
+    subMessage: String? = null,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            WavyLinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp),
+                color = color,
+                strokeWidth = 4.dp,
+                waveAmplitude = 3.5.dp
+            )
+            if (subMessage != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = subMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Compact inline wavy progress bar with an optional message.
+ */
+@Composable
+fun WavyLoadingIndicator(
+    modifier: Modifier = Modifier,
+    message: String? = null,
+    color: Color = MaterialTheme.colorScheme.primary,
+    strokeWidth: Dp = 4.dp,
+    waveAmplitude: Dp = 3.dp
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (message != null) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        WavyLinearProgressIndicator(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(waveAmplitude * 2 + strokeWidth + 4.dp),
+            color = color,
+            strokeWidth = strokeWidth,
+            waveAmplitude = waveAmplitude
         )
     }
 }

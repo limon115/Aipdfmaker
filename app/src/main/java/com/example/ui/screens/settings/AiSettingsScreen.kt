@@ -76,9 +76,11 @@ fun AiSettingsScreen(
         containerColor = androidx.compose.ui.graphics.Color.Transparent
     ) { innerPadding ->
         if (settingsNullable == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            com.example.ui.components.WavyLoadingScreen(
+                message = "Loading AI Settings...",
+                subMessage = "Retrieving provider configurations and keys",
+                modifier = Modifier.padding(innerPadding)
+            )
         } else {
             val settings = settingsNullable!!
             Column(

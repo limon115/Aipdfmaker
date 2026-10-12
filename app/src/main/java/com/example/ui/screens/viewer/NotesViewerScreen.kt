@@ -206,7 +206,10 @@ fun NotesViewerScreen(
                 .padding(innerPadding)
         ) {
             if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
+                com.example.ui.components.WavyLoadingScreen(
+                    message = "Loading LaTeX Document...",
+                    subMessage = "Parsing snippets and compiling preview"
+                )
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(
@@ -291,7 +294,11 @@ fun NotesViewerScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 } else {
-                    CircularProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
+                    com.example.ui.components.WavyLinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(16.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }

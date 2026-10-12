@@ -178,9 +178,14 @@ fun ApiKeyTestSection(
         
         when (testState) {
             is TestState.Testing -> {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    com.example.ui.components.WavyLinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(14.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Text("Testing API connection...", style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -310,9 +315,14 @@ fun ModelTestSection(
         
         when (testState) {
             is ModelTestState.Testing -> {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    com.example.ui.components.WavyLinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(14.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Text("Running model test...", style = MaterialTheme.typography.bodyMedium)
                 }
             }

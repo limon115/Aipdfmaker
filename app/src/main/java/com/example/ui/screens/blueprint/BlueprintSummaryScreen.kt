@@ -73,9 +73,11 @@ fun BlueprintSummaryScreen(
         }
     ) { innerPadding ->
         if (state == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            com.example.ui.components.WavyLoadingScreen(
+                message = "Generating Blueprint Summary...",
+                subMessage = "Analyzing topics, formatting rules, and LaTeX structure",
+                modifier = Modifier.padding(innerPadding)
+            )
         } else {
             val safeState = state!!
             Column(

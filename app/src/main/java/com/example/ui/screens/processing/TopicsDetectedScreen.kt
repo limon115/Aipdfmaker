@@ -78,9 +78,10 @@ fun TopicsDetectedScreen(
                 .padding(horizontal = 16.dp)
         ) {
             if (blueprintState == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                com.example.ui.components.WavyLoadingScreen(
+                    message = "Detecting Lecture Topics...",
+                    subMessage = "Extracting key concepts, formulas, and headings"
+                )
             } else {
                 com.example.ui.components.glass.GlassCard(
                     modifier = Modifier

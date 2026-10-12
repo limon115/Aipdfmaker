@@ -138,7 +138,20 @@ fun ProcessingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(28.dp))
+
+            com.example.ui.components.WavyLinearProgressIndicator(
+                progress = { progressAnim.value },
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(20.dp),
+                color = ringColor,
+                trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
+                strokeWidth = 6.dp,
+                waveAmplitude = 4.dp
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Cycling Status Text with Animation
             AnimatedContent(
@@ -227,10 +240,11 @@ fun ChecklistRow(item: ChecklistItem) {
                     }
                 }
                 StepState.IN_PROGRESS -> {
-                    CircularProgressIndicator(
+                    com.example.ui.components.WavyCircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.5.dp,
+                        waveAmplitude = 1.5.dp
                     )
                 }
                 StepState.PENDING -> {

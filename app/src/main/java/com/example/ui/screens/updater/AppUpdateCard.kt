@@ -33,10 +33,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -284,19 +282,17 @@ fun AppUpdateCard(
                 }
 
                 is UpdateState.Checking -> {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
+                        com.example.ui.components.WavyLinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(16.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Checking GitHub Actions for artifacts...",
                             style = MaterialTheme.typography.bodyMedium,
@@ -473,19 +469,17 @@ fun AppUpdateCard(
                 }
 
                 is UpdateState.Extracting -> {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
+                        com.example.ui.components.WavyLinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(16.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Extracting APK (Zip Slip protected)...",
                             style = MaterialTheme.typography.bodyMedium
@@ -494,19 +488,17 @@ fun AppUpdateCard(
                 }
 
                 is UpdateState.Validating -> {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
+                        com.example.ui.components.WavyLinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(16.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Validating package ID & cryptographic signatures...",
                             style = MaterialTheme.typography.bodyMedium
@@ -619,16 +611,15 @@ fun AppUpdateCard(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
+                            com.example.ui.components.WavyLinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().height(16.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Package installer active...",
                                 style = MaterialTheme.typography.bodyMedium,

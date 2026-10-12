@@ -201,6 +201,55 @@ fun NoteGenerationScreen(
                 }
             }
 
+            if (!state.isFinished && !state.hasError) {
+                val completedCount = state.checklist.count { it.state == StepState.COMPLETED }
+                val totalCount = state.checklist.size
+                com.example.ui.components.glass.GlassCard(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Generating Study Notes...",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (totalCount > 0) {
+                                Text(
+                                    "$completedCount / $totalCount",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        if (totalCount > 0) {
+                            val prog = (completedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f)
+                            com.example.ui.components.WavyLinearProgressIndicator(
+                                progress = { prog },
+                                modifier = Modifier.fillMaxWidth().height(16.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            com.example.ui.components.WavyLinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().height(16.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
