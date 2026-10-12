@@ -77,6 +77,9 @@ class MathSolverWorker(
             val prompt = """
                 Act as an expert mathematics tutor. I have a specific math problem for you to solve. Please provide a comprehensive breakdown by strictly following these instructions:
                 
+                0. Problem Statement (MANDATORY AT THE VERY BEGINNING):
+                Always write the question/problem provided at the very beginning of the PDF before solving. Present the complete original question clearly at the start of your document body inside an elegant box or dedicated section (e.g., \begin{tcolorbox}[title=\textbf{Problem Statement}] ... \end{tcolorbox} or \section*{Problem Statement}).
+                
                 1. Related Theory & Fundamentals:
                 Explain all the core theories, concepts, and fundamental formulas related to this problem. Strictly use fundamental core formulas for your proofs and explanations. Do not use derived memory tricks or shortcuts unless you ask for my permission first.
                 
@@ -88,6 +91,7 @@ class MathSolverWorker(
                 Show me all possible variations of this specific type of math problem that I might encounter. For each variation, provide the complete solution.
 
                 CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
+                0. ALWAYS WRITE THE QUESTION FIRST: You MUST write the provided question/problem statement at the very top of the generated document body before beginning the theory or solution.
                 1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
                 2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
                 3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
