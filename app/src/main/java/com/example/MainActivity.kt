@@ -5,6 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -76,7 +81,14 @@ fun DocMorphApp(
 ) {
   val navController = rememberNavController()
   
-  NavHost(navController = navController, startDestination = initialRoute) {
+  NavHost(
+      navController = navController,
+      startDestination = initialRoute,
+      enterTransition = { fadeIn(animationSpec = tween(260, easing = LinearOutSlowInEasing)) },
+      exitTransition = { fadeOut(animationSpec = tween(200, easing = FastOutLinearInEasing)) },
+      popEnterTransition = { fadeIn(animationSpec = tween(260, easing = LinearOutSlowInEasing)) },
+      popExitTransition = { fadeOut(animationSpec = tween(200, easing = FastOutLinearInEasing)) }
+  ) {
     composable("onboarding") {
       OnboardingScreen(
         onGetStartedClick = {

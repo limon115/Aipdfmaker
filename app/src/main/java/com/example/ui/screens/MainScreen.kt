@@ -147,50 +147,36 @@ fun MainScreen() {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    // Smooth, instant crossfade between primary bottom nav tabs (no heavy multi-screen slide jank)
-                    fadeIn(animationSpec = tween(140, easing = LinearOutSlowInEasing))
+                    fadeIn(animationSpec = tween(160, easing = LinearOutSlowInEasing))
                 } else {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> fullWidth / 4 },
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
+                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))
                 }
             },
             exitTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    // Smooth, instant crossfade between primary bottom nav tabs
-                    fadeOut(animationSpec = tween(100, easing = FastOutLinearInEasing))
+                    fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
                 } else {
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> -fullWidth / 6 },
-                        animationSpec = tween(200, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
                 }
             },
             popEnterTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    fadeIn(animationSpec = tween(140, easing = LinearOutSlowInEasing))
+                    fadeIn(animationSpec = tween(160, easing = LinearOutSlowInEasing))
                 } else {
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> -fullWidth / 6 },
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
+                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))
                 }
             },
             popExitTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    fadeOut(animationSpec = tween(100, easing = FastOutLinearInEasing))
+                    fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
                 } else {
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> fullWidth / 4 },
-                        animationSpec = tween(200, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
                 }
             }
         ) {

@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
+import com.example.ui.components.WavyCircularProgressIndicator
+import com.example.ui.components.WavyLinearProgressIndicator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -115,19 +117,14 @@ fun ProcessingScreen(
                     else -> Color(0xFF3B82F6) // Blue
                 }
 
-                CircularProgressIndicator(
-                    progress = { 1f },
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                    strokeWidth = 8.dp
-                )
-
-                CircularProgressIndicator(
+                WavyCircularProgressIndicator(
                     progress = { progressAnim.value },
                     modifier = Modifier.fillMaxSize(),
                     color = ringColor,
+                    trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f),
                     strokeWidth = 8.dp,
-                    strokeCap = StrokeCap.Round
+                    waveAmplitude = 6.dp,
+                    waveCount = 12
                 )
 
                 Text(
@@ -140,7 +137,7 @@ fun ProcessingScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            com.example.ui.components.WavyLinearProgressIndicator(
+            WavyLinearProgressIndicator(
                 progress = { progressAnim.value },
                 modifier = Modifier
                     .fillMaxWidth(0.8f)

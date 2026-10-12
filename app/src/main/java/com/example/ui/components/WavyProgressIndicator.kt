@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ui.components.glass.GlassCard
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.math.cos
 
 /**
  * Modern expressive wavy linear progress indicator.
@@ -200,6 +201,116 @@ fun WavyLinearProgressIndicator(
             )
         )
     }
+}
+
+/**
+ * Modern wavy circular progress indicator with determinate progress support.
+ * Renders an animated wavy track and active progress arc that flows dynamically around the circle.
+ */
+@Composable
+fun WavyCircularProgressIndicator(
+    progress: () -> Float,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+    strokeWidth: Dp = 8.dp,
+    waveAmplitude: Dp = 6.dp,
+    waveCount: Int = 12
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "WavyCircularProgressTransition")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "WavyCircularProgressPhase"
+    )
+
+    Canvas(modifier = modifier) {
+        val currentProgress = progress().coerceIn(0f, 1f)
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val strokeWidthPx = strokeWidth.toPx()
+        val ampPx = waveAmplitude.toPx()
+        val baseRadius = (minOf(size.width, size.height) / 2f) - ampPx - strokeWidthPx / 2f
+        if (baseRadius <= 0f) return@Canvas
+
+        // Draw track circle (subtle background ring)
+        drawCircle(
+            color = trackColor,
+            radius = baseRadius,
+            center = center,
+            style = Stroke(
+                width = strokeWidthPx,
+                cap = StrokeCap.Round
+            )
+        )
+
+        // Draw active animated wavy progress arc
+        if (currentProgress > 0.005f) {
+            val wavePath = Path()
+            val startAngle = -PI / 2.0 // Start at top (12 o'clock)
+            val sweepAngle = 2 * PI * currentProgress
+            val totalSteps = (180 * currentProgress).toInt().coerceAtLeast(12)
+
+            for (i in 0..totalSteps) {
+                val fraction = i.toFloat() / totalSteps
+                val angle = startAngle + sweepAngle * fraction
+                val angleFromStart = sweepAngle * fraction
+
+                // Radius modulated by sine wave along the circular arc
+                val r = baseRadius + ampPx * sin(waveCount * angleFromStart - phase).toFloat()
+                val x = (center.x + r * cos(angle)).toFloat()
+                val y = (center.y + r * sin(angle)).toFloat()
+
+                if (i == 0) {
+                    wavePath.moveTo(x, y)
+                } else {
+                    wavePath.lineTo(x, y)
+                }
+            }
+
+            // If full circle (100%), close path smoothly
+            if (currentProgress >= 0.999f) {
+                wavePath.close()
+            }
+
+            drawPath(
+                path = wavePath,
+                color = color,
+                style = Stroke(
+                    width = strokeWidthPx,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Overload accepting direct Float progress.
+ */
+@Composable
+fun WavyCircularProgressIndicator(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+    strokeWidth: Dp = 8.dp,
+    waveAmplitude: Dp = 6.dp,
+    waveCount: Int = 12
+) {
+    WavyCircularProgressIndicator(
+        progress = { progress },
+        modifier = modifier,
+        color = color,
+        trackColor = trackColor,
+        strokeWidth = strokeWidth,
+        waveAmplitude = waveAmplitude,
+        waveCount = waveCount
+    )
 }
 
 /**
