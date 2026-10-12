@@ -13,6 +13,26 @@ class ApkInstallerService(private val context: Context) {
 
     companion object {
         private const val TAG = "ApkInstallerService"
+
+        /**
+         * Cleans up all downloaded update files (APKs, ZIPs, and temporary files) from storage.
+         */
+        fun cleanupUpdatesDir(context: Context) {
+            try {
+                val updatesDir = File(context.filesDir, "updates")
+                if (updatesDir.exists() && updatesDir.isDirectory) {
+                    val files = updatesDir.listFiles()
+                    files?.forEach { file ->
+                        if (file.isFile) {
+                            val deleted = file.delete()
+                            AppLogger.i(TAG, "Cleaned up update file from storage: ${file.name}, success=$deleted")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.e(TAG, "Failed to clean up update files from storage", e)
+            }
+        }
     }
 
     /**
@@ -61,6 +81,12 @@ class ApkInstallerService(private val context: Context) {
                 val errorMsg = "Cannot install: APK file does not exist at ${apkFile.absolutePath}"
                 AppLogger.e(TAG, errorMsg)
                 return Result.failure(IllegalArgumentException(errorMsg))
+            }
+
+            try {
+                apkFile.deleteOnExit()
+            } catch (e: Exception) {
+                AppLogger.w(TAG, "Could not set deleteOnExit: ${e.message}")
             }
 
             val authority = "${context.packageName}.fileprovider"

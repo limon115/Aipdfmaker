@@ -42,6 +42,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.services.updater.UpdateState
@@ -72,6 +76,7 @@ fun AppUpdateCard(
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     val savedToken by viewModel.githubToken.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var tokenInput by remember(savedToken) { mutableStateOf(savedToken) }
     var isTokenVisible by remember { mutableStateOf(false) }
@@ -81,9 +86,18 @@ fun AppUpdateCard(
         mutableStateOf(viewModel.canRequestPackageInstalls())
     }
 
-    // Refresh permission state on resume/render
-    LaunchedEffect(Unit) {
-        canInstallUnknownSources = viewModel.canRequestPackageInstalls()
+    // Refresh permission state & check for completed install on resume
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                canInstallUnknownSources = viewModel.canRequestPackageInstalls()
+                viewModel.onResumeCheck()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     GlassCard(
@@ -543,6 +557,11 @@ fun AppUpdateCard(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Signature check: Passed", style = MaterialTheme.typography.bodySmall)
                             }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Storage: Update file automatically deleted after installation", style = MaterialTheme.typography.bodySmall)
+                            }
                         }
 
                         // Unknown sources permission check
@@ -591,23 +610,45 @@ fun AppUpdateCard(
                 }
 
                 is UpdateState.Installing -> {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Package installer active...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                         Text(
-                            text = "Starting Android package installer...",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "Please complete installation in the Android system prompt. The downloaded APK will be automatically deleted from storage once installation finishes.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.onResumeCheck()
+                                viewModel.checkForUpdates()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Check Update Status / Done", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
 

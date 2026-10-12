@@ -15,6 +15,13 @@ class DocMorphApplication : Application() {
         super.onCreate()
         Timber.plant(Timber.DebugTree())
         
+        // Clean up leftover update files from storage
+        try {
+            com.example.domain.services.updater.ApkInstallerService.cleanupUpdatesDir(this)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to clean up update files on app startup")
+        }
+
         // Eagerly initialize DataStore caching mechanism to eliminate startup delays
         GlobalScope.launch {
             val dataStore = AiSettingsDataStore(this@DocMorphApplication)

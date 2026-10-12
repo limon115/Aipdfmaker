@@ -49,6 +49,9 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
         currentVersionName = packageInfo?.versionName ?: "1.0"
         currentVersionCode = packageInfo?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 1L
 
+        // Clean up any update files leftover from a previous installation
+        ApkInstallerService.cleanupUpdatesDir(application)
+
         viewModelScope.launch {
             dataStore.aiSettingsFlow.collectLatest { settings ->
                 _githubToken.value = settings.githubToken
@@ -165,6 +168,9 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
                 val validationResult = validationService.validateApk(apkFile)
 
                 if (!validationResult.isValid) {
+                    if (apkFile.exists()) {
+                        apkFile.delete()
+                    }
                     _updateState.value = UpdateState.Error(
                         message = "APK Validation Failed: ${validationResult.statusMessage}"
                     )
@@ -186,10 +192,32 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun installApk(apkFile: File) {
+        _updateState.value = UpdateState.Installing
         val result = installerService.installApk(apkFile)
         if (result.isFailure) {
             _updateState.value = UpdateState.Error(
                 message = "Installation failed: ${result.exceptionOrNull()?.message}"
+            )
+        }
+    }
+
+    /**
+     * Checks if the app was newly installed after returning to the app and cleans up storage.
+     */
+    fun onResumeCheck() {
+        val context = getApplication<Application>()
+        val packageInfo = try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (e: Exception) {
+            null
+        }
+        val latestCode = packageInfo?.let { PackageInfoCompat.getLongVersionCode(it) } ?: currentVersionCode
+        if (latestCode > currentVersionCode) {
+            AppLogger.i(TAG, "Detected newly installed version: $latestCode > $currentVersionCode. Cleaning up update files.")
+            ApkInstallerService.cleanupUpdatesDir(context)
+            _updateState.value = UpdateState.UpToDate(
+                currentVersionName = packageInfo?.versionName ?: currentVersionName,
+                currentVersionCode = latestCode
             )
         }
     }
@@ -203,6 +231,7 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun resetState() {
+        ApkInstallerService.cleanupUpdatesDir(getApplication())
         _updateState.value = UpdateState.Idle
     }
 }
