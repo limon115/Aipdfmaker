@@ -439,12 +439,11 @@ fun AppUpdateCard(
                             )
                         }
 
-                        LinearProgressIndicator(
+                        com.example.ui.components.WavyLinearProgressIndicator(
                             progress = { state.progress },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
+                                .height(16.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
 

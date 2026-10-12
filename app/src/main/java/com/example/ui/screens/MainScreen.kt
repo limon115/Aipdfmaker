@@ -24,6 +24,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -88,6 +106,7 @@ fun MainScreen() {
     val blueprintViewModel: BlueprintViewModel = viewModel()
 
     MainScreenContent(
+        navController = navController,
         currentRoute = currentRoute,
         onNavigate = { route ->
             navController.navigate(route) {
@@ -453,12 +472,16 @@ fun MainScreen() {
 
 @Composable
 fun MainScreenContent(
-    currentRoute: String?,
+    navController: androidx.navigation.NavHostController,
+    currentRoute: String? = null,
     onNavigate: (String) -> Unit,
     onNavigateToNewProject: () -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
 ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val activeRoute = navBackStackEntry?.destination?.route ?: currentRoute
+
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.Dashboard,
@@ -468,9 +491,9 @@ fun MainScreenContent(
     com.example.ui.components.glass.LiquidBackground {
         Scaffold(
             modifier = modifier,
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            containerColor = Color.Transparent,
             bottomBar = {
-                val isBottomBarVisible = currentRoute in items.map { it.route }
+                val isBottomBarVisible = activeRoute in items.map { it.route }
                 AnimatedVisibility(
                     visible = isBottomBarVisible,
                     enter = slideInVertically(
@@ -482,68 +505,113 @@ fun MainScreenContent(
                         animationSpec = tween(180, easing = FastOutSlowInEasing)
                     ) + fadeOut(animationSpec = tween(150))
                 ) {
-                    val colors = com.example.ui.theme.AppTheme.colors
-                    com.example.ui.components.glass.GlassSurface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                            topStart = 24.dp,
-                            topEnd = 24.dp,
-                            bottomStart = 0.dp,
-                            bottomEnd = 0.dp
+                    val isDark = com.example.ui.theme.AppTheme.colors.isDark
+                    val capsuleShape = RoundedCornerShape(percent = 50)
+
+                    val bgGradient = Brush.linearGradient(
+                        colors = listOf(
+                            if (isDark) Color(0xFF161924).copy(alpha = 0.70f)
+                            else Color.White.copy(alpha = 0.75f),
+                            if (isDark) Color(0xFF10121A).copy(alpha = 0.55f)
+                            else Color.White.copy(alpha = 0.65f)
+                        )
+                    )
+
+                    val borderGradient = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = if (isDark) 0.40f else 0.80f),
+                            Color.White.copy(alpha = if (isDark) 0.08f else 0.20f),
+                            Color.White.copy(alpha = if (isDark) 0.25f else 0.50f)
                         ),
-                        alpha = 0.3f
+                        start = Offset(0f, 0f),
+                        end = Offset(400f, 400f)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
                     ) {
-                        NavigationBar(
-                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                            tonalElevation = 0.dp,
-                            windowInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                        // 1. Floating Capsule Navigation Container with Glassmorphism
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(64.dp)
+                                .shadow(
+                                    elevation = if (isDark) 12.dp else 8.dp,
+                                    shape = capsuleShape,
+                                    spotColor = if (isDark) Color.Black.copy(alpha = 0.45f)
+                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    ambientColor = if (isDark) Color.Black.copy(alpha = 0.25f)
+                                    else Color.Black.copy(alpha = 0.05f)
+                                )
+                                .clip(capsuleShape)
+                                .border(1.dp, borderGradient, capsuleShape)
                         ) {
-                            val homeSelected = currentRoute == BottomNavItem.Home.route
-                            AnimatedBottomNavItem(
-                                selected = homeSelected,
-                                onClick = { onNavigate(BottomNavItem.Home.route) },
-                                icon = {
-                                    Icon(
-                                        if (homeSelected) BottomNavItem.Home.selectedIcon else BottomNavItem.Home.unselectedIcon,
-                                        contentDescription = BottomNavItem.Home.title
-                                    )
-                                },
-                                label = { Text(BottomNavItem.Home.title) }
+                            // Liquid glass background with semi-transparent color and background blur
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .blur(radius = 16.dp)
+                                    .background(bgGradient)
                             )
 
-                            AnimatedBottomNavItem(
-                                selected = false,
+                            // Right-to-Left (RTL) Navigation Items: Home -> Dashboard -> Settings
+                            // Home is on the far RIGHT, Dashboard in the middle, Settings on the LEFT
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val rtlItems = listOf(
+                                        BottomNavItem.Home,
+                                        BottomNavItem.Dashboard,
+                                        BottomNavItem.Settings
+                                    )
+                                    rtlItems.forEach { item ->
+                                        val isSelected = activeRoute == item.route
+                                        CapsuleNavItem(
+                                            item = item,
+                                            selected = isSelected,
+                                            onClick = { onNavigate(item.route) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Separate circular Floating Action Button (FAB) immediately to the right of the main capsule
+                        val isHomeActive = navBackStackEntry?.destination?.route == BottomNavItem.Home.route ||
+                                activeRoute == BottomNavItem.Home.route
+                        AnimatedVisibility(
+                            visible = isHomeActive,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)),
+                            exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
+                        ) {
+                            FloatingActionButton(
                                 onClick = onNavigateToNewProject,
-                                icon = { Icon(Icons.Default.Add, contentDescription = "Add Project") },
-                                label = { Text("New") }
-                            )
-
-                            val dashSelected = currentRoute == BottomNavItem.Dashboard.route
-                            AnimatedBottomNavItem(
-                                selected = dashSelected,
-                                onClick = { onNavigate(BottomNavItem.Dashboard.route) },
-                                icon = {
-                                    Icon(
-                                        if (dashSelected) BottomNavItem.Dashboard.selectedIcon else BottomNavItem.Dashboard.unselectedIcon,
-                                        contentDescription = BottomNavItem.Dashboard.title
-                                    )
-                                },
-                                label = { Text(BottomNavItem.Dashboard.title) }
-                            )
-
-                            val settingsSelected = currentRoute == BottomNavItem.Settings.route
-                            AnimatedBottomNavItem(
-                                selected = settingsSelected,
-                                onClick = { onNavigate(BottomNavItem.Settings.route) },
-                                icon = {
-                                    Icon(
-                                        if (settingsSelected) BottomNavItem.Settings.selectedIcon else BottomNavItem.Settings.unselectedIcon,
-                                        contentDescription = BottomNavItem.Settings.title
-                                    )
-                                },
-                                label = { Text(BottomNavItem.Settings.title) }
-                            )
+                                shape = CircleShape,
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                elevation = FloatingActionButtonDefaults.elevation(
+                                    defaultElevation = 6.dp,
+                                    pressedElevation = 10.dp
+                                ),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "New Project",
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -553,6 +621,7 @@ fun MainScreenContent(
         }
     }
 }
+
 @Composable
 fun CenteredText(text: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -561,16 +630,16 @@ fun CenteredText(text: String) {
 }
 
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.AnimatedBottomNavItem(
+private fun CapsuleNavItem(
+    item: BottomNavItem,
     selected: Boolean,
     onClick: () -> Unit,
-    icon: @Composable () -> Unit,
-    label: @Composable () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
 
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.20f else 1.0f,
+        targetValue = if (selected) 1.15f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -586,26 +655,44 @@ private fun androidx.compose.foundation.layout.RowScope.AnimatedBottomNavItem(
         label = "navIconTranslationY"
     )
     val alpha by animateFloatAsState(
-        targetValue = if (selected) 1.0f else 0.68f,
+        targetValue = if (selected) 1.0f else 0.65f,
         animationSpec = tween(durationMillis = 200),
         label = "navItemAlpha"
     )
-    val labelScale by animateFloatAsState(
-        targetValue = if (selected) 1.05f else 0.95f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "navLabelScale"
-    )
 
-    NavigationBarItem(
-        selected = selected,
-        onClick = {
-            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-            onClick()
-        },
-        icon = {
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 6.dp, horizontal = 4.dp)
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
             Box(
                 modifier = Modifier.graphicsLayer {
                     scaleX = scale
@@ -615,26 +702,23 @@ private fun androidx.compose.foundation.layout.RowScope.AnimatedBottomNavItem(
                 },
                 contentAlignment = Alignment.Center
             ) {
-                icon()
+                Icon(
+                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                    contentDescription = item.title,
+                    tint = contentColor,
+                    modifier = Modifier.size(22.dp)
+                )
             }
-        },
-        label = {
-            Box(
-                modifier = Modifier.graphicsLayer {
-                    this.alpha = alpha
-                    scaleX = labelScale
-                    scaleY = labelScale
-                }
-            ) {
-                label()
+            Spacer(modifier = Modifier.height(2.dp))
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                    color = contentColor,
+                    maxLines = 1
+                )
             }
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = MaterialTheme.colorScheme.primary,
-            selectedTextColor = MaterialTheme.colorScheme.primary,
-            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    )
+        }
+    }
 }

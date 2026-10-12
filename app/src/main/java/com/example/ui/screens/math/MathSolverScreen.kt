@@ -338,12 +338,11 @@ private fun MathSolverProgressCard(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            LinearProgressIndicator(
+            com.example.ui.components.WavyLinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(RoundedCornerShape(5.dp)),
+                    .height(16.dp),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )

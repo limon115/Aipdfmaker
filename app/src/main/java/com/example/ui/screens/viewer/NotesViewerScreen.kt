@@ -278,9 +278,9 @@ fun NotesViewerScreen(
                 Text("Generating PDF...", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 if (state.exportProgress > 0f) {
-                    androidx.compose.material3.LinearProgressIndicator(
+                    com.example.ui.components.WavyLinearProgressIndicator(
                         progress = { state.exportProgress },
-                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(16.dp),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
