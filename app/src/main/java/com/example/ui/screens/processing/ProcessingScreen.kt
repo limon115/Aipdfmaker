@@ -106,17 +106,17 @@ fun ProcessingScreen(
         ) {
             Spacer(modifier = Modifier.weight(1f))
 
+            val ringColor = when (state.workState) {
+                WorkInfo.State.FAILED -> Color(0xFFEF4444) // Red
+                WorkInfo.State.SUCCEEDED -> Color(0xFF10B981) // Green
+                else -> Color(0xFF3B82F6) // Blue
+            }
+
             // The Glowing Circular Progress Indicator
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(240.dp)
             ) {
-                val ringColor = when (state.workState) {
-                    WorkInfo.State.FAILED -> Color(0xFFEF4444) // Red
-                    WorkInfo.State.SUCCEEDED -> Color(0xFF10B981) // Green
-                    else -> Color(0xFF3B82F6) // Blue
-                }
-
                 WavyCircularProgressIndicator(
                     progress = { progressAnim.value },
                     modifier = Modifier.fillMaxSize(),
