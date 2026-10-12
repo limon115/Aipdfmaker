@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -38,11 +37,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -85,31 +82,33 @@ fun MainScreen() {
     )
 
     val context = LocalContext.current
-    val db = AppDatabase.getDatabase(context)
-    val projectDao = db.projectDao()
+    val db = remember { AppDatabase.getDatabase(context) }
+    val projectDao = remember(db) { db.projectDao() }
     
-    val homeViewModelFactory = object : ViewModelProvider.Factory {
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return HomeViewModel(projectDao) as T
+    val homeViewModelFactory = remember(projectDao) {
+        object : ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return HomeViewModel(projectDao) as T
+            }
         }
     }
     val homeViewModel: HomeViewModel = viewModel(factory = homeViewModelFactory)
     
-    val newProjectViewModelFactory = object : ViewModelProvider.Factory {
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return NewProjectViewModel(projectDao) as T
+    val newProjectViewModelFactory = remember(projectDao) {
+        object : ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return NewProjectViewModel(projectDao) as T
+            }
         }
     }
     val newProjectViewModel: NewProjectViewModel = viewModel(factory = newProjectViewModelFactory)
     
     val blueprintViewModel: BlueprintViewModel = viewModel()
 
-    MainScreenContent(
-        navController = navController,
-        currentRoute = currentRoute,
-        onNavigate = { route ->
+    val onNavigate: (String) -> Unit = remember(navController) {
+        { route ->
             navController.navigate(route) {
                 popUpTo(navController.graph.startDestinationId) {
                     saveState = true
@@ -117,16 +116,28 @@ fun MainScreen() {
                 launchSingleTop = true
                 restoreState = true
             }
-        },
-        onNavigateToNewProject = {
+        }
+    }
+
+    val onNavigateToNewProject: () -> Unit = remember(navController) {
+        {
             navController.navigate("input_source")
         }
+    }
+
+    MainScreenContent(
+        navController = navController,
+        currentRoute = currentRoute,
+        onNavigate = onNavigate,
+        onNavigateToNewProject = onNavigateToNewProject
     ) { innerPadding ->
-        val bottomNavRoutes = listOf(
-            BottomNavItem.Home.route,
-            BottomNavItem.Dashboard.route,
-            BottomNavItem.Settings.route
-        )
+        val bottomNavRoutes = remember {
+            listOf(
+                BottomNavItem.Home.route,
+                BottomNavItem.Dashboard.route,
+                BottomNavItem.Settings.route
+            )
+        }
 
         NavHost(
             navController = navController,
@@ -136,73 +147,51 @@ fun MainScreen() {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    if (toIdx > fromIdx) {
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> fullWidth / 3 },
-                            animationSpec = tween(240, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
-                    } else {
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> -fullWidth / 3 },
-                            animationSpec = tween(240, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
-                    }
+                    // Smooth, instant crossfade between primary bottom nav tabs (no heavy multi-screen slide jank)
+                    fadeIn(animationSpec = tween(140, easing = LinearOutSlowInEasing))
                 } else {
                     slideInHorizontally(
                         initialOffsetX = { fullWidth -> fullWidth / 4 },
-                        animationSpec = tween(240, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
                 }
             },
             exitTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    if (toIdx > fromIdx) {
-                        slideOutHorizontally(
-                            targetOffsetX = { fullWidth -> -fullWidth / 3 },
-                            animationSpec = tween(240, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
-                    } else {
-                        slideOutHorizontally(
-                            targetOffsetX = { fullWidth -> fullWidth / 3 },
-                            animationSpec = tween(240, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
-                    }
+                    // Smooth, instant crossfade between primary bottom nav tabs
+                    fadeOut(animationSpec = tween(100, easing = FastOutLinearInEasing))
                 } else {
                     slideOutHorizontally(
                         targetOffsetX = { fullWidth -> -fullWidth / 6 },
                         animationSpec = tween(200, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
+                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
                 }
             },
             popEnterTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    if (toIdx > fromIdx) {
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> fullWidth / 3 },
-                            animationSpec = tween(240, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
-                    } else {
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> -fullWidth / 3 },
-                            animationSpec = tween(240, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
-                    }
+                    fadeIn(animationSpec = tween(140, easing = LinearOutSlowInEasing))
                 } else {
                     slideInHorizontally(
                         initialOffsetX = { fullWidth -> -fullWidth / 6 },
-                        animationSpec = tween(240, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing))
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
                 }
             },
             popExitTransition = {
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> fullWidth / 4 },
-                    animationSpec = tween(240, easing = FastOutSlowInEasing)
-                ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing), targetAlpha = 0.2f)
+                val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
+                val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
+                if (fromIdx != -1 && toIdx != -1) {
+                    fadeOut(animationSpec = tween(100, easing = FastOutLinearInEasing))
+                } else {
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> fullWidth / 4 },
+                        animationSpec = tween(200, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                }
             }
         ) {
             composable(BottomNavItem.Home.route) {
@@ -424,14 +413,15 @@ fun MainScreen() {
             composable("notes_viewer/{projectId}", deepLinks = listOf(androidx.navigation.navDeepLink { uriPattern = "docmorph://notes_viewer/{projectId}" })) { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getString("projectId")?.toIntOrNull() ?: 1
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val db = com.example.data.database.AppDatabase.getDatabase(context)
+                val db = remember(context) { com.example.data.database.AppDatabase.getDatabase(context) }
+                val compilerRepository = remember(context) { com.example.domain.repository.LatexCompilerRepository(context) }
                 
-                val compilerRepository = com.example.domain.repository.LatexCompilerRepository(context)
-                
-                val factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                        @Suppress("UNCHECKED_CAST")
-                        return com.example.ui.screens.viewer.NotesViewerViewModel(db.documentSnippetDao(), compilerRepository, db.projectDao()) as T
+                val factory = remember(db, compilerRepository) {
+                    object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return com.example.ui.screens.viewer.NotesViewerViewModel(db.documentSnippetDao(), compilerRepository, db.projectDao()) as T
+                        }
                     }
                 }
                 val notesViewerViewModel: com.example.ui.screens.viewer.NotesViewerViewModel = 
@@ -483,42 +473,48 @@ fun MainScreenContent(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val activeRoute = navBackStackEntry?.destination?.route ?: currentRoute
 
-    val items = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Dashboard,
-        BottomNavItem.Settings
-    )
+    val items = remember {
+        listOf(
+            BottomNavItem.Home,
+            BottomNavItem.Dashboard,
+            BottomNavItem.Settings
+        )
+    }
 
-    com.example.ui.components.glass.LiquidBackground {
-        Scaffold(
-            modifier = modifier,
-            containerColor = Color.Transparent,
-            bottomBar = {
-                val isBottomBarVisible = activeRoute in items.map { it.route }
-                AnimatedVisibility(
-                    visible = isBottomBarVisible,
-                    enter = slideInVertically(
-                        initialOffsetY = { it },
-                        animationSpec = tween(240, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(200)),
-                    exit = slideOutVertically(
-                        targetOffsetY = { it },
-                        animationSpec = tween(180, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(150))
-                ) {
-                    val isDark = com.example.ui.theme.AppTheme.colors.isDark
-                    val capsuleShape = RoundedCornerShape(percent = 50)
+    val bottomNavRoutes = remember(items) { items.map { it.route }.toSet() }
 
-                    val bgGradient = Brush.linearGradient(
+    Scaffold(
+        modifier = modifier,
+        containerColor = Color.Transparent,
+        bottomBar = {
+            val isBottomBarVisible = activeRoute in bottomNavRoutes
+            AnimatedVisibility(
+                visible = isBottomBarVisible,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = tween(180, easing = FastOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(140)),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = tween(140, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(100))
+            ) {
+                val isDark = com.example.ui.theme.AppTheme.colors.isDark
+                val capsuleShape = remember { RoundedCornerShape(percent = 50) }
+
+                val bgGradient = remember(isDark) {
+                    Brush.linearGradient(
                         colors = listOf(
-                            if (isDark) Color(0xFF161924).copy(alpha = 0.70f)
-                            else Color.White.copy(alpha = 0.75f),
-                            if (isDark) Color(0xFF10121A).copy(alpha = 0.55f)
-                            else Color.White.copy(alpha = 0.65f)
+                            if (isDark) Color(0xFF161924).copy(alpha = 0.85f)
+                            else Color.White.copy(alpha = 0.88f),
+                            if (isDark) Color(0xFF10121A).copy(alpha = 0.75f)
+                            else Color.White.copy(alpha = 0.80f)
                         )
                     )
+                }
 
-                    val borderGradient = Brush.linearGradient(
+                val borderGradient = remember(isDark) {
+                    Brush.linearGradient(
                         colors = listOf(
                             Color.White.copy(alpha = if (isDark) 0.40f else 0.80f),
                             Color.White.copy(alpha = if (isDark) 0.08f else 0.20f),
@@ -527,99 +523,83 @@ fun MainScreenContent(
                         start = Offset(0f, 0f),
                         end = Offset(400f, 400f)
                     )
+                }
 
-                    Row(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+                ) {
+                    // 1. Floating Capsule Navigation Container with Glassmorphism (Home First)
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
-                    ) {
-                        // 1. Floating Capsule Navigation Container with Glassmorphism
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(64.dp)
-                                .shadow(
-                                    elevation = if (isDark) 12.dp else 8.dp,
-                                    shape = capsuleShape,
-                                    spotColor = if (isDark) Color.Black.copy(alpha = 0.45f)
-                                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    ambientColor = if (isDark) Color.Black.copy(alpha = 0.25f)
-                                    else Color.Black.copy(alpha = 0.05f)
-                                )
-                                .clip(capsuleShape)
-                                .border(1.dp, borderGradient, capsuleShape)
-                        ) {
-                            // Liquid glass background with semi-transparent color and background blur
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .blur(radius = 16.dp)
-                                    .background(bgGradient)
+                            .weight(1f)
+                            .height(64.dp)
+                            .shadow(
+                                elevation = if (isDark) 12.dp else 8.dp,
+                                shape = capsuleShape,
+                                spotColor = if (isDark) Color.Black.copy(alpha = 0.45f)
+                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                ambientColor = if (isDark) Color.Black.copy(alpha = 0.25f)
+                                else Color.Black.copy(alpha = 0.05f)
                             )
-
-                            // Right-to-Left (RTL) Navigation Items: Home -> Dashboard -> Settings
-                            // Home is on the far RIGHT, Dashboard in the middle, Settings on the LEFT
-                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 6.dp),
-                                    horizontalArrangement = Arrangement.SpaceEvenly,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val rtlItems = listOf(
-                                        BottomNavItem.Home,
-                                        BottomNavItem.Dashboard,
-                                        BottomNavItem.Settings
-                                    )
-                                    rtlItems.forEach { item ->
-                                        val isSelected = activeRoute == item.route
-                                        CapsuleNavItem(
-                                            item = item,
-                                            selected = isSelected,
-                                            onClick = { onNavigate(item.route) },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // 2. Separate circular Floating Action Button (FAB) immediately to the right of the main capsule
-                        val isHomeActive = navBackStackEntry?.destination?.route == BottomNavItem.Home.route ||
-                                activeRoute == BottomNavItem.Home.route
-                        AnimatedVisibility(
-                            visible = isHomeActive,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)),
-                            exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
+                            .clip(capsuleShape)
+                            .background(bgGradient)
+                            .border(1.dp, borderGradient, capsuleShape)
+                    ) {
+                        // Home is FIRST on the left, Dashboard in middle, Settings on the right
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FloatingActionButton(
-                                onClick = onNavigateToNewProject,
-                                shape = CircleShape,
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                                elevation = FloatingActionButtonDefaults.elevation(
-                                    defaultElevation = 6.dp,
-                                    pressedElevation = 10.dp
-                                ),
-                                modifier = Modifier.size(56.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "New Project",
-                                    modifier = Modifier.size(26.dp)
+                            items.forEach { item ->
+                                val isSelected = activeRoute == item.route
+                                CapsuleNavItem(
+                                    item = item,
+                                    selected = isSelected,
+                                    onClick = { onNavigate(item.route) },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
                     }
+
+                    // 2. Separate circular Floating Action Button (FAB) immediately to the right of the main capsule
+                    val isHomeActive = activeRoute == BottomNavItem.Home.route
+                    AnimatedVisibility(
+                        visible = isHomeActive,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing))
+                    ) {
+                        FloatingActionButton(
+                            onClick = onNavigateToNewProject,
+                            shape = CircleShape,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            elevation = FloatingActionButtonDefaults.elevation(
+                                defaultElevation = 6.dp,
+                                pressedElevation = 10.dp
+                            ),
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "New Project",
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
                 }
             }
-        ) { innerPadding ->
-            content(innerPadding)
         }
+    ) { innerPadding ->
+        content(innerPadding)
     }
 }
 
@@ -640,24 +620,24 @@ private fun CapsuleNavItem(
     val haptic = LocalHapticFeedback.current
 
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.15f else 1.0f,
+        targetValue = if (selected) 1.08f else 1.0f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessHigh
         ),
         label = "navIconScale"
     )
     val translationY by animateFloatAsState(
-        targetValue = if (selected) -2f else 0f,
+        targetValue = if (selected) -1.5f else 0f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessHigh
         ),
         label = "navIconTranslationY"
     )
     val alpha by animateFloatAsState(
         targetValue = if (selected) 1.0f else 0.65f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = 150),
         label = "navItemAlpha"
     )
 
@@ -711,15 +691,13 @@ private fun CapsuleNavItem(
                 )
             }
             Spacer(modifier = Modifier.height(2.dp))
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    color = contentColor,
-                    maxLines = 1
-                )
-            }
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = contentColor,
+                maxLines = 1
+            )
         }
     }
 }
