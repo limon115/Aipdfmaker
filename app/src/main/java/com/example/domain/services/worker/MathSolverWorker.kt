@@ -84,7 +84,8 @@ class MathSolverWorker(
                 Act as an expert mathematics tutor. I have a specific math problem for you to solve. Please provide a comprehensive breakdown by strictly following these instructions:
                 
                 0. Problem Statement (MANDATORY AT THE VERY BEGINNING):
-                Always write the question/problem provided at the very beginning of the PDF before solving. Present the complete original question clearly at the start of your document body inside an elegant box or dedicated section (e.g., \begin{tcolorbox}[title=\textbf{Problem Statement}] ... \end{tcolorbox} or \section*{Problem Statement}).
+                Always write the question/problem provided at the very beginning of the PDF before solving. Present the complete original question clearly at the start of your document body inside an elegant box or dedicated section (e.g., \begin{tcolorbox}[title={\textbf{Problem Statement}}] ... \end{tcolorbox} or \section*{Problem Statement}).
+                CRITICAL: NEVER output raw bracketed option text like "title=Problem Statement]" without the enclosing \begin{tcolorbox} environment and properly paired brackets!
                 
                 1. Related Theory & Fundamentals:
                 Explain all the core theories, concepts, and fundamental formulas related to this problem. Strictly use fundamental core formulas for your proofs and explanations. Do not use derived memory tricks or shortcuts unless you ask for my permission first.
@@ -97,7 +98,7 @@ class MathSolverWorker(
                 Show me all possible variations of this specific type of math problem that I might encounter. For each variation, provide the complete solution.
 
                 CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
-                0. ALWAYS WRITE THE QUESTION FIRST: You MUST write the provided question/problem statement at the very top of the generated document body before beginning the theory or solution.
+                0. ALWAYS WRITE THE QUESTION FIRST: You MUST write the provided question/problem statement at the very top of the generated document body inside \begin{tcolorbox}[title={\textbf{Problem Statement}}] ... \end{tcolorbox} or \section*{Problem Statement} before beginning the theory or solution.
                 1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
                 2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
                 3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
@@ -178,6 +179,57 @@ class MathSolverWorker(
             }
             cleanLatex = cleanLatex.trim()
 
+            // If AI returned full document wrapper, strip documentclass and begin/end document
+            if (cleanLatex.contains("\\documentclass")) {
+                cleanLatex = cleanLatex.substringAfter("\\begin{document}", cleanLatex)
+            }
+            cleanLatex = cleanLatex
+                .replace(Regex("""\\documentclass(\[.*?\])?\{.*?\}"""), "")
+                .replace(Regex("""\\begin\{document\}"""), "")
+                .replace(Regex("""\\end\{document\}"""), "")
+                .trim()
+
+            // Normalize any malformed \begin{tcolorbox} missing opening '['
+            cleanLatex = cleanLatex.replace(
+                Regex("""\\begin\{tcolorbox\}\s*title\s*=""", RegexOption.IGNORE_CASE),
+                """\begin{tcolorbox}[title="""
+            )
+
+            // Fix bare stray "title=Problem Statement]" or "[title=Problem Statement]" without \begin{tcolorbox}
+            cleanLatex = cleanLatex.replace(
+                Regex("""(?m)^(?!\s*\\begin\{tcolorbox\}\s*\[)\s*\[?title\s*=\s*(?:\\textbf\{)?Problem\s*Statement\}?\]?\s*""", RegexOption.IGNORE_CASE)
+            ) {
+                """\begin{tcolorbox}[title={\textbf{Problem Statement}}]"""
+            }
+
+            // Ensure title options in \begin{tcolorbox}[title=...] are cleanly braced
+            cleanLatex = cleanLatex.replace(
+                Regex("""\\begin\{tcolorbox\}\[title=([^\{\]\n][^\]\n]*)\]""", RegexOption.IGNORE_CASE)
+            ) { match ->
+                val titleVal = match.groupValues[1].trim()
+                """\begin{tcolorbox}[title={$titleVal}]"""
+            }
+
+            // Balance \begin{tcolorbox} and \end{tcolorbox} if the AI left tcolorbox unclosed
+            val openBoxes = cleanLatex.split("\\begin{tcolorbox}").size - 1
+            val closeBoxes = cleanLatex.split("\\end{tcolorbox}").size - 1
+            if (openBoxes > closeBoxes) {
+                val nextSectionIdx = cleanLatex.indexOf("\\section")
+                cleanLatex = if (nextSectionIdx != -1) {
+                    val before = cleanLatex.substring(0, nextSectionIdx)
+                    val after = cleanLatex.substring(nextSectionIdx)
+                    val beforeOpens = before.split("\\begin{tcolorbox}").size - 1
+                    val beforeCloses = before.split("\\end{tcolorbox}").size - 1
+                    if (beforeOpens > beforeCloses) {
+                        before.trimEnd() + "\n\\end{tcolorbox}\n\n" + after
+                    } else {
+                        cleanLatex + "\n\\end{tcolorbox}"
+                    }
+                } else {
+                    cleanLatex + "\n\\end{tcolorbox}"
+                }
+            }
+
             try {
                 setProgress(workDataOf("PROGRESS" to 0.75f, "STATUS" to "Compiling LaTeX code to PDF..."))
                 setForeground(createForegroundInfo("Compiling LaTeX solution to PDF..."))
@@ -204,16 +256,19 @@ class MathSolverWorker(
 
             val fullLatex = """
                 \documentclass{article}
+                \usepackage{geometry}
+                \geometry{a4paper, margin=1in}
+                \usepackage{xcolor}
                 \usepackage{amsmath}
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
-                \usepackage{geometry}
-                \geometry{a4paper, margin=1in}
                 \usepackage{tikz}
                 \usepackage{pgfplots}
                 \usepackage{circuitikz}
                 \usepackage{booktabs}
+                \usepackage{tcolorbox}
+                \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
                 \pgfplotsset{compat=1.18}
                 \setmainfont{DejaVu Serif}
                 \newfontfamily\bengalifont[
@@ -476,8 +531,9 @@ class MathSolverWorker(
                 .replace(Regex("\\\\textit\\{([^}]+)\\}"), "$1")
                 .replace(Regex("\\\\item"), "• ")
                 .replace(Regex("\\\\[\\[\\]]"), "")
-                .replace(Regex("\\\\begin\\{[^}]+\\}"), "")
+                .replace(Regex("\\\\begin\\{[^}]+\\}(?:\\s*\\[[^\\]]*\\])?"), "")
                 .replace(Regex("\\\\end\\{[^}]+\\}"), "")
+                .replace(Regex("(?:\\[\\s*)?title\\s*=\\s*(?:\\\\textbf\\{)?[^\\]\\n]+(?:\\})?\\]?"), "")
                 .replace(Regex("\\\\boxed\\{([^}]+)\\}"), "[$1]")
                 .replace(Regex("\\\\(?:quad|qquad|,|;|!)"), " ")
                 .replace(Regex("\\\\text\\{([^}]+)\\}"), "$1")

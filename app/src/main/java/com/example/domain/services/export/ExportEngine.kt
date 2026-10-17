@@ -49,6 +49,7 @@ class ExportEngine(private val context: Context) {
                     \usepackage{fontspec}
                     \usepackage{geometry}
                     \geometry{a4paper, margin=1in}
+                    \usepackage{xcolor}
                     \usepackage{tikz}
                     \usepackage{pgfplots}
                     \pgfplotsset{compat=1.18}
@@ -56,6 +57,8 @@ class ExportEngine(private val context: Context) {
                     \usepackage[version=4]{mhchem}
                     \usepackage{chemfig}
                     \usepackage{booktabs}
+                    \usepackage{tcolorbox}
+                    \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
                     \usepackage{hyperref}
 
                     \setmainfont{DejaVu Serif}
