@@ -138,43 +138,66 @@ object FileUtils {
     }
 
     /**
+     * Resolves the dedicated directory for Math Solver outputs:
+     * "/storage/emulated/0/Documents/aipdfs/mathsolver"
+     */
+    fun getMathSolverDirectory(context: Context): File {
+        return getExportDirectory(context, "aipdfs/mathsolver")
+    }
+
+    /**
      * Locates any compiled PDF associated with a project.
-     * Looks in public, external, and internal directories under "aipdfs/<safeName>" and "AiPdfMaker".
+     * Looks in public, external, and internal directories under "aipdfs/mathsolver", "aipdfs/<safeName>", and "AiPdfMaker".
      */
     fun findCompiledPdf(context: Context, projectTitle: String): File? {
         val safeName = getSafeFileName(projectTitle, "Project")
+        val strippedTitle = getSafeFileName(
+            projectTitle.removePrefix("Math:").removePrefix("Math -").trim(),
+            ""
+        )
         val possibleDirs = mutableListOf<File>()
 
-        // 1. Primary export directory
+        // 1. Math solver dedicated directory (/storage/emulated/0/Documents/aipdfs/mathsolver)
+        try {
+            possibleDirs.add(getMathSolverDirectory(context))
+        } catch (_: Exception) {}
+
+        // 2. Primary export directory
         try {
             possibleDirs.add(getExportDirectory(context, "aipdfs/$safeName"))
         } catch (_: Exception) {}
 
-        // 2. Public Documents directory
+        // 3. Public Documents directory
         try {
             val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            possibleDirs.add(File(pub, "aipdfs/mathsolver"))
             possibleDirs.add(File(pub, "aipdfs/$safeName"))
             possibleDirs.add(File(pub, "AiPdfMaker"))
         } catch (_: Exception) {}
 
-        // 3. External app documents
+        // 4. External app documents
         try {
             context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.let {
+                possibleDirs.add(File(it, "aipdfs/mathsolver"))
                 possibleDirs.add(File(it, "aipdfs/$safeName"))
                 possibleDirs.add(File(it, "AiPdfMaker"))
             }
         } catch (_: Exception) {}
 
-        // 4. Internal app files
+        // 5. Internal app files
+        possibleDirs.add(File(context.filesDir, "aipdfs/mathsolver"))
         possibleDirs.add(File(context.filesDir, "aipdfs/$safeName"))
         possibleDirs.add(File(context.filesDir, "AiPdfMaker"))
 
-        val targetNames = listOf("main.pdf", "document.pdf", "solution.pdf", "solution_native.pdf")
+        val targetNames = mutableListOf("main.pdf", "document.pdf", "solution.pdf", "solution_native.pdf", "$safeName.pdf")
+        if (strippedTitle.isNotBlank()) {
+            targetNames.add("$strippedTitle.pdf")
+        }
 
         for (dir in possibleDirs) {
             if (!dir.exists() || !dir.isDirectory) continue
 
-            // Check standard file names first
+            // Check specific target file names first
             for (name in targetNames) {
                 val candidate = File(dir, name)
                 if (candidate.exists() && candidate.isFile && candidate.length() > 0) {
@@ -187,7 +210,13 @@ object FileUtils {
                 file.isFile && file.name.endsWith(".pdf", ignoreCase = true) && file.length() > 0
             }
             if (!pdfs.isNullOrEmpty()) {
-                if (dir.name == "AiPdfMaker") {
+                if (dir.name == "mathsolver") {
+                    val matched = pdfs.firstOrNull {
+                        it.nameWithoutExtension.equals(safeName, ignoreCase = true) ||
+                        (strippedTitle.isNotBlank() && it.nameWithoutExtension.contains(strippedTitle.take(15), ignoreCase = true))
+                    }
+                    if (matched != null) return matched
+                } else if (dir.name == "AiPdfMaker") {
                     val cleanWord = safeName.replace("Math_", "").replace("Project", "").trim('_')
                     val matched = if (cleanWord.isNotBlank()) {
                         pdfs.firstOrNull { it.name.contains(cleanWord.take(15), ignoreCase = true) }

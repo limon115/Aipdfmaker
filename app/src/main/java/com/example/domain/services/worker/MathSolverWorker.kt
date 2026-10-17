@@ -20,7 +20,11 @@ import com.example.data.network.AiNetworkClient
 import com.example.domain.models.AiProvider
 import com.example.domain.services.pdf.PdfNotificationManager
 import com.example.domain.services.pdf.TermuxXeLaTeXBridge
+import com.example.data.database.AppDatabase
+import com.example.data.database.DocumentSnippetEntity
+import com.example.data.database.ProjectEntity
 import com.example.utils.AppLogger
+import com.example.utils.FileUtils
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
@@ -32,6 +36,7 @@ class MathSolverWorker(
 
     companion object {
         const val KEY_PROBLEM_TEXT = "KEY_PROBLEM_TEXT"
+        const val KEY_CUSTOM_TITLE = "KEY_CUSTOM_TITLE"
         const val KEY_PDF_PATH = "KEY_PDF_PATH"
         const val KEY_ERROR = "KEY_ERROR"
         const val CHANNEL_ID = "math_solver_bg_channel"
@@ -47,6 +52,7 @@ class MathSolverWorker(
 
     override suspend fun doWork(): Result {
         val problemText = inputData.getString(KEY_PROBLEM_TEXT) ?: ""
+        val customTitle = inputData.getString(KEY_CUSTOM_TITLE)?.trim()?.ifBlank { null }
 
         if (problemText.isBlank()) {
             val errorMsg = "Problem text was empty."
@@ -179,8 +185,22 @@ class MathSolverWorker(
                 AppLogger.w("MathSolverWorker", "Failed to set foreground status: ${e.message}")
             }
 
-            val safeName = "Math_Solution_${System.currentTimeMillis()}"
-            val baseDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$safeName")
+            val firstLine = problemText.lines().firstOrNull { it.isNotBlank() }?.trim() ?: "Math Solution"
+            val resolvedTitle = customTitle ?: ("Math: " + firstLine.take(40))
+            val safeTitle = com.example.utils.FileUtils.getSafeFileName(
+                customTitle ?: firstLine.replace(Regex("[^a-zA-Z0-9 _-]"), " ").take(30),
+                "Math_Solution"
+            )
+
+            val latexTitle = resolvedTitle
+                .replace("\\", "\\textbackslash{}")
+                .replace("&", "\\&")
+                .replace("%", "\\%")
+                .replace("$", "\\$")
+                .replace("#", "\\#")
+                .replace("_", "\\_")
+                .replace("{", "\\{")
+                .replace("}", "\\}")
 
             val fullLatex = """
                 \documentclass{article}
@@ -209,7 +229,7 @@ class MathSolverWorker(
                 \setTransitionsForBengali{\bengalifont}{\rmfamily}
                 \setTransitionsForDevanagari{\bengalifont}{\rmfamily}
                 % DO NOT add a BasicLatin transition, let LaTeX handle it naturally
-                \title{Math Solution}
+                \title{$latexTitle}
                 \author{AI Tutor}
                 \date{\today}
                 \begin{document}
@@ -219,25 +239,78 @@ class MathSolverWorker(
                 \end{document}
             """.trimIndent()
 
-            val texFile = File(baseDir, "solution.tex")
+            val mathSolverDir = com.example.utils.FileUtils.getMathSolverDirectory(context)
+            if (!mathSolverDir.exists()) {
+                mathSolverDir.mkdirs()
+            }
+
+            // Deduplication Check: insure no duplicate PDF is saved for same LaTeX code
+            var duplicatePdf: File? = null
+
+            // 1. Scan existing .tex files in mathsolver directory
+            val existingTexFiles = mathSolverDir.listFiles { file ->
+                file.isFile && file.name.endsWith(".tex", ignoreCase = true)
+            } ?: emptyArray()
+
+            for (tex in existingTexFiles) {
+                try {
+                    val existingContent = tex.readText(Charsets.UTF_8).trim()
+                    if (isSameLatexCode(existingContent, fullLatex, cleanLatex)) {
+                        val matchingPdf = File(mathSolverDir, "${tex.nameWithoutExtension}.pdf")
+                        if (matchingPdf.exists() && matchingPdf.length() > 0) {
+                            duplicatePdf = matchingPdf
+                            AppLogger.i("MathSolverWorker", "Found existing matching PDF for identical LaTeX in mathsolver: ${matchingPdf.absolutePath}")
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.w("MathSolverWorker", "Error checking existing tex file ${tex.name}: ${e.message}")
+                }
+            }
+
+            // 2. Scan Room DB snippets for identical LaTeX code
+            if (duplicatePdf == null) {
+                try {
+                    val db = com.example.data.database.AppDatabase.getDatabase(context)
+                    val existingSnippet = db.documentSnippetDao().findSnippetByContent(fullLatex)
+                        ?: db.documentSnippetDao().findSnippetByContent(cleanLatex)
+                    if (existingSnippet != null) {
+                        val project = db.projectDao().getProjectById(existingSnippet.projectId)
+                        if (project != null) {
+                            val candidatePdf = com.example.utils.FileUtils.findCompiledPdf(context, project.title)
+                            if (candidatePdf != null && candidatePdf.exists() && candidatePdf.length() > 0) {
+                                duplicatePdf = candidatePdf
+                                AppLogger.i("MathSolverWorker", "Found existing compiled PDF from DB project '${project.title}': ${candidatePdf.absolutePath}")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.w("MathSolverWorker", "Error searching DB snippets for duplicate LaTeX: ${e.message}")
+                }
+            }
+
+            if (duplicatePdf != null && duplicatePdf.exists()) {
+                AppLogger.i("MathSolverWorker", "Identical LaTeX code already exists. Reusing existing PDF without duplication: ${duplicatePdf.absolutePath}")
+                try {
+                    setProgress(workDataOf("PROGRESS" to 1.0f, "STATUS" to "Solution found (cached PDF reused)."))
+                } catch (_: Exception) {}
+
+                updateOrInsertProjectInDb(problemText, resolvedTitle, fullLatex)
+                showSuccessNotification(resolvedTitle, duplicatePdf)
+                return Result.success(workDataOf(KEY_PDF_PATH to duplicatePdf.absolutePath))
+            }
+
+            // No duplicate PDF found: compile LaTeX to PDF
+            val buildDir = File(context.cacheDir, "math_build_${System.currentTimeMillis()}").apply { mkdirs() }
+            val texFile = File(buildDir, "solution.tex")
             FileOutputStream(texFile).use { fos ->
                 fos.write(fullLatex.toByteArray(Charsets.UTF_8))
                 fos.flush()
             }
 
             val compileResult = TermuxXeLaTeXBridge.compile(context = context, texFile = texFile)
-            val cleanProblem = problemText.lines()
-                .firstOrNull { it.isNotBlank() }
-                ?.replace(Regex("[^a-zA-Z0-9]"), "_")
-                ?.replace(Regex("_+"), "_")
-                ?.trim('_')
-                ?.take(30)
-                ?.ifEmpty { "Solution" } ?: "Solution"
-            val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
-            val descriptiveName = "Math_Solution_${cleanProblem}_${timestamp}"
-
-            val sharedOutputDir = com.example.utils.FileUtils.getExportDirectory(context, "AiPdfMaker")
-            val finalSharedPdfFile = File(sharedOutputDir, "$descriptiveName.pdf")
+            val finalTargetPdf = File(mathSolverDir, "$safeTitle.pdf")
+            val finalTargetTex = File(mathSolverDir, "$safeTitle.tex")
 
             var finalPdfFile: File? = null
 
@@ -245,71 +318,55 @@ class MathSolverWorker(
                 val generatedPdf = compileResult.getOrNull()
                 if (generatedPdf != null && generatedPdf.exists()) {
                     try {
-                        generatedPdf.copyTo(finalSharedPdfFile, overwrite = true)
-                        finalPdfFile = finalSharedPdfFile
-                        AppLogger.i("MathSolverWorker", "Saved XeLaTeX PDF to shared storage: ${finalSharedPdfFile.absolutePath}")
+                        generatedPdf.copyTo(finalTargetPdf, overwrite = true)
+                        finalPdfFile = finalTargetPdf
+                        AppLogger.i("MathSolverWorker", "Saved XeLaTeX PDF to mathsolver directory: ${finalTargetPdf.absolutePath}")
                     } catch (e: Exception) {
                         finalPdfFile = generatedPdf
-                        AppLogger.e("MathSolverWorker", "Failed to copy PDF to shared storage: ${e.message}")
+                        AppLogger.e("MathSolverWorker", "Failed to copy PDF to mathsolver directory: ${e.message}")
                     }
                 }
             }
 
-            // If XeLaTeX was unavailable or failed to compile, fallback to native Android PDF rendering to guarantee task finishes!
+            // Fallback to native Android PDF rendering if XeLaTeX failed or was unavailable
             if (finalPdfFile == null || !finalPdfFile.exists()) {
-                AppLogger.w("MathSolverWorker", "XeLaTeX compilation unavailable or returned error. Compiling via native Android PDF renderer to finish task.")
-                val fallbackPdfFile = File(baseDir, "solution_native.pdf")
+                AppLogger.w("MathSolverWorker", "XeLaTeX compilation unavailable or returned error. Compiling via native Android PDF renderer.")
+                val fallbackPdfFile = File(buildDir, "solution_native.pdf")
                 val success = renderNativeFallbackPdf(problemText, cleanLatex, fallbackPdfFile)
                 if (success && fallbackPdfFile.exists()) {
                     try {
-                        fallbackPdfFile.copyTo(finalSharedPdfFile, overwrite = true)
-                        finalPdfFile = finalSharedPdfFile
+                        fallbackPdfFile.copyTo(finalTargetPdf, overwrite = true)
+                        finalPdfFile = finalTargetPdf
                     } catch (e: Exception) {
                         finalPdfFile = fallbackPdfFile
                     }
                 }
             }
 
-            if (finalPdfFile != null && finalPdfFile.exists()) {
-                try {
-                    val db = com.example.data.database.AppDatabase.getDatabase(context)
-                    val firstLine = problemText.lines().firstOrNull { it.isNotBlank() }?.take(40) ?: "Math Solution"
-                    val projectTitle = "Math: $firstLine"
-                    
-                    val projSafeName = com.example.utils.FileUtils.getSafeFileName(projectTitle, "Project")
-                    val projDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$projSafeName")
-                    try {
-                        finalPdfFile.copyTo(File(projDir, "main.pdf"), overwrite = true)
-                    } catch (e: Exception) {
-                        AppLogger.w("MathSolverWorker", "Failed to copy solution to project dir: ${e.message}")
-                    }
+            // Save companion .tex file for future deduplication checks
+            try {
+                finalTargetTex.writeText(fullLatex, Charsets.UTF_8)
+            } catch (e: Exception) {
+                AppLogger.w("MathSolverWorker", "Failed to write companion tex file: ${e.message}")
+            }
 
-                    val project = com.example.data.database.ProjectEntity(
-                        title = projectTitle,
-                        course = "AI Math Solver",
-                        chapter = "Step-by-step Solution",
-                        description = problemText,
-                        noteStyle = "Math Solution",
-                        outputFormat = "PDF",
-                        status = "Completed",
-                        pageCount = 1,
-                        lastUpdated = System.currentTimeMillis(),
-                        sourceText = problemText
-                    )
-                    val projectId = db.projectDao().insertProject(project).toInt()
-                    val snippet = com.example.data.database.DocumentSnippetEntity(
-                        projectId = projectId,
-                        topicTitle = "Math Solution",
-                        jsonContent = fullLatex,
-                        orderIndex = 0
-                    )
-                    db.documentSnippetDao().insertSnippet(snippet)
-                    AppLogger.i("MathSolverWorker", "Inserted Math Solution project with ID: $projectId into database")
+            // Clean up temporary build directory
+            try {
+                buildDir.deleteRecursively()
+            } catch (_: Exception) {}
+
+            if (finalPdfFile != null && finalPdfFile.exists()) {
+                // Also mirror to project directory for home screen / notes viewer discovery
+                try {
+                    val projSafeName = com.example.utils.FileUtils.getSafeFileName(resolvedTitle, "Project")
+                    val projDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$projSafeName")
+                    finalPdfFile.copyTo(File(projDir, "main.pdf"), overwrite = true)
                 } catch (e: Exception) {
-                    AppLogger.e("MathSolverWorker", "Failed to insert math solution project into database: ${e.message}")
+                    AppLogger.w("MathSolverWorker", "Failed to mirror solution to project dir: ${e.message}")
                 }
 
-                showSuccessNotification("Math Solution", finalPdfFile)
+                updateOrInsertProjectInDb(problemText, resolvedTitle, fullLatex)
+                showSuccessNotification(resolvedTitle, finalPdfFile)
                 return Result.success(workDataOf(KEY_PDF_PATH to finalPdfFile.absolutePath))
             } else {
                 val errorMsg = "Could not produce PDF file: ${compileResult.exceptionOrNull()?.message ?: "PDF rendering error"}"
@@ -579,5 +636,74 @@ class MathSolverWorker(
             \section{Verification \& Consistency Check}
             Direct substitution confirms that all algebraic and dimensional properties hold consistent.
         """.trimIndent()
+    }
+
+    private suspend fun updateOrInsertProjectInDb(problemText: String, title: String, fullLatex: String) {
+        try {
+            val db = AppDatabase.getDatabase(context)
+            val existingProject = db.projectDao().findMathProjectByProblem(problemText)
+                ?: db.projectDao().findProjectByTitle(title)
+
+            val projectId = if (existingProject != null) {
+                val updated = existingProject.copy(
+                    title = title,
+                    lastUpdated = System.currentTimeMillis(),
+                    status = "Completed",
+                    description = problemText,
+                    sourceText = problemText
+                )
+                db.projectDao().updateProject(updated)
+                existingProject.id
+            } else {
+                val project = ProjectEntity(
+                    title = title,
+                    course = "AI Math Solver",
+                    chapter = "Step-by-step Solution",
+                    description = problemText,
+                    noteStyle = "Math Solution",
+                    outputFormat = "PDF",
+                    status = "Completed",
+                    pageCount = 1,
+                    lastUpdated = System.currentTimeMillis(),
+                    sourceText = problemText
+                )
+                db.projectDao().insertProject(project).toInt()
+            }
+
+            val existingSnippet = db.documentSnippetDao().getFirstSnippetForProject(projectId)
+            if (existingSnippet != null) {
+                val updatedSnippet = existingSnippet.copy(
+                    topicTitle = "Math Solution",
+                    jsonContent = fullLatex
+                )
+                db.documentSnippetDao().insertSnippet(updatedSnippet)
+            } else {
+                val snippet = DocumentSnippetEntity(
+                    projectId = projectId,
+                    topicTitle = "Math Solution",
+                    jsonContent = fullLatex,
+                    orderIndex = 0
+                )
+                db.documentSnippetDao().insertSnippet(snippet)
+            }
+            AppLogger.i("MathSolverWorker", "Cleanly updated/inserted Math Solution project ID $projectId in database")
+        } catch (e: Exception) {
+            AppLogger.e("MathSolverWorker", "Failed to update/insert project in database: ${e.message}")
+        }
+    }
+
+    private fun isSameLatexCode(existing: String, fullLatex: String, cleanLatex: String): Boolean {
+        val normExisting = normalizeLatex(existing)
+        val normFull = normalizeLatex(fullLatex)
+        val normClean = normalizeLatex(cleanLatex)
+        return normExisting == normFull || normExisting == normClean ||
+               existing.trim() == fullLatex.trim() || existing.trim() == cleanLatex.trim()
+    }
+
+    private fun normalizeLatex(latex: String): String {
+        return latex.lines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("%") && !it.startsWith("\\date") }
+            .joinToString("\n")
     }
 }

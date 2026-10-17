@@ -24,4 +24,10 @@ interface ProjectDao {
 
     @Delete
     suspend fun deleteProject(project: ProjectEntity)
+
+    @Query("SELECT * FROM projects WHERE course = 'AI Math Solver' AND sourceText = :sourceText LIMIT 1")
+    suspend fun findMathProjectByProblem(sourceText: String): ProjectEntity?
+
+    @Query("SELECT * FROM projects WHERE title = :title LIMIT 1")
+    suspend fun findProjectByTitle(title: String): ProjectEntity?
 }

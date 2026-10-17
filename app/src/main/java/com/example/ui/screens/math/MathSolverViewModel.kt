@@ -38,14 +38,14 @@ class MathSolverViewModel : ViewModel() {
     private var isBackgroundMode = false
     private var currentProblemText: String = ""
 
-    fun solveProblem(context: Context, problemText: String) {
+    fun solveProblem(context: Context, problemText: String, title: String? = null) {
         if (problemText.isBlank()) return
         isBackgroundMode = false
         currentProblemText = problemText
-        startOrObserveWorker(context, problemText)
+        startOrObserveWorker(context, problemText, title)
     }
 
-    fun solveProblemInBackground(context: Context, problemText: String) {
+    fun solveProblemInBackground(context: Context, problemText: String, title: String? = null) {
         if (problemText.isBlank()) return
 
         val currentState = _state.value
@@ -69,17 +69,20 @@ class MathSolverViewModel : ViewModel() {
 
         isBackgroundMode = true
         currentProblemText = problemText
-        startOrObserveWorker(context, problemText)
+        startOrObserveWorker(context, problemText, title)
     }
 
-    private fun startOrObserveWorker(context: Context, problemText: String) {
+    private fun startOrObserveWorker(context: Context, problemText: String, title: String? = null) {
         observeJob?.cancel()
         val workManager = WorkManager.getInstance(context)
         val workName = "MathSolver_Active"
 
-        val inputData = Data.Builder()
+        val dataBuilder = Data.Builder()
             .putString(MathSolverWorker.KEY_PROBLEM_TEXT, problemText)
-            .build()
+        if (!title.isNullOrBlank()) {
+            dataBuilder.putString(MathSolverWorker.KEY_CUSTOM_TITLE, title.trim())
+        }
+        val inputData = dataBuilder.build()
 
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)

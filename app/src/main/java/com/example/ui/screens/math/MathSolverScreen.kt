@@ -28,7 +28,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import java.io.File
-
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Cancel
 import com.example.ui.components.glass.GlassButton
@@ -43,6 +44,9 @@ fun MathSolverScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var problemText by remember { mutableStateOf("") }
+    var pdfTitle by remember { mutableStateOf("") }
+    var showTitleDialog by remember { mutableStateOf(false) }
+    var isBackgroundAction by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val pdfNotificationManager = remember { PdfNotificationManager(context) }
 
@@ -68,6 +72,74 @@ fun MathSolverScreen(
             }
             else -> {}
         }
+    }
+
+    if (showTitleDialog) {
+        var dialogTitle by remember(showTitleDialog) {
+            mutableStateOf(pdfTitle.ifBlank { suggestMathTitle(problemText) })
+        }
+        AlertDialog(
+            onDismissRequest = { showTitleDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.PictureAsPdf,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Title for Solved Math PDF",
+                    fontWeight = FontWeight.Bold,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Specify a title for the solved math document. This will be used in the PDF header and saved file name.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = dialogTitle,
+                        onValueChange = { dialogTitle = it },
+                        label = { Text("PDF Document Title") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Saved under: /storage/emulated/0/Documents/aipdfs/mathsolver/",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showTitleDialog = false
+                        val finalTitle = dialogTitle.trim().ifEmpty { suggestMathTitle(problemText) }
+                        pdfTitle = finalTitle
+                        if (isBackgroundAction) {
+                            viewModel.solveProblemInBackground(context, problemText, finalTitle)
+                        } else {
+                            viewModel.solveProblem(context, problemText, finalTitle)
+                        }
+                    }
+                ) {
+                    Text(if (isBackgroundAction) "Solve in Background" else "Solve & Generate")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTitleDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -135,6 +207,17 @@ fun MathSolverScreen(
             }
 
             GlassTextField(
+                value = pdfTitle,
+                onValueChange = { pdfTitle = it },
+                label = { Text("PDF Document Title (Optional)") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
+            GlassTextField(
                 value = problemText,
                 onValueChange = { problemText = it },
                 label = { Text("Enter Math Problem") },
@@ -150,7 +233,10 @@ fun MathSolverScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = { problemText = "" }) {
+                    TextButton(onClick = { 
+                        problemText = ""
+                        pdfTitle = ""
+                    }) {
                         Text("Clear Input", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
                     }
                 }
@@ -165,7 +251,10 @@ fun MathSolverScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = { viewModel.solveProblem(context, problemText) },
+                            onClick = {
+                                isBackgroundAction = false
+                                showTitleDialog = true
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp),
@@ -176,7 +265,10 @@ fun MathSolverScreen(
                         }
 
                         GlassButton(
-                            onClick = { viewModel.solveProblemInBackground(context, problemText) },
+                            onClick = {
+                                isBackgroundAction = true
+                                showTitleDialog = true
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(54.dp),
@@ -209,7 +301,7 @@ fun MathSolverScreen(
                         progress = procState.progress,
                         statusText = procState.statusText,
                         title = "Solving Math Problem",
-                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText) },
+                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText, pdfTitle.ifBlank { null }) },
                         onCancel = { viewModel.cancelSolving(context) }
                     )
                 }
@@ -219,7 +311,7 @@ fun MathSolverScreen(
                         progress = compileState.progress,
                         statusText = compileState.statusText,
                         title = "Compiling PDF Solution",
-                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText) },
+                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText, pdfTitle.ifBlank { null }) },
                         onCancel = { viewModel.cancelSolving(context) }
                     )
                 }
@@ -237,31 +329,75 @@ fun MathSolverScreen(
                     val pdfFile = (state as MathSolverState.Success).pdfFile
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                "Success!",
+                                "PDF Solution Sheet Ready!",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Your PDF solution sheet is ready.")
+                            Text(
+                                pdfFile.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Size: ${com.example.utils.FileUtils.formatFileSize(pdfFile.length())}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Saved under:\n${pdfFile.absolutePath}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(10.dp),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = {
                                     openPdf(context, pdfFile)
                                 },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text("Open PDF")
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { 
-                                problemText = ""
-                                viewModel.resetState() 
-                            }) {
+                            OutlinedButton(
+                                onClick = { 
+                                    problemText = ""
+                                    pdfTitle = ""
+                                    viewModel.resetState() 
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
                                 Text("Solve Another Problem")
                             }
                         }
@@ -409,4 +545,14 @@ private fun MathSolverProgressCard(
             }
         }
     }
+}
+
+private fun suggestMathTitle(problem: String): String {
+    val clean = problem.lines()
+        .firstOrNull { it.isNotBlank() }
+        ?.replace(Regex("[^a-zA-Z0-9 ]"), " ")
+        ?.trim()
+        ?.replace(Regex("\\s+"), " ")
+        ?.take(40) ?: "Math Solution"
+    return if (clean.startsWith("Math", ignoreCase = true)) clean else "Math: $clean"
 }
