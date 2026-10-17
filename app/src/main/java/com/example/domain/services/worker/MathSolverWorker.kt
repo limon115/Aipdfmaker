@@ -275,6 +275,15 @@ class MathSolverWorker(
                     val db = com.example.data.database.AppDatabase.getDatabase(context)
                     val firstLine = problemText.lines().firstOrNull { it.isNotBlank() }?.take(40) ?: "Math Solution"
                     val projectTitle = "Math: $firstLine"
+                    
+                    val projSafeName = com.example.utils.FileUtils.getSafeFileName(projectTitle, "Project")
+                    val projDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$projSafeName")
+                    try {
+                        finalPdfFile.copyTo(File(projDir, "main.pdf"), overwrite = true)
+                    } catch (e: Exception) {
+                        AppLogger.w("MathSolverWorker", "Failed to copy solution to project dir: ${e.message}")
+                    }
+
                     val project = com.example.data.database.ProjectEntity(
                         title = projectTitle,
                         course = "AI Math Solver",

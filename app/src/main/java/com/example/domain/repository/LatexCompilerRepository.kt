@@ -191,4 +191,8 @@ class LatexCompilerRepository(private val context: Context) {
             Pair(result, texFile)
         }
     }
+
+    fun getCompiledPdf(project: ProjectEntity): File? {
+        return com.example.utils.FileUtils.findCompiledPdf(context, project.title)
+    }
 }

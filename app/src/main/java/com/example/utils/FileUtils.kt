@@ -1,9 +1,12 @@
 package com.example.utils
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.provider.OpenableColumns
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import java.io.File
 
 object FileUtils {
@@ -132,6 +135,101 @@ object FileUtils {
         } catch (e: Exception) {
             AppLogger.w("FileUtils", "Error cleaning temp cache: ${e.message}")
         }
+    }
+
+    /**
+     * Locates any compiled PDF associated with a project.
+     * Looks in public, external, and internal directories under "aipdfs/<safeName>" and "AiPdfMaker".
+     */
+    fun findCompiledPdf(context: Context, projectTitle: String): File? {
+        val safeName = getSafeFileName(projectTitle, "Project")
+        val possibleDirs = mutableListOf<File>()
+
+        // 1. Primary export directory
+        try {
+            possibleDirs.add(getExportDirectory(context, "aipdfs/$safeName"))
+        } catch (_: Exception) {}
+
+        // 2. Public Documents directory
+        try {
+            val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            possibleDirs.add(File(pub, "aipdfs/$safeName"))
+            possibleDirs.add(File(pub, "AiPdfMaker"))
+        } catch (_: Exception) {}
+
+        // 3. External app documents
+        try {
+            context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.let {
+                possibleDirs.add(File(it, "aipdfs/$safeName"))
+                possibleDirs.add(File(it, "AiPdfMaker"))
+            }
+        } catch (_: Exception) {}
+
+        // 4. Internal app files
+        possibleDirs.add(File(context.filesDir, "aipdfs/$safeName"))
+        possibleDirs.add(File(context.filesDir, "AiPdfMaker"))
+
+        val targetNames = listOf("main.pdf", "document.pdf", "solution.pdf", "solution_native.pdf")
+
+        for (dir in possibleDirs) {
+            if (!dir.exists() || !dir.isDirectory) continue
+
+            // Check standard file names first
+            for (name in targetNames) {
+                val candidate = File(dir, name)
+                if (candidate.exists() && candidate.isFile && candidate.length() > 0) {
+                    return candidate
+                }
+            }
+
+            // Check any other .pdf files in this directory
+            val pdfs = dir.listFiles { file ->
+                file.isFile && file.name.endsWith(".pdf", ignoreCase = true) && file.length() > 0
+            }
+            if (!pdfs.isNullOrEmpty()) {
+                if (dir.name == "AiPdfMaker") {
+                    val cleanWord = safeName.replace("Math_", "").replace("Project", "").trim('_')
+                    val matched = if (cleanWord.isNotBlank()) {
+                        pdfs.firstOrNull { it.name.contains(cleanWord.take(15), ignoreCase = true) }
+                    } else null
+                    if (matched != null) return matched
+                } else {
+                    return pdfs.maxByOrNull { it.lastModified() }
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Opens a PDF file using the system's default or chooser PDF viewer.
+     */
+    fun openPdf(context: Context, file: File, chooserTitle: String = "Open PDF") {
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/pdf")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, chooserTitle))
+        } catch (e: Exception) {
+            AppLogger.e("FileUtils", "Failed to open PDF: ${e.message}", e)
+            Toast.makeText(context, "Could not open PDF: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Formats a byte count into human-readable string (KB, MB, etc.).
+     */
+    fun formatFileSize(bytes: Long): String {
+        if (bytes <= 0) return "0 B"
+        val units = arrayOf("B", "KB", "MB", "GB")
+        val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
+        return String.format(java.util.Locale.US, "%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
     }
 
     enum class FileCategory {

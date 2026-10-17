@@ -21,12 +21,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Image
+import com.example.utils.FileUtils
+import java.io.File
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -64,12 +68,95 @@ fun HomeScreenContent(
     onNavigateToProject: (Int, String) -> Unit = { _, _ -> },
     onDeleteProject: (ProjectEntity) -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectEntity?>(null) }
+    var projectForPdfAction by remember { mutableStateOf<Pair<ProjectEntity, File>?>(null) }
     
     val tabs = listOf("All", "Notes", "Debugged", "Tasks")
+
+    if (projectForPdfAction != null) {
+        val (actionProject, pdfFile) = projectForPdfAction!!
+        AlertDialog(
+            onDismissRequest = { projectForPdfAction = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.PictureAsPdf,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = actionProject.title,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "A compiled PDF is available (${FileUtils.formatFileSize(pdfFile.length())}).",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+                            val targetPdf = pdfFile
+                            val title = actionProject.title
+                            projectForPdfAction = null
+                            FileUtils.openPdf(context, targetPdf, "Open $title")
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("View PDF", fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            val projId = actionProject.id
+                            val projStatus = actionProject.status
+                            projectForPdfAction = null
+                            onNavigateToProject(projId, projStatus)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("View LaTeX Notes")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { projectForPdfAction = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (projectToDelete != null) {
         AlertDialog(
@@ -263,10 +350,25 @@ fun HomeScreenContent(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(tabFiltered, key = { it.id }) { project ->
+                            val compiledPdf = remember(project.id, project.lastUpdated) {
+                                FileUtils.findCompiledPdf(context, project.title)
+                            }
                             ProjectCard(
-                                project = project, 
+                                project = project,
+                                compiledPdf = compiledPdf,
                                 onDelete = { projectToDelete = it },
-                                onClick = { onNavigateToProject(project.id, project.status) }
+                                onClick = {
+                                    if (project.status == "Processing") {
+                                        onNavigateToProject(project.id, project.status)
+                                    } else if (compiledPdf != null && compiledPdf.exists()) {
+                                        projectForPdfAction = Pair(project, compiledPdf)
+                                    } else {
+                                        onNavigateToProject(project.id, project.status)
+                                    }
+                                },
+                                onViewPdf = { pdf ->
+                                    FileUtils.openPdf(context, pdf, "Open ${project.title}")
+                                }
                             )
                         }
                     }
@@ -276,7 +378,13 @@ fun HomeScreenContent(
     }
 }
 @Composable
-fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onClick: () -> Unit) {
+fun ProjectCard(
+    project: ProjectEntity,
+    compiledPdf: File? = null,
+    onDelete: (ProjectEntity) -> Unit,
+    onClick: () -> Unit,
+    onViewPdf: (File) -> Unit = {}
+) {
     var expanded by remember { mutableStateOf(false) }
 
     GlassCard(
@@ -362,6 +470,32 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
                             }
                         )
                     }
+                    if (compiledPdf != null && compiledPdf.exists()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PictureAsPdf,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "PDF",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -379,6 +513,22 @@ fun ProjectCard(project: ProjectEntity, onDelete: (ProjectEntity) -> Unit, onCli
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
+                    if (compiledPdf != null && compiledPdf.exists()) {
+                        DropdownMenuItem(
+                            text = { Text("View PDF") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.PictureAsPdf,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                onViewPdf(compiledPdf)
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Copy Title") },
                         onClick = {

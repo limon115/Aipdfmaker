@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.PictureAsPdf
+import com.example.utils.FileUtils
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -156,6 +158,14 @@ fun NotesViewerScreen(
                     }
                 },
                 actions = {
+                    val pdfFile = state.generatedPdfFile
+                    if (pdfFile != null && pdfFile.exists()) {
+                        IconButton(onClick = {
+                            FileUtils.openPdf(context, pdfFile, "Open ${state.project?.title ?: "PDF"}")
+                        }) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "View PDF", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     if (state.latexContent.isNotBlank()) {
                         IconButton(onClick = {
                             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -175,22 +185,61 @@ fun NotesViewerScreen(
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
+            val pdfFile = state.generatedPdfFile
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Button(
-                    onClick = { showPreviewModal = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Export Final Document", style = MaterialTheme.typography.titleMedium)
+                if (pdfFile != null && pdfFile.exists()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                FileUtils.openPdf(context, pdfFile, "Open ${state.project?.title ?: "PDF"}")
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("View PDF", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = { showPreviewModal = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Recompile", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = { showPreviewModal = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("Export Final Document", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
         }

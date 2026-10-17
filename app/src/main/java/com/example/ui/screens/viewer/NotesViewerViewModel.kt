@@ -55,11 +55,14 @@ class NotesViewerViewModel(
                 val latexSnippets = snippets.filter { it.topicTitle != "fix_script" }
                 val masterLatex = latexSnippets.joinToString("\n\n") { it.jsonContent }
 
+                val existingPdf = project?.let { compilerRepository.getCompiledPdf(it) }
+
                 _state.update { it.copy(
                     latexContent = masterLatex,
                     fixScript = fixScriptSnippet?.jsonContent,
                     isLoading = false,
                     project = project,
+                    generatedPdfFile = existingPdf,
                     outputFormat = project?.outputFormat ?: "PDF"
                 ) }
             } catch (e: Exception) {
