@@ -117,15 +117,21 @@ class MathSolverWorker(
                 9. ENVIRONMENT BALANCING: You MUST meticulously balance every `\begin` with its corresponding `\end`. Do NOT leave `\begin{tikzpicture}` without `\end{tikzpicture}`. Do NOT add stray `\end{center}` without a matching `\begin{center}`.
                 10. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
                 
-                **STRICT XELATEX & BENGALI RULES FOR THIS GENERATION:**
-                1. **Bengali in Math Mode (CRITICAL):** Whenever you write Bengali text inside an equation, you MUST explicitly invoke the font inside the text command. 
+                **STRICT XELATEX, POLYGLOSSIA & BENGALI RULES FOR THIS GENERATION:**
+                1. **Polyglossia Language Management (CRITICAL):** The document uses Polyglossia (`\setmainlanguage{english}`, `\setotherlanguage{bengali}`) with `\bengalifont` configured for SolaimanLipi.
+                   - If writing solutions/explanations in Bengali, wrap the Bengali text in `\begin{bengali} ... \end{bengali}` (or start with `\selectlanguage{bengali}`) so Polyglossia automatically applies `\bengalifont`.
+                   - For inline Bengali words or phrases inside English text, use `\textbengali{<Bengali text>}`.
+                   - For inline English terms inside Bengali text, use `\textenglish{<English text>}`.
+                   - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, or font definitions; they are already loaded in the preamble.
+                2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (`$...$`, `\[ ... \]`, `align`, `equation`). Whenever writing Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
                    - WRONG: `\text{সাফল্য}`
                    - CORRECT: `\text{\bengalifont সাফল্য}`
-                2. **No Em-Dashes:** The SolaimanLipi font does not support the Unicode Em-Dash (`—`). Never generate `—`. Always use standard LaTeX dashes (`---` for em-dash, `--` for en-dash).
-                3. **No Floats in Boxes:** NEVER use floating environments (`\begin{table}` or `\begin{figure}`) inside a `tcolorbox`, `minipage`, or any other box. Use `\begin{center}` and `\begin{tabular}` directly.
-                4. **Environment Hygiene:** Double-check that every `\begin{...}` has a matching `\end{...}`. 
-                5. **No Stray Line Breaks:** Do not use `\\` to create new paragraphs in standard text. Use a blank line for a new paragraph or `\vspace{}`.
-                6. **Script Consistency:** Output only English and Bengali text. Do not generate Arabic, Tamil, or other non-Latin scripts.
+                3. **Numerals in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing.
+                4. **No Em-Dashes:** The SolaimanLipi font does not support the Unicode Em-Dash (`—`). Never generate `—`. Always use standard LaTeX dashes (`---` for em-dash, `--` for en-dash).
+                5. **No Floats in Boxes:** NEVER use floating environments (`\begin{table}` or `\begin{figure}`) inside a `tcolorbox`, `minipage`, or any other box. Use `\begin{center}` and `\begin{tabular}` directly.
+                6. **Environment Hygiene:** Double-check that every `\begin{...}` has a matching `\end{...}`. 
+                7. **No Stray Line Breaks:** Do not use `\\` to create new paragraphs in standard text. Use a blank line for a new paragraph or `\vspace{}`.
+                8. **Script Consistency:** Output only English and Bengali text. Do not generate Arabic, Tamil, or other non-Latin scripts.
                 
                 * Outputs should be in the same language as input by user.
                 
