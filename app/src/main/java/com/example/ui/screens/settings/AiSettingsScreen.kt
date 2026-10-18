@@ -250,11 +250,9 @@ fun AiConfigCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 com.example.ui.components.glass.GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onProviderClick),
-                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(8.dp)
+                    onClick = onProviderClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
                         modifier = Modifier

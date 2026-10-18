@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -22,13 +23,13 @@ fun LiquidBackground(
     val isDark = colors.isDark
 
     // Modern deep background canvas color
-    val bgColor = if (isDark) Color(0xFF0B0D14) else Color(0xFFF1F3F9)
+    val bgColor = remember(isDark) { if (isDark) Color(0xFF0B0D14) else Color(0xFFF1F3F9) }
     
     // Liquid ambient palette
-    val color1 = Color(0xFF6C63FF).copy(alpha = if (isDark) 0.38f else 0.55f) // Electric Purple
-    val color2 = Color(0xFF00E5FF).copy(alpha = if (isDark) 0.30f else 0.45f) // Cyan Glow
-    val color3 = Color(0xFFFF5252).copy(alpha = if (isDark) 0.22f else 0.35f) // Coral Pink
-    val color4 = Color(0xFF7C4DFF).copy(alpha = if (isDark) 0.28f else 0.42f) // Deep Violet
+    val color1 = remember(isDark) { Color(0xFF6C63FF).copy(alpha = if (isDark) 0.38f else 0.55f) } // Electric Purple
+    val color2 = remember(isDark) { Color(0xFF00E5FF).copy(alpha = if (isDark) 0.30f else 0.45f) } // Cyan Glow
+    val color3 = remember(isDark) { Color(0xFFFF5252).copy(alpha = if (isDark) 0.22f else 0.35f) } // Coral Pink
+    val color4 = remember(isDark) { Color(0xFF7C4DFF).copy(alpha = if (isDark) 0.28f else 0.42f) } // Deep Violet
 
     val infiniteTransition = rememberInfiniteTransition(label = "liquid_bg")
     

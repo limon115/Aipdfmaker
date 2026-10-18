@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Cancel
 import com.example.ui.components.glass.GlassButton
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.draw.clip
 
@@ -194,7 +195,7 @@ fun MathSolverScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
             ) {
-                items(sampleProblems) { sample ->
+                items(sampleProblems, key = { it }) { sample ->
                     AssistChip(
                         onClick = { problemText = sample },
                         label = { Text(sample, style = MaterialTheme.typography.labelSmall) },
@@ -244,181 +245,187 @@ fun MathSolverScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            when (state) {
-                is MathSolverState.Idle -> {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                isBackgroundAction = false
-                                showTitleDialog = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp),
-                            enabled = problemText.isNotBlank(),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Text("Solve & Generate PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-
-                        GlassButton(
-                            onClick = {
-                                isBackgroundAction = true
-                                showTitleDialog = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp),
-                            enabled = problemText.isNotBlank(),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Run in Background",
-                                    tint = androidx.compose.ui.graphics.Color.White
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Solve in Background",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = androidx.compose.ui.graphics.Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-                is MathSolverState.Processing -> {
-                    val procState = state as MathSolverState.Processing
-                    MathSolverProgressCard(
-                        progress = procState.progress,
-                        statusText = procState.statusText,
-                        title = "Solving Math Problem",
-                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText, pdfTitle.ifBlank { null }) },
-                        onCancel = { viewModel.cancelSolving(context) }
-                    )
-                }
-                is MathSolverState.CompilingPdf -> {
-                    val compileState = state as MathSolverState.CompilingPdf
-                    MathSolverProgressCard(
-                        progress = compileState.progress,
-                        statusText = compileState.statusText,
-                        title = "Compiling PDF Solution",
-                        onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText, pdfTitle.ifBlank { null }) },
-                        onCancel = { viewModel.cancelSolving(context) }
-                    )
-                }
-                is MathSolverState.EnqueuedInBackground -> {
-                    val bgState = state as MathSolverState.EnqueuedInBackground
-                    MathSolverProgressCard(
-                        progress = bgState.progress,
-                        statusText = bgState.statusText,
-                        title = "Running in Background",
-                        onSwitchBackground = null,
-                        onCancel = { viewModel.cancelSolving(context) }
-                    )
-                }
-                is MathSolverState.Success -> {
-                    val pdfFile = (state as MathSolverState.Success).pdfFile
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+            AnimatedContent(
+                targetState = state,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.98f))
+                        .togetherWith(fadeOut(animationSpec = tween(160)))
+                },
+                label = "mathSolverStateTransition"
+            ) { currentState ->
+                when (currentState) {
+                    is MathSolverState.Idle -> {
                         Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Success",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                "PDF Solution Sheet Ready!",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                pdfFile.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "Size: ${com.example.utils.FileUtils.formatFileSize(pdfFile.length())}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "Saved under:\n${pdfFile.absolutePath}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(10.dp),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = {
-                                    openPdf(context, pdfFile)
+                                    isBackgroundAction = false
+                                    showTitleDialog = true
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(12.dp)
+                                    .height(54.dp),
+                                enabled = problemText.isNotBlank(),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Open PDF")
+                                Text("Solve & Generate PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = { 
-                                    problemText = ""
-                                    pdfTitle = ""
-                                    viewModel.resetState() 
+
+                            GlassButton(
+                                onClick = {
+                                    isBackgroundAction = true
+                                    showTitleDialog = true
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(12.dp)
+                                    .height(54.dp),
+                                enabled = problemText.isNotBlank(),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("Solve Another Problem")
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = "Run in Background",
+                                        tint = androidx.compose.ui.graphics.Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Solve in Background",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                is MathSolverState.Error -> {
-                    val errorMsg = (state as MathSolverState.Error).message
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Error", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = { viewModel.resetState() },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    is MathSolverState.Processing -> {
+                        MathSolverProgressCard(
+                            progress = currentState.progress,
+                            statusText = currentState.statusText,
+                            title = "Solving Math Problem",
+                            onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText, pdfTitle.ifBlank { null }) },
+                            onCancel = { viewModel.cancelSolving(context) }
+                        )
+                    }
+                    is MathSolverState.CompilingPdf -> {
+                        MathSolverProgressCard(
+                            progress = currentState.progress,
+                            statusText = currentState.statusText,
+                            title = "Compiling PDF Solution",
+                            onSwitchBackground = { viewModel.solveProblemInBackground(context, problemText, pdfTitle.ifBlank { null }) },
+                            onCancel = { viewModel.cancelSolving(context) }
+                        )
+                    }
+                    is MathSolverState.EnqueuedInBackground -> {
+                        MathSolverProgressCard(
+                            progress = currentState.progress,
+                            statusText = currentState.statusText,
+                            title = "Running in Background",
+                            onSwitchBackground = null,
+                            onCancel = { viewModel.cancelSolving(context) }
+                        )
+                    }
+                    is MathSolverState.Success -> {
+                        val pdfFile = currentState.pdfFile
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Try Again")
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Success",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    "PDF Solution Sheet Ready!",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    pdfFile.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Size: ${com.example.utils.FileUtils.formatFileSize(pdfFile.length())}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "Saved under:\n${pdfFile.absolutePath}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(10.dp),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = {
+                                        openPdf(context, pdfFile)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Open PDF")
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = { 
+                                        problemText = ""
+                                        pdfTitle = ""
+                                        viewModel.resetState() 
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Solve Another Problem")
+                                }
+                            }
+                        }
+                    }
+                    is MathSolverState.Error -> {
+                        val errorMsg = currentState.message
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Error", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(errorMsg, color = MaterialTheme.colorScheme.onErrorContainer)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = { viewModel.resetState() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Text("Try Again")
+                                }
                             }
                         }
                     }

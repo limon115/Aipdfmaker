@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -102,7 +103,7 @@ fun LatexDebuggerScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             ) {
-                items(sampleErrors) { (label, codeAndLog) ->
+                items(sampleErrors, key = { it.first }) { (label, codeAndLog) ->
                     AssistChip(
                         onClick = {
                             viewModel.updateLatexCode(codeAndLog.first)
@@ -174,48 +175,57 @@ fun LatexDebuggerScreen(
                 }
             }
 
-            if (state.isDebugging) {
-                com.example.ui.components.glass.GlassCard(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+            AnimatedContent(
+                targetState = state.isDebugging,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(200)) + scaleIn(initialScale = 0.98f))
+                        .togetherWith(fadeOut(animationSpec = tween(150)))
+                },
+                label = "latexDebuggerStateTransition"
+            ) { isDebugging ->
+                if (isDebugging) {
+                    com.example.ui.components.glass.GlassCard(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text(
-                            "AI is debugging your LaTeX code...",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        com.example.ui.components.WavyLinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth().height(16.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        OutlinedButton(
-                            onClick = { viewModel.cancelDebugging() },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Debugging")
-                            Spacer(Modifier.width(8.dp))
-                            Text("Cancel Debugging", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                "AI is debugging your LaTeX code...",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            com.example.ui.components.WavyLinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().height(16.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            OutlinedButton(
+                                onClick = { viewModel.cancelDebugging() },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(Icons.Default.Cancel, contentDescription = "Cancel Debugging")
+                                Spacer(Modifier.width(8.dp))
+                                Text("Cancel Debugging", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
-                }
-            } else {
-                Button(
-                    onClick = { viewModel.debugLatex(onSuccess = onNavigateToViewer) },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    enabled = state.latexCode.isNotBlank(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.BugReport, contentDescription = "Debug")
-                    Spacer(Modifier.width(8.dp))
-                    Text("Debug & Rewrite Code", style = MaterialTheme.typography.titleMedium)
+                } else {
+                    Button(
+                        onClick = { viewModel.debugLatex(onSuccess = onNavigateToViewer) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        enabled = state.latexCode.isNotBlank(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.BugReport, contentDescription = "Debug")
+                        Spacer(Modifier.width(8.dp))
+                        Text("Debug & Rewrite Code", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
         }

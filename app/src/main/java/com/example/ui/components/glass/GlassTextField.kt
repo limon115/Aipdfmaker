@@ -53,12 +53,14 @@ fun GlassTextField(
     val isFocused by interactionSource.collectIsFocusedAsState()
 
     val bgAlpha = if (isDark) 0.35f else 0.50f
-    val bgGradient = Brush.linearGradient(
-        colors = listOf(
-            if (isDark) Color(0xFF161924).copy(alpha = bgAlpha) else Color.White.copy(alpha = bgAlpha),
-            if (isDark) Color(0xFF10121A).copy(alpha = bgAlpha * 0.7f) else Color.White.copy(alpha = bgAlpha * 0.85f)
+    val bgGradient = remember(isDark, bgAlpha) {
+        Brush.linearGradient(
+            colors = listOf(
+                if (isDark) Color(0xFF161924).copy(alpha = bgAlpha) else Color.White.copy(alpha = bgAlpha),
+                if (isDark) Color(0xFF10121A).copy(alpha = bgAlpha * 0.7f) else Color.White.copy(alpha = bgAlpha * 0.85f)
+            )
         )
-    )
+    }
 
     val focusedBorderColor1 by animateColorAsState(
         targetValue = if (isFocused) Color(0xFF6C63FF) else Color.White.copy(alpha = if (isDark) 0.35f else 0.70f),
@@ -71,11 +73,13 @@ fun GlassTextField(
         label = "border2"
     )
 
-    val borderGradient = Brush.linearGradient(
-        colors = listOf(focusedBorderColor1, focusedBorderColor2),
-        start = Offset(0f, 0f),
-        end = Offset(1000f, 1000f)
-    )
+    val borderGradient = remember(focusedBorderColor1, focusedBorderColor2) {
+        Brush.linearGradient(
+            colors = listOf(focusedBorderColor1, focusedBorderColor2),
+            start = Offset(0f, 0f),
+            end = Offset(1000f, 1000f)
+        )
+    }
 
     OutlinedTextField(
         value = value,

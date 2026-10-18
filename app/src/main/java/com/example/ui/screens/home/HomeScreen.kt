@@ -186,23 +186,32 @@ fun HomeScreenContent(
         topBar = {
             TopAppBar(
                 title = {
-                    if (isSearchActive) {
-                        GlassTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text("Search projects...") },
-                            trailingIcon = if (searchQuery.isNotEmpty()) {
-                                {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AnimatedContent(
+                        targetState = isSearchActive,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(200)) + slideInHorizontally { width -> width / 3 })
+                                .togetherWith(fadeOut(animationSpec = tween(150)) + slideOutHorizontally { width -> -width / 3 })
+                        },
+                        label = "searchBarTransition"
+                    ) { searchActive ->
+                        if (searchActive) {
+                            GlassTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = { Text("Search projects...") },
+                                trailingIcon = if (searchQuery.isNotEmpty()) {
+                                    {
+                                        IconButton(onClick = { searchQuery = "" }) {
+                                            Icon(Icons.Default.Close, contentDescription = "Clear search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
-                                }
-                            } else null,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            singleLine = true
-                        )
-                    } else {
-                        Text("Projects", fontWeight = FontWeight.Bold)
+                                } else null,
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                singleLine = true
+                            )
+                        } else {
+                            Text("Projects", fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 navigationIcon = {
@@ -349,7 +358,11 @@ fun HomeScreenContent(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(tabFiltered, key = { it.id }) { project ->
+                        items(
+                            items = tabFiltered,
+                            key = { it.id },
+                            contentType = { "project_card" }
+                        ) { project ->
                             val compiledPdf = remember(project.id, project.lastUpdated) {
                                 FileUtils.findCompiledPdf(context, project.title)
                             }
@@ -388,9 +401,8 @@ fun ProjectCard(
     var expanded by remember { mutableStateOf(false) }
 
     GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier

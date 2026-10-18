@@ -224,7 +224,9 @@ fun MainScreen() {
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
                     
                     com.example.ui.components.glass.GlassCard(
-                        modifier = Modifier.fillMaxWidth().clickable { navController.navigate("math_solver") }
+                        onClick = { navController.navigate("math_solver") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         androidx.compose.foundation.layout.Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(androidx.compose.material.icons.Icons.Default.Build, contentDescription = "Math Solver", tint = MaterialTheme.colorScheme.primary)
@@ -239,7 +241,9 @@ fun MainScreen() {
 
                     
                     com.example.ui.components.glass.GlassCard(
-                        modifier = Modifier.fillMaxWidth().clickable { navController.navigate("latex_debugger") }
+                        onClick = { navController.navigate("latex_debugger") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         androidx.compose.foundation.layout.Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(androidx.compose.material.icons.Icons.Default.Build, contentDescription = "LaTeX Debugger", tint = MaterialTheme.colorScheme.primary)
@@ -645,13 +649,17 @@ private fun CapsuleNavItem(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (selected) {
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(animationSpec = tween(150)) + scaleIn(initialScale = 0.88f),
+            exit = fadeOut(animationSpec = tween(120)) + scaleOut(targetScale = 0.88f)
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(vertical = 6.dp, horizontal = 4.dp)
                     .clip(RoundedCornerShape(percent = 50))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
             )
         }
 

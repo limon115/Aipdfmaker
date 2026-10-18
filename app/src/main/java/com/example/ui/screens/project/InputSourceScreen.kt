@@ -161,7 +161,11 @@ fun InputSourceScreen(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(sources, key = { source -> source.route }) { source ->
+                items(
+                    items = sources,
+                    key = { source -> source.route },
+                    contentType = { "source_card" }
+                ) { source ->
                     SourceCard(
                         item = source,
                         onClick = { 
@@ -203,12 +207,9 @@ fun InputSourceScreen(
 @Composable
 fun SourceCard(item: InputSourceItem, onClick: () -> Unit) {
     com.example.ui.components.glass.GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier

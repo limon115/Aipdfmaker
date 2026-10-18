@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.AppTheme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ripple
+
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -36,25 +39,29 @@ fun GlassCard(
 ) {
     val isDark = AppTheme.colors.isDark
     
-    // Modern ambient backdrop glow
-    val bgGlow = Brush.radialGradient(
-        colors = listOf(
-            if (isDark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.65f),
-            if (isDark) Color(0xFF161924).copy(alpha = 0.75f) else Color(0xFFF8FAFC).copy(alpha = 0.70f)
-        ),
-        radius = 900f
-    )
+    // Modern ambient backdrop glow - remembered to prevent reallocations
+    val bgGlow = remember(isDark) {
+        Brush.radialGradient(
+            colors = listOf(
+                if (isDark) Color.White.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.65f),
+                if (isDark) Color(0xFF161924).copy(alpha = 0.75f) else Color(0xFFF8FAFC).copy(alpha = 0.70f)
+            ),
+            radius = 900f
+        )
+    }
 
     // Modern 3-stop specular glass refraction border
-    val shimmerBorder = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = if (isDark) 0.45f else 0.80f),
-            Color.White.copy(alpha = if (isDark) 0.08f else 0.20f),
-            Color.White.copy(alpha = if (isDark) 0.25f else 0.50f)
-        ),
-        start = Offset(0f, 0f),
-        end = Offset(1000f, 1000f)
-    )
+    val shimmerBorder = remember(isDark) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = if (isDark) 0.45f else 0.80f),
+                Color.White.copy(alpha = if (isDark) 0.08f else 0.20f),
+                Color.White.copy(alpha = if (isDark) 0.25f else 0.50f)
+            ),
+            start = Offset(0f, 0f),
+            end = Offset(1000f, 1000f)
+        )
+    }
 
     Box(
         modifier = modifier
@@ -97,23 +104,27 @@ fun GlassCard(
         label = "glassCardScale"
     )
 
-    val bgGlow = Brush.radialGradient(
-        colors = listOf(
-            if (isDark) Color.White.copy(alpha = if (isPressed) 0.12f else 0.08f) else Color.White.copy(alpha = if (isPressed) 0.85f else 0.65f),
-            if (isDark) Color(0xFF161924).copy(alpha = 0.75f) else Color(0xFFF8FAFC).copy(alpha = 0.70f)
-        ),
-        radius = 900f
-    )
+    val bgGlow = remember(isDark, isPressed) {
+        Brush.radialGradient(
+            colors = listOf(
+                if (isDark) Color.White.copy(alpha = if (isPressed) 0.12f else 0.08f) else Color.White.copy(alpha = if (isPressed) 0.85f else 0.65f),
+                if (isDark) Color(0xFF161924).copy(alpha = 0.75f) else Color(0xFFF8FAFC).copy(alpha = 0.70f)
+            ),
+            radius = 900f
+        )
+    }
 
-    val shimmerBorder = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = if (isDark) (if (isPressed) 0.65f else 0.45f) else (if (isPressed) 0.95f else 0.80f)),
-            Color.White.copy(alpha = if (isDark) 0.08f else 0.20f),
-            Color.White.copy(alpha = if (isDark) 0.25f else 0.50f)
-        ),
-        start = Offset(0f, 0f),
-        end = Offset(1000f, 1000f)
-    )
+    val shimmerBorder = remember(isDark, isPressed) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = if (isDark) (if (isPressed) 0.65f else 0.45f) else (if (isPressed) 0.95f else 0.80f)),
+                Color.White.copy(alpha = if (isDark) 0.08f else 0.20f),
+                Color.White.copy(alpha = if (isDark) 0.25f else 0.50f)
+            ),
+            start = Offset(0f, 0f),
+            end = Offset(1000f, 1000f)
+        )
+    }
 
     Box(
         modifier = modifier
@@ -128,7 +139,9 @@ fun GlassCard(
                 enabled = enabled,
                 onClick = onClick,
                 interactionSource = interactionSource,
-                indication = null
+                indication = ripple(
+                    color = if (isDark) Color.White.copy(alpha = 0.18f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                )
             )
     ) {
         Column(content = content)
