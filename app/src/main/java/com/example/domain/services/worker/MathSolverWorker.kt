@@ -118,7 +118,7 @@ class MathSolverWorker(
                 10. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
                 
                 **STRICT XELATEX & BENGALI RULES FOR THIS GENERATION:**
-                1. **Bengali in Math Mode (CRITICAL):** The `ucharclasses` package does NOT work inside math mode. Whenever you write Bengali text inside an equation, you MUST explicitly invoke the font inside the text command. 
+                1. **Bengali in Math Mode (CRITICAL):** Whenever you write Bengali text inside an equation, you MUST explicitly invoke the font inside the text command. 
                    - WRONG: `\text{সাফল্য}`
                    - CORRECT: `\text{\bengalifont সাফল্য}`
                 2. **No Em-Dashes:** The SolaimanLipi font does not support the Unicode Em-Dash (`—`). Never generate `—`. Always use standard LaTeX dashes (`---` for em-dash, `--` for en-dash).
