@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment

@@ -58,7 +58,7 @@ class NoteGenerationService(
                  * For multi-line text, paragraphs, sections, or blocks in English, wrap them in `\begin{english} ... \end{english}`.
                  * For inline English words, terms, headings, or phrases, wrap them in `\textenglish{<English text>}`.
                - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, `\setotherlanguage`, or font definitions; they are already loaded in the preamble.
-            2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (`$...$`, `\[ ... \]`, `align`, `equation`). Whenever you write Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
+            2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (${'$'}...${'$'}, `\[ ... \]`, `align`, `equation`). Whenever you write Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
                - WRONG: `\text{সাফল্য}`
                - CORRECT: `\text{\bengalifont সাফল্য}`
             3. **Numerals and English in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing. For English text inside math formulas via `\text{...}`, wrap in `\text{\textenglish{...}}`.
