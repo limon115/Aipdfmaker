@@ -47,6 +47,9 @@ class ExportEngine(private val context: Context) {
                     \usepackage{amsfonts}
                     \usepackage{amssymb}
                     \usepackage{fontspec}
+                    \usepackage{polyglossia}
+                    \setmainlanguage{english}
+                    \setotherlanguage{bengali}
                     \usepackage{geometry}
                     \geometry{a4paper, margin=1in}
                     \usepackage{xcolor}
@@ -70,12 +73,6 @@ class ExportEngine(private val context: Context) {
                         AutoFakeBold=1.5,
                         AutoFakeSlant=0.2
                     ]{solaiman.ttf}
-
-                    % Let ucharclasses handle Bengali and the Dari (।) which is in the Devanagari block
-                    \usepackage[Bengali, Devanagari]{ucharclasses}
-                    \setTransitionsFor{Bengali}{\bengalifont}{\rmfamily}
-                    \setTransitionsFor{Devanagari}{\bengalifont}{\rmfamily}
-                    % DO NOT add a BasicLatin transition, let LaTeX handle it naturally
 
                     \title{$projectName}
                     \author{AI Generated Notes}

@@ -28,6 +28,9 @@ class LatexCompilerRepository(private val context: Context) {
         \usepackage{amsfonts}
         \usepackage{amssymb}
         \usepackage{fontspec}
+        \usepackage{polyglossia}
+        \setmainlanguage{english}
+        \setotherlanguage{bengali}
         \usepackage{tikz}
         \usepackage{pgfplots}
         \pgfplotsset{compat=1.18}
@@ -43,12 +46,6 @@ class LatexCompilerRepository(private val context: Context) {
             AutoFakeBold=1.5,
             AutoFakeSlant=0.2
         ]{solaiman.ttf}
-
-        % Let ucharclasses handle Bengali and the Dari (।) which is in the Devanagari block
-        \usepackage[Bengali, Devanagari]{ucharclasses}
-        \setTransitionsFor{Bengali}{\bengalifont}{\rmfamily}
-        \setTransitionsFor{Devanagari}{\bengalifont}{\rmfamily}
-        % DO NOT add a BasicLatin transition, let LaTeX handle it naturally
         % --- Signature Design Color ---
         \definecolor{titlepagecolor}{cmyk}{1,.60,0,.40}
         % --- Professional Serif Typography (Palatino) ---

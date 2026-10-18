@@ -263,6 +263,9 @@ class MathSolverWorker(
                 \usepackage{amsfonts}
                 \usepackage{amssymb}
                 \usepackage{fontspec}
+                \usepackage{polyglossia}
+                \setmainlanguage{english}
+                \setotherlanguage{bengali}
                 \usepackage{tikz}
                 \usepackage{pgfplots}
                 \usepackage{circuitikz}
@@ -278,12 +281,6 @@ class MathSolverWorker(
                     AutoFakeBold=1.5,
                     AutoFakeSlant=0.2
                 ]{solaiman.ttf}
-
-                % Let ucharclasses handle Bengali and the Dari (।) which is in the Devanagari block
-                \usepackage[Bengali, Devanagari]{ucharclasses}
-                \setTransitionsFor{Bengali}{\bengalifont}{\rmfamily}
-                \setTransitionsFor{Devanagari}{\bengalifont}{\rmfamily}
-                % DO NOT add a BasicLatin transition, let LaTeX handle it naturally
                 \title{$latexTitle}
                 \author{AI Tutor}
                 \date{\today}
