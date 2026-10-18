@@ -6,21 +6,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
+import com.example.domain.models.Topic
 import com.example.ui.screens.blueprint.BlueprintViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +33,114 @@ fun TopicsDetectedScreen(
 ) {
     val blueprintState by blueprintViewModel.state.collectAsState()
     val topics = blueprintState?.topics ?: emptyList()
+
+    var topicToDelete by remember { mutableStateOf<Pair<Int, Topic>?>(null) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var newTopicTitle by remember { mutableStateOf("") }
+    var newTopicDuration by remember { mutableStateOf("20") }
+
+    // Delete Confirmation Dialog
+    if (topicToDelete != null) {
+        val (targetIndex, targetTopic) = topicToDelete!!
+        AlertDialog(
+            onDismissRequest = { topicToDelete = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text("Delete Topic?", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${targetTopic.title}\"? It will be excluded from the generated study notes.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        blueprintViewModel.deleteTopicAt(targetIndex)
+                        topicToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { topicToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Add Topic Dialog
+    if (showAddDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text("Add Topic", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = newTopicTitle,
+                        onValueChange = { newTopicTitle = it },
+                        label = { Text("Topic Title") },
+                        placeholder = { Text("e.g. Differentiation Rules") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newTopicDuration,
+                        onValueChange = { newTopicDuration = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Est. Duration (minutes)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = newTopicTitle.trim()
+                        if (trimmed.isNotBlank()) {
+                            val duration = newTopicDuration.toIntOrNull() ?: 20
+                            blueprintViewModel.addTopic(trimmed, duration)
+                            newTopicTitle = ""
+                            newTopicDuration = "20"
+                            showAddDialog = false
+                        }
+                    },
+                    enabled = newTopicTitle.isNotBlank()
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -64,9 +173,12 @@ fun TopicsDetectedScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
-                    enabled = blueprintState != null
+                    enabled = blueprintState != null && topics.isNotEmpty()
                 ) {
-                    Text("Continue", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (topics.isNotEmpty()) "Continue (${topics.size} Topics)" else "Continue",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
         }
@@ -94,7 +206,11 @@ fun TopicsDetectedScreen(
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Text(
-                        text = "We found ${topics.size} topics in this lecture. You can review and edit them.",
+                        text = if (topics.isNotEmpty()) {
+                            "We found ${topics.size} topics in this lecture. Tap the delete icon on any topic you want to exclude."
+                        } else {
+                            "All topics were removed. Tap 'Add Topic' below to add topics for note generation."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(16.dp)
@@ -105,13 +221,19 @@ fun TopicsDetectedScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    itemsIndexed(topics, key = { index, topic -> topic.title.ifEmpty { index.toString() } }) { index, topic ->
-                        TopicRow(index = index + 1, topic = topic)
+                    itemsIndexed(topics, key = { index, topic -> "${topic.title}_$index" }) { index, topic ->
+                        TopicRow(
+                            index = index + 1,
+                            topic = topic,
+                            onDelete = {
+                                topicToDelete = Pair(index, topic)
+                            }
+                        )
                     }
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedButton(
-                            onClick = { /* TODO */ },
+                            onClick = { showAddDialog = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
@@ -130,7 +252,11 @@ fun TopicsDetectedScreen(
 }
 
 @Composable
-fun TopicRow(index: Int, topic: com.example.domain.models.Topic) {
+fun TopicRow(
+    index: Int,
+    topic: com.example.domain.models.Topic,
+    onDelete: () -> Unit
+) {
     val isDark = com.example.ui.theme.AppTheme.colors.isDark
     com.example.ui.components.glass.GlassCard(
         modifier = Modifier.fillMaxWidth(),
@@ -174,11 +300,17 @@ fun TopicRow(index: Int, topic: com.example.domain.models.Topic) {
                 )
             }
 
-            Icon(
-                imageVector = Icons.Default.DragIndicator,
-                contentDescription = "Reorder",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            IconButton(
+                onClick = onDelete,
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Delete Topic"
+                )
+            }
         }
     }
 }
