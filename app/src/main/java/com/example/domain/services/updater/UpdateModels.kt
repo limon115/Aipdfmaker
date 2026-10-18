@@ -56,7 +56,8 @@ sealed class UpdateState {
     data class Downloading(
         val progress: Float,
         val bytesDownloaded: Long,
-        val totalBytes: Long
+        val totalBytes: Long,
+        val speedBytesPerSec: Long = 0L
     ) : UpdateState()
     data object Extracting : UpdateState()
     data object Validating : UpdateState()
@@ -69,4 +70,16 @@ sealed class UpdateState {
         val message: String,
         val isAuthError: Boolean = false
     ) : UpdateState()
+}
+
+/**
+ * Formats download speed in bytes/sec to a clean, user-facing string (e.g. "12.4 MB/s", "850 KB/s").
+ */
+fun formatDownloadSpeed(bytesPerSec: Long): String {
+    return when {
+        bytesPerSec >= 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f MB/s", bytesPerSec.toDouble() / (1024 * 1024))
+        bytesPerSec >= 1024 -> String.format(java.util.Locale.US, "%.0f KB/s", bytesPerSec.toDouble() / 1024)
+        bytesPerSec > 0 -> "$bytesPerSec B/s"
+        else -> "-- MB/s"
+    }
 }

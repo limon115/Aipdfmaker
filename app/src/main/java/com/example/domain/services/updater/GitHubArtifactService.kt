@@ -6,6 +6,8 @@ import com.example.utils.AppLogger
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -28,7 +30,9 @@ class GitHubArtifactService(private val context: Context) {
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .followRedirects(true)
         .followSslRedirects(true)
         .build()
@@ -131,13 +135,14 @@ class GitHubArtifactService(private val context: Context) {
     }
 
     /**
-     * Downloads the artifact ZIP file from GitHub Actions with streaming progress reporting.
+     * Downloads the artifact ZIP file from GitHub Actions with streaming progress and speed reporting.
+     * Uses optimized 128KB buffer with buffered streams to maximize network & flash storage throughput.
      */
     suspend fun downloadArtifactZip(
         artifact: GitHubArtifact,
         token: String?,
         outputZipFile: File,
-        onProgress: (downloaded: Long, total: Long) -> Unit
+        onProgress: (downloaded: Long, total: Long, speedBytesPerSec: Long) -> Unit
     ): Result<File> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (token.isNullOrBlank()) {
             return@withContext Result.failure(
@@ -188,13 +193,19 @@ class GitHubArtifactService(private val context: Context) {
                 outputZipFile.delete()
             }
 
-            val inputStream: InputStream = responseBody.byteStream()
-            val outputStream = FileOutputStream(outputZipFile)
+            // High-throughput 128KB buffer and buffered streams to maximize network & flash storage I/O
+            val bufferSize = 128 * 1024
+            val inputStream = BufferedInputStream(responseBody.byteStream(), bufferSize)
+            val outputStream = BufferedOutputStream(FileOutputStream(outputZipFile), bufferSize)
 
-            val buffer = ByteArray(16 * 1024)
+            val buffer = ByteArray(bufferSize)
             var bytesRead: Int
             var totalRead = 0L
+            val downloadStartTime = System.currentTimeMillis()
             var lastProgressEmit = 0L
+            var lastSpeedSampleTime = downloadStartTime
+            var lastSpeedSampleBytes = 0L
+            var smoothedSpeed = 0L
 
             inputStream.use { input ->
                 outputStream.use { output ->
@@ -203,16 +214,42 @@ class GitHubArtifactService(private val context: Context) {
                         totalRead += bytesRead
 
                         val now = System.currentTimeMillis()
-                        if (now - lastProgressEmit > 100 || totalRead == totalBytes) {
+                        val speedSampleElapsed = now - lastSpeedSampleTime
+
+                        // Compute rolling smoothed download speed every ~250ms
+                        if (speedSampleElapsed >= 250L) {
+                            val bytesDelta = totalRead - lastSpeedSampleBytes
+                            val instantSpeed = (bytesDelta * 1000L) / speedSampleElapsed
+                            smoothedSpeed = if (smoothedSpeed <= 0L) {
+                                instantSpeed
+                            } else {
+                                ((smoothedSpeed * 0.7) + (instantSpeed * 0.3)).toLong()
+                            }
+                            lastSpeedSampleTime = now
+                            lastSpeedSampleBytes = totalRead
+                        }
+
+                        // Emit progress to UI at ~150-200ms intervals or on completion
+                        if (now - lastProgressEmit >= 150L || totalRead == totalBytes) {
                             lastProgressEmit = now
-                            onProgress(totalRead, totalBytes)
+                            val currentSpeed = if (smoothedSpeed > 0L) {
+                                smoothedSpeed
+                            } else {
+                                val elapsed = now - downloadStartTime
+                                if (elapsed > 50L) (totalRead * 1000L) / elapsed else 0L
+                            }
+                            onProgress(totalRead, totalBytes, currentSpeed)
                         }
                     }
                     output.flush()
                 }
             }
 
-            AppLogger.i(TAG, "Successfully downloaded artifact ZIP to ${outputZipFile.absolutePath} ($totalRead bytes)")
+            val totalElapsed = (System.currentTimeMillis() - downloadStartTime).coerceAtLeast(1L)
+            val finalAverageSpeed = (totalRead * 1000L) / totalElapsed
+            onProgress(totalRead, totalBytes, finalAverageSpeed)
+
+            AppLogger.i(TAG, "Successfully downloaded artifact ZIP to ${outputZipFile.absolutePath} ($totalRead bytes in ${totalElapsed}ms, avg ${finalAverageSpeed / 1024} KB/s)")
             Result.success(outputZipFile)
         } catch (e: Exception) {
             AppLogger.e(TAG, "Error downloading artifact ZIP", e)

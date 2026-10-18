@@ -124,12 +124,13 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
                     artifact = artifact,
                     token = _githubToken.value,
                     outputZipFile = zipFile,
-                    onProgress = { downloaded, total ->
+                    onProgress = { downloaded, total, speed ->
                         val progress = if (total > 0) downloaded.toFloat() / total.toFloat() else 0f
                         _updateState.value = UpdateState.Downloading(
                             progress = progress.coerceIn(0f, 1f),
                             bytesDownloaded = downloaded,
-                            totalBytes = total
+                            totalBytes = total,
+                            speedBytesPerSec = speed
                         )
                     }
                 )

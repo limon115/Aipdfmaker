@@ -4,6 +4,7 @@ import com.example.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -41,9 +42,9 @@ class ApkExtractorService {
             var foundApk = false
             var extractedBytes = 0L
 
-            ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { zipIn ->
+            ZipInputStream(BufferedInputStream(FileInputStream(zipFile), 128 * 1024)).use { zipIn ->
                 var entry = zipIn.nextEntry
-                val buffer = ByteArray(16 * 1024)
+                val buffer = ByteArray(128 * 1024)
 
                 while (entry != null) {
                     val entryName = entry.name
@@ -57,7 +58,7 @@ class ApkExtractorService {
 
                     if (!entry.isDirectory && entryName.endsWith(".apk", ignoreCase = true)) {
                         AppLogger.i(TAG, "Extracting APK entry: $entryName (${entry.size} bytes)")
-                        FileOutputStream(targetApkFile).use { out ->
+                        BufferedOutputStream(FileOutputStream(targetApkFile), 128 * 1024).use { out ->
                             var len: Int
                             while (zipIn.read(buffer).also { len = it } != -1) {
                                 out.write(buffer, 0, len)
