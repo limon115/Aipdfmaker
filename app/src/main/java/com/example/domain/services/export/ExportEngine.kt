@@ -48,8 +48,8 @@ class ExportEngine(private val context: Context) {
                     \usepackage{amssymb}
                     \usepackage{fontspec}
                     \usepackage{polyglossia}
-                    \setmainlanguage{english}
-                    \setotherlanguage{bengali}
+                    \setmainlanguage{bengali}
+                    \setotherlanguage{english}
                     \usepackage{geometry}
                     \geometry{a4paper, margin=1in}
                     \usepackage{xcolor}
@@ -64,12 +64,16 @@ class ExportEngine(private val context: Context) {
                     \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
                     \usepackage{hyperref}
 
-                    \setmainfont{DejaVu Serif}
-
+                    \setmainfont[
+                        Path=/data/data/com.termux/files/home/,
+                        Script=Bengali,
+                        AutoFakeBold=1.5,
+                        AutoFakeSlant=0.2
+                    ]{solaiman.ttf}
+                    \newfontfamily\englishfont{DejaVu Serif}
                     \newfontfamily\bengalifont[
                         Path=/data/data/com.termux/files/home/,
                         Script=Bengali,
-                        Language=Bengali,
                         AutoFakeBold=1.5,
                         AutoFakeSlant=0.2
                     ]{solaiman.ttf}

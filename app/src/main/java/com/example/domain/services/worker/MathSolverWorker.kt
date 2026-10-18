@@ -118,15 +118,16 @@ class MathSolverWorker(
                 10. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
                 
                 **STRICT XELATEX, POLYGLOSSIA & BENGALI RULES FOR THIS GENERATION:**
-                1. **Polyglossia Language Management (CRITICAL):** The document uses Polyglossia (`\setmainlanguage{english}`, `\setotherlanguage{bengali}`) with `\bengalifont` configured for SolaimanLipi.
-                   - If writing solutions/explanations in Bengali, wrap the Bengali text in `\begin{bengali} ... \end{bengali}` (or start with `\selectlanguage{bengali}`) so Polyglossia automatically applies `\bengalifont`.
-                   - For inline Bengali words or phrases inside English text, use `\textbengali{<Bengali text>}`.
-                   - For inline English terms inside Bengali text, use `\textenglish{<English text>}`.
-                   - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, or font definitions; they are already loaded in the preamble.
+                1. **Polyglossia Language Management (CRITICAL):** The main document font is Bengali (`solaiman.ttf`) and the main document language is Bengali (`\setmainlanguage{bengali}`, `\setotherlanguage{english}`).
+                   - Because Bangla is the main font, all Bengali text renders directly by default without needing wrappers.
+                   - CRITICAL: Since the main document font is Bangla, you MUST explicitly wrap ALL English texts inside Polyglossia's english environment:
+                     * For multi-line solutions, paragraphs, or blocks in English, wrap them in `\begin{english} ... \end{english}`.
+                     * For inline English words, terms, headings, or phrases, wrap them in `\textenglish{<English text>}`.
+                   - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, `\setotherlanguage`, or font definitions; they are already loaded in the preamble.
                 2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (`$...$`, `\[ ... \]`, `align`, `equation`). Whenever writing Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
                    - WRONG: `\text{সাফল্য}`
                    - CORRECT: `\text{\bengalifont সাফল্য}`
-                3. **Numerals in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing.
+                3. **Numerals and English in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing. For English text inside math formulas via `\text{...}`, wrap in `\text{\textenglish{...}}`.
                 4. **No Em-Dashes:** The SolaimanLipi font does not support the Unicode Em-Dash (`—`). Never generate `—`. Always use standard LaTeX dashes (`---` for em-dash, `--` for en-dash).
                 5. **No Floats in Boxes:** NEVER use floating environments (`\begin{table}` or `\begin{figure}`) inside a `tcolorbox`, `minipage`, or any other box. Use `\begin{center}` and `\begin{tabular}` directly.
                 6. **Environment Hygiene:** Double-check that every `\begin{...}` has a matching `\end{...}`. 
@@ -270,8 +271,8 @@ class MathSolverWorker(
                 \usepackage{amssymb}
                 \usepackage{fontspec}
                 \usepackage{polyglossia}
-                \setmainlanguage{english}
-                \setotherlanguage{bengali}
+                \setmainlanguage{bengali}
+                \setotherlanguage{english}
                 \usepackage{tikz}
                 \usepackage{pgfplots}
                 \usepackage{circuitikz}
@@ -279,11 +280,16 @@ class MathSolverWorker(
                 \usepackage{tcolorbox}
                 \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
                 \pgfplotsset{compat=1.18}
-                \setmainfont{DejaVu Serif}
+                \setmainfont[
+                    Path=/data/data/com.termux/files/home/,
+                    Script=Bengali,
+                    AutoFakeBold=1.5,
+                    AutoFakeSlant=0.2
+                ]{solaiman.ttf}
+                \newfontfamily\englishfont{DejaVu Serif}
                 \newfontfamily\bengalifont[
                     Path=/data/data/com.termux/files/home/,
                     Script=Bengali,
-                    Language=Bengali,
                     AutoFakeBold=1.5,
                     AutoFakeSlant=0.2
                 ]{solaiman.ttf}

@@ -29,8 +29,8 @@ class LatexCompilerRepository(private val context: Context) {
         \usepackage{amssymb}
         \usepackage{fontspec}
         \usepackage{polyglossia}
-        \setmainlanguage{english}
-        \setotherlanguage{bengali}
+        \setmainlanguage{bengali}
+        \setotherlanguage{english}
         \usepackage{tikz}
         \usepackage{pgfplots}
         \pgfplotsset{compat=1.18}
@@ -38,11 +38,16 @@ class LatexCompilerRepository(private val context: Context) {
         \usepackage{booktabs}
         \usepackage{tcolorbox}
         \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
-        \setmainfont{DejaVu Serif}
+        \setmainfont[
+            Path=/data/data/com.termux/files/home/,
+            Script=Bengali,
+            AutoFakeBold=1.5,
+            AutoFakeSlant=0.2
+        ]{solaiman.ttf}
+        \newfontfamily\englishfont{DejaVu Serif}
         \newfontfamily\bengalifont[
             Path=/data/data/com.termux/files/home/,
             Script=Bengali,
-            Language=Bengali,
             AutoFakeBold=1.5,
             AutoFakeSlant=0.2
         ]{solaiman.ttf}
@@ -57,8 +62,8 @@ class LatexCompilerRepository(private val context: Context) {
         \makeatother
         % --- Author Information ---
         \author{%
-            Khalid Hasan Limon \\\\
-            HSC 26 \\\\
+            Khalid Hasan Limon \\[0.5em]
+            HSC 26 \\[0.5em]
             \texttt{Study Notes}
         }
         % --- Graphical Decoration ---
