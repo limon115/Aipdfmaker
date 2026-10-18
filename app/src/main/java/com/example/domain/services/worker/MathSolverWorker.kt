@@ -133,6 +133,7 @@ class MathSolverWorker(
                 6. **Environment Hygiene:** Double-check that every `\begin{...}` has a matching `\end{...}`. 
                 7. **No Stray Line Breaks:** Do not use `\\` to create new paragraphs in standard text. Use a blank line for a new paragraph or `\vspace{}`.
                 8. **Script Consistency:** Output only English and Bengali text. Do not generate Arabic, Tamil, or other non-Latin scripts.
+                9. **No Wrapping of Standard Text (CRITICAL):** Never wrap paragraphs or standard body text inside `\text{}`, `\mbox{}`, or font-switching commands like `\text{\bengalifont{...}}`. Write all standard text directly in the document body so the XeLaTeX compiler can apply automatic line breaks naturally. Only use `\text{}` for brief text snippets inside math environments or TikZ node labels.
                 
                 * Outputs should be in the same language as input by user.
                 
