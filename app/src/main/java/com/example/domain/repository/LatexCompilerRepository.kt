@@ -46,8 +46,8 @@ class LatexCompilerRepository(private val context: Context) {
 
         % Let ucharclasses handle Bengali and the Dari (।) which is in the Devanagari block
         \usepackage[Bengali, Devanagari]{ucharclasses}
-        \setTransitionsForBengali{\bengalifont}{\rmfamily}
-        \setTransitionsForDevanagari{\bengalifont}{\rmfamily}
+        \setTransitionsFor{Bengali}{\bengalifont}{\rmfamily}
+        \setTransitionsFor{Devanagari}{\bengalifont}{\rmfamily}
         % DO NOT add a BasicLatin transition, let LaTeX handle it naturally
         % --- Signature Design Color ---
         \definecolor{titlepagecolor}{cmyk}{1,.60,0,.40}

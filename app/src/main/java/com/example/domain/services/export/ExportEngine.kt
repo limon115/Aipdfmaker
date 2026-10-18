@@ -73,8 +73,8 @@ class ExportEngine(private val context: Context) {
 
                     % Let ucharclasses handle Bengali and the Dari (।) which is in the Devanagari block
                     \usepackage[Bengali, Devanagari]{ucharclasses}
-                    \setTransitionsForBengali{\bengalifont}{\rmfamily}
-                    \setTransitionsForDevanagari{\bengalifont}{\rmfamily}
+                    \setTransitionsFor{Bengali}{\bengalifont}{\rmfamily}
+                    \setTransitionsFor{Devanagari}{\bengalifont}{\rmfamily}
                     % DO NOT add a BasicLatin transition, let LaTeX handle it naturally
 
                     \title{$projectName}
