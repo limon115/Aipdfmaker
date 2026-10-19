@@ -206,6 +206,7 @@ class LatexChatService(private val context: Context) {
             \usepackage{circuitikz}
             \usepackage{booktabs}
             \usepackage{tcolorbox}
+            \usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue]{hyperref}
             \newenvironment{rectbox}{\begin{tcolorbox}}{\end{tcolorbox}}
             \pgfplotsset{compat=1.18}
             \setmainfont[

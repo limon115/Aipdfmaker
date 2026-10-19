@@ -530,7 +530,9 @@ fun MainScreenContent(
         modifier = modifier,
         containerColor = Color.Transparent,
         bottomBar = {
-            val isBottomBarVisible = activeRoute in bottomNavRoutes
+            val isBottomBarVisible = (activeRoute in bottomNavRoutes) && 
+                activeRoute != BottomNavItem.Chat.route && 
+                activeRoute != "latex_chat"
             AnimatedVisibility(
                 visible = isBottomBarVisible,
                 enter = slideInVertically(
