@@ -28,7 +28,7 @@ data class NewProjectState(
     val course: String = "",
     val chapter: String = "",
     val description: String = "",
-    val noteStyle: String = "Study Notes (Detailed)",
+    val noteStyle: String = "HSC Level",
     val outputFormat: String = "PDF",
     val errorMessage: String? = null
 )
@@ -42,12 +42,17 @@ class NewProjectViewModel(private val projectDao: ProjectDao) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val project = projectDao.getProjectById(projectId)
             if (project != null) {
+                val normalizedStyle = if (project.noteStyle.contains("HSC", ignoreCase = true)) {
+                    "HSC Level"
+                } else {
+                    "University Level"
+                }
                 _state.update {
                     it.copy(
                         projectTitle = project.title,
                         course = project.course,
                         chapter = project.chapter,
-                        noteStyle = project.noteStyle,
+                        noteStyle = normalizedStyle,
                         outputFormat = project.outputFormat,
                         extractedText = project.sourceText
                     )

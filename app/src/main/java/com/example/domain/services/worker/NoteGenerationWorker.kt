@@ -67,6 +67,7 @@ class NoteGenerationWorker(
         val projectDao = db.projectDao()
         val project = projectDao.getProjectById(projectId)
         val sourceText = project?.sourceText ?: ""
+        val noteStyle = project?.noteStyle ?: "University Level"
 
         if (sourceText.isEmpty()) {
             return Result.failure(workDataOf(ERROR to "Source text is empty"))
@@ -126,6 +127,7 @@ class NoteGenerationWorker(
                         topicTitle = topic.title,
                         blueprintContext = blueprintJson,
                         relevantContext = relevantContextForTopic,
+                        noteStyle = noteStyle,
                         ai2Provider = candidate.provider,
                         ai2Model = candidate.model,
                         ai2ApiKey = candidate.apiKey,
@@ -144,6 +146,7 @@ class NoteGenerationWorker(
                         topicTitle = topic.title,
                         blueprintContext = blueprintJson,
                         relevantContext = relevantContextForTopic,
+                        noteStyle = noteStyle,
                         ai2Provider = primaryCandidate.provider,
                         ai2Model = primaryCandidate.model,
                         ai2ApiKey = primaryCandidate.apiKey,
