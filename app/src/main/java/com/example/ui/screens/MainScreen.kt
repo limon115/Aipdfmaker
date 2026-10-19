@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.width
 
@@ -78,6 +79,7 @@ fun MainScreen() {
 
     val items = listOf(
         BottomNavItem.Home,
+        BottomNavItem.Chat,
         BottomNavItem.Dashboard,
         BottomNavItem.Settings
     )
@@ -135,6 +137,7 @@ fun MainScreen() {
         val bottomNavRoutes = remember {
             listOf(
                 BottomNavItem.Home.route,
+                BottomNavItem.Chat.route,
                 BottomNavItem.Dashboard.route,
                 BottomNavItem.Settings.route
             )
@@ -218,6 +221,11 @@ fun MainScreen() {
                     }
                 )
             }
+            composable(BottomNavItem.Chat.route) {
+                com.example.ui.screens.chat.LatexChatScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
             composable("latex_debugger") {
                 com.example.ui.screens.debugger.LatexDebuggerScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -233,7 +241,38 @@ fun MainScreen() {
                         .verticalScroll(androidx.compose.foundation.rememberScrollState())
                         .padding(start = 16.dp, end = 16.dp, top = 48.dp)
                 ) {
-                                        com.example.ui.screens.settings.AiUsageDashboardCard()
+                    com.example.ui.screens.settings.AiUsageDashboardCard()
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                    
+                    com.example.ui.components.glass.GlassCard(
+                        onClick = { navController.navigate(BottomNavItem.Chat.route) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        androidx.compose.foundation.layout.Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Forum, contentDescription = "LaTeX AI ChatBot", tint = MaterialTheme.colorScheme.primary)
+                            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+                            Column {
+                                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("LaTeX AI ChatBot", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                    androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            "NEW",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text("Ask for custom LaTeX documents and compile to PDF in real-time.", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
                     
                     com.example.ui.components.glass.GlassCard(
@@ -479,6 +518,7 @@ fun MainScreenContent(
     val items = remember {
         listOf(
             BottomNavItem.Home,
+            BottomNavItem.Chat,
             BottomNavItem.Dashboard,
             BottomNavItem.Settings
         )
