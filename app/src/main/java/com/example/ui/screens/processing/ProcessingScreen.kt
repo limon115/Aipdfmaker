@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
@@ -176,44 +177,71 @@ fun ProcessingScreen(
 
             if (state.workState == WorkInfo.State.FAILED) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
                         onClick = { viewModel.retry(context, projectId) },
                         shape = RoundedCornerShape(32.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.height(48.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
                     ) {
-                        Text("Retry", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Retry",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
                     OutlinedButton(
                         onClick = onNavigateBack,
                         shape = RoundedCornerShape(32.dp),
-                        modifier = Modifier.height(48.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
                     ) {
-                        Text("Go Back", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = "Go Back",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             } else {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    com.example.ui.components.glass.GlassCard(
+                    Button(
                         onClick = onNavigateBack,
-                        modifier = Modifier.wrapContentSize(),
-                        shape = RoundedCornerShape(32.dp)
+                        shape = RoundedCornerShape(32.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .height(48.dp)
                     ) {
-                        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
-                            Text(
-                                text = "Run in Background",
-                                color = MaterialTheme.colorScheme.onBackground,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Text(
+                            text = "Run in Background",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
                     OutlinedButton(
@@ -223,9 +251,17 @@ fun ProcessingScreen(
                         },
                         shape = RoundedCornerShape(32.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        modifier = Modifier.height(48.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Cancel",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

@@ -270,7 +270,7 @@ fun HomeScreenContent(
                             Text(
                                 text = title,
                                 color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     )
@@ -364,7 +364,7 @@ fun HomeScreenContent(
                             contentType = { "project_card" }
                         ) { project ->
                             val compiledPdf = remember(project.id, project.lastUpdated) {
-                                FileUtils.findCompiledPdf(context, project.title)
+                                FileUtils.findCompiledPdf(context, project.title, project.lastUpdated)
                             }
                             ProjectCard(
                                 project = project,
@@ -445,36 +445,43 @@ fun ProjectCard(
                 ) {
                     val daysAgo = ((System.currentTimeMillis() - project.lastUpdated) / (1000 * 60 * 60 * 24)).toInt()
                     val timeText = when (daysAgo) {
-                        0 -> "Updated today"
-                        1 -> "Updated 1 day ago"
-                        else -> "Updated $daysAgo days ago"
+                        0 -> "Today"
+                        1 -> "1d ago"
+                        else -> "${daysAgo}d ago"
                     }
                     Text(
                         text = timeText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "•",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     val isDark = com.example.ui.theme.AppTheme.colors.isDark
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = when (project.status) {
-                            "Completed" -> if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) else Color(0xFF4CAF50).copy(alpha = 0.15f)
-                            "Debugged" -> if (isDark) Color(0xFF4A148C).copy(alpha = 0.5f) else Color(0xFF9C27B0).copy(alpha = 0.15f)
-                            else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                when (project.status) {
+                                    "Completed" -> if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) else Color(0xFF4CAF50).copy(alpha = 0.15f)
+                                    "Debugged" -> if (isDark) Color(0xFF4A148C).copy(alpha = 0.5f) else Color(0xFF9C27B0).copy(alpha = 0.15f)
+                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                }
+                            )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = project.status,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             color = when (project.status) {
                                 "Completed" -> if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
                                 "Debugged" -> if (isDark) Color(0xFFCE93D8) else Color(0xFF7B1FA2)
@@ -484,12 +491,13 @@ fun ProjectCard(
                     }
                     if (compiledPdf != null && compiledPdf.exists()) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -503,6 +511,8 @@ fun ProjectCard(
                                     text = "PDF",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }

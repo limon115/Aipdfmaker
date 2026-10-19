@@ -31,6 +31,11 @@ fun LiquidBackground(
     val color3 = remember(isDark) { Color(0xFFFF5252).copy(alpha = if (isDark) 0.22f else 0.35f) } // Coral Pink
     val color4 = remember(isDark) { Color(0xFF7C4DFF).copy(alpha = if (isDark) 0.28f else 0.42f) } // Deep Violet
 
+    val colorList1 = remember(color1) { listOf(color1, Color.Transparent) }
+    val colorList2 = remember(color2) { listOf(color2, Color.Transparent) }
+    val colorList3 = remember(color3) { listOf(color3, Color.Transparent) }
+    val colorList4 = remember(color4) { listOf(color4, Color.Transparent) }
+
     val infiniteTransition = rememberInfiniteTransition(label = "liquid_bg")
     
     val phase1State = infiniteTransition.animateFloat(
@@ -83,7 +88,7 @@ fun LiquidBackground(
             val cy1 = height * 0.28f + (height * 0.22f) * kotlin.math.cos(p1)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color1, Color.Transparent),
+                    colors = colorList1,
                     center = Offset(cx1, cy1),
                     radius = radius
                 ),
@@ -96,7 +101,7 @@ fun LiquidBackground(
             val cy2 = height * 0.48f + (height * 0.25f) * kotlin.math.sin(p2)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color2, Color.Transparent),
+                    colors = colorList2,
                     center = Offset(cx2, cy2),
                     radius = radius * 0.95f
                 ),
@@ -109,7 +114,7 @@ fun LiquidBackground(
             val cy3 = height * 0.82f + (height * 0.20f) * kotlin.math.cos(p3)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color3, Color.Transparent),
+                    colors = colorList3,
                     center = Offset(cx3, cy3),
                     radius = radius * 1.15f
                 ),
@@ -122,7 +127,7 @@ fun LiquidBackground(
             val cy4 = height * 0.85f + (height * 0.18f) * kotlin.math.cos(p1)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color4, Color.Transparent),
+                    colors = colorList4,
                     center = Offset(cx4, cy4),
                     radius = radius * 0.85f
                 ),

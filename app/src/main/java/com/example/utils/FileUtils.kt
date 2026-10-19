@@ -138,6 +138,16 @@ object FileUtils {
     }
 
     /**
+     * In-memory cache for compiled PDF file lookups to prevent blocking disk I/O on the UI thread during LazyColumn scrolling.
+     */
+    private val NOT_FOUND_FILE = File("")
+    private val compiledPdfCache = java.util.concurrent.ConcurrentHashMap<String, File>()
+
+    fun invalidateCompiledPdfCache() {
+        compiledPdfCache.clear()
+    }
+
+    /**
      * Resolves the dedicated directory for Math Solver outputs:
      * "/storage/emulated/0/Documents/aipdfs/mathsolver"
      */
@@ -148,8 +158,19 @@ object FileUtils {
     /**
      * Locates any compiled PDF associated with a project.
      * Looks in public, external, and internal directories under "aipdfs/mathsolver", "aipdfs/<safeName>", and "AiPdfMaker".
+     * Uses in-memory caching to prevent stutter and frame drops while scrolling LazyColumns.
      */
-    fun findCompiledPdf(context: Context, projectTitle: String): File? {
+    fun findCompiledPdf(context: Context, projectTitle: String, lastUpdated: Long = 0L): File? {
+        val cacheKey = "${projectTitle}_${lastUpdated}"
+        val cached = compiledPdfCache[cacheKey]
+        if (cached != null) {
+            return if (cached === NOT_FOUND_FILE || !cached.exists() || cached.length() <= 0) {
+                null
+            } else {
+                cached
+            }
+        }
+
         val safeName = getSafeFileName(projectTitle, "Project")
         val strippedTitle = getSafeFileName(
             projectTitle.removePrefix("Math:").removePrefix("Math -").trim(),
@@ -201,6 +222,7 @@ object FileUtils {
             for (name in targetNames) {
                 val candidate = File(dir, name)
                 if (candidate.exists() && candidate.isFile && candidate.length() > 0) {
+                    compiledPdfCache[cacheKey] = candidate
                     return candidate
                 }
             }
@@ -215,18 +237,29 @@ object FileUtils {
                         it.nameWithoutExtension.equals(safeName, ignoreCase = true) ||
                         (strippedTitle.isNotBlank() && it.nameWithoutExtension.contains(strippedTitle.take(15), ignoreCase = true))
                     }
-                    if (matched != null) return matched
+                    if (matched != null) {
+                        compiledPdfCache[cacheKey] = matched
+                        return matched
+                    }
                 } else if (dir.name == "AiPdfMaker") {
                     val cleanWord = safeName.replace("Math_", "").replace("Project", "").trim('_')
                     val matched = if (cleanWord.isNotBlank()) {
                         pdfs.firstOrNull { it.name.contains(cleanWord.take(15), ignoreCase = true) }
                     } else null
-                    if (matched != null) return matched
+                    if (matched != null) {
+                        compiledPdfCache[cacheKey] = matched
+                        return matched
+                    }
                 } else {
-                    return pdfs.maxByOrNull { it.lastModified() }
+                    val latest = pdfs.maxByOrNull { it.lastModified() }
+                    if (latest != null) {
+                        compiledPdfCache[cacheKey] = latest
+                        return latest
+                    }
                 }
             }
         }
+        compiledPdfCache[cacheKey] = NOT_FOUND_FILE
         return null
     }
 

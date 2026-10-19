@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -147,36 +148,48 @@ fun MainScreen() {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    fadeIn(animationSpec = tween(160, easing = LinearOutSlowInEasing))
+                    fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing))
                 } else {
-                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> (fullWidth * 0.15f).toInt() },
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
                 }
             },
             exitTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
+                    fadeOut(animationSpec = tween(140, easing = FastOutLinearInEasing))
                 } else {
-                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> (-fullWidth * 0.15f).toInt() },
+                        animationSpec = tween(200, easing = FastOutLinearInEasing)
+                    ) + fadeOut(animationSpec = tween(160, easing = FastOutLinearInEasing))
                 }
             },
             popEnterTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    fadeIn(animationSpec = tween(160, easing = LinearOutSlowInEasing))
+                    fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing))
                 } else {
-                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing))
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> (-fullWidth * 0.15f).toInt() },
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
                 }
             },
             popExitTransition = {
                 val fromIdx = bottomNavRoutes.indexOf(initialState.destination.route)
                 val toIdx = bottomNavRoutes.indexOf(targetState.destination.route)
                 if (fromIdx != -1 && toIdx != -1) {
-                    fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
+                    fadeOut(animationSpec = tween(140, easing = FastOutLinearInEasing))
                 } else {
-                    fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing))
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> (fullWidth * 0.15f).toInt() },
+                        animationSpec = tween(200, easing = FastOutLinearInEasing)
+                    ) + fadeOut(animationSpec = tween(160, easing = FastOutLinearInEasing))
                 }
             }
         ) {
@@ -561,29 +574,22 @@ fun MainScreenContent(
                     }
 
                     // 2. Separate circular Floating Action Button (FAB) immediately to the right of the main capsule
-                    val isHomeActive = activeRoute == BottomNavItem.Home.route
-                    AnimatedVisibility(
-                        visible = isHomeActive,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing))
+                    FloatingActionButton(
+                        onClick = onNavigateToNewProject,
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 10.dp
+                        ),
+                        modifier = Modifier.size(56.dp)
                     ) {
-                        FloatingActionButton(
-                            onClick = onNavigateToNewProject,
-                            shape = CircleShape,
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            elevation = FloatingActionButtonDefaults.elevation(
-                                defaultElevation = 6.dp,
-                                pressedElevation = 10.dp
-                            ),
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "New Project",
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "New Project",
+                            modifier = Modifier.size(26.dp)
+                        )
                     }
                 }
             }
@@ -688,9 +694,10 @@ private fun CapsuleNavItem(
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = contentColor,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

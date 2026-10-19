@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.domain.services.youtube.YouTubeCaptionExtractor
 import kotlinx.coroutines.launch
@@ -112,7 +113,14 @@ fun YouTubeLinkScreen(
                         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                         youtubeUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                     },
-                    label = { Text("Sample Video URL", style = MaterialTheme.typography.labelSmall) },
+                    label = {
+                        Text(
+                            text = "Sample Video URL",
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                     )

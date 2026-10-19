@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -198,7 +199,14 @@ fun MathSolverScreen(
                 items(sampleProblems, key = { it }) { sample ->
                     AssistChip(
                         onClick = { problemText = sample },
-                        label = { Text(sample, style = MaterialTheme.typography.labelSmall) },
+                        label = {
+                            Text(
+                                text = sample,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                             labelColor = MaterialTheme.colorScheme.onSurface
@@ -532,7 +540,9 @@ private fun MathSolverProgressCard(
                             "Switch to Background Task",
                             style = MaterialTheme.typography.titleMedium,
                             color = androidx.compose.ui.graphics.Color.White,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -547,7 +557,13 @@ private fun MathSolverProgressCard(
                 ) {
                     Icon(Icons.Default.Cancel, contentDescription = "Cancel Task")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cancel Task", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Cancel Task",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }

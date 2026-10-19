@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 import com.example.domain.models.Topic
@@ -176,8 +177,10 @@ fun TopicsDetectedScreen(
                     enabled = blueprintState != null && topics.isNotEmpty()
                 ) {
                     Text(
-                        if (topics.isNotEmpty()) "Continue (${topics.size} Topics)" else "Continue",
-                        style = MaterialTheme.typography.titleMedium
+                        text = if (topics.isNotEmpty()) "Continue (${topics.size} Topics)" else "Continue",
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -291,12 +294,16 @@ fun TopicRow(
                     text = topic.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "Est. duration: ${topic.durationMinutes} min",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import android.os.Environment
@@ -176,7 +177,7 @@ fun ProjectDetailsScreen(
                         FilterChip(
                             selected = state.outputFormat == format,
                             onClick = { viewModel.updateOutputFormat(format) },
-                            label = { Text(format) },
+                            label = { Text(format, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer

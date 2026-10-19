@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -110,7 +111,14 @@ fun LatexDebuggerScreen(
                             viewModel.updateLatexCode(codeAndLog.first)
                             viewModel.updateLogContent(codeAndLog.second)
                         },
-                        label = { Text("Sample: $label", style = MaterialTheme.typography.labelSmall) },
+                        label = {
+                            Text(
+                                text = "Sample: $label",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
                             labelColor = MaterialTheme.colorScheme.onSurface

@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -211,7 +212,13 @@ fun NotesViewerScreen(
                         ) {
                             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("View PDF", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "View PDF",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         Button(
@@ -224,7 +231,13 @@ fun NotesViewerScreen(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
-                            Text("Recompile", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Recompile",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 } else {
@@ -238,7 +251,12 @@ fun NotesViewerScreen(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("Export Final Document", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = "Export Final Document",
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

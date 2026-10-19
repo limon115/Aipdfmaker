@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -120,7 +121,12 @@ fun NoteGenerationScreen(
                                     .height(56.dp),
                                 shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("Run in Background", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "Run in Background",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             OutlinedButton(
@@ -133,7 +139,13 @@ fun NoteGenerationScreen(
                                 shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
-                                Text("Cancel", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Cancel",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
