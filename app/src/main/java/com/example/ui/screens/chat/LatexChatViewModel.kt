@@ -2,31 +2,38 @@ package com.example.ui.screens.chat
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.example.data.repository.LatexChatRepository
 import com.example.domain.models.chat.ChatMessage
 import com.example.domain.models.chat.ChatPdfStatus
+import com.example.domain.models.chat.ChatSession
 import com.example.domain.services.chat.LatexChatService
+import com.example.domain.services.worker.LatexChatWorker
+import com.example.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.UUID
 
-data class PromptCategory(
-    val id: String,
-    val title: String,
-    val iconEmoji: String,
-    val prompts: List<PromptItem>
-)
-
-data class PromptItem(
-    val title: String,
-    val description: String,
-    val promptText: String
-)
-
 class LatexChatViewModel : ViewModel() {
+
+    private val _sessions = MutableStateFlow<List<ChatSession>>(emptyList())
+    val sessions: StateFlow<List<ChatSession>> = _sessions.asStateFlow()
+
+    private val _currentSession = MutableStateFlow<ChatSession?>(null)
+    val currentSession: StateFlow<ChatSession?> = _currentSession.asStateFlow()
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -42,6 +49,9 @@ class LatexChatViewModel : ViewModel() {
 
     private val _selectedCategoryIndex = MutableStateFlow(0)
     val selectedCategoryIndex: StateFlow<Int> = _selectedCategoryIndex.asStateFlow()
+
+    private var observeJob: Job? = null
+    private var repository: LatexChatRepository? = null
 
     val promptCategories = listOf(
         PromptCategory(
@@ -127,92 +137,211 @@ class LatexChatViewModel : ViewModel() {
         )
     )
 
-    fun selectCategory(index: Int) {
-        _selectedCategoryIndex.value = index.coerceIn(0, promptCategories.size - 1)
-    }
-
-    fun sendMessage(context: Context, prompt: String) {
-        val trimmedPrompt = prompt.trim()
-        if (trimmedPrompt.isBlank() || _isGenerating.value) return
-
-        val userMessage = ChatMessage(
-            id = UUID.randomUUID().toString(),
-            isUser = true,
-            text = trimmedPrompt
-        )
-
-        val botMessageId = UUID.randomUUID().toString()
-        val initialBotMessage = ChatMessage(
-            id = botMessageId,
-            isUser = false,
-            text = "Analyzing your request and crafting your custom LaTeX document...",
-            pdfStatus = ChatPdfStatus.IDLE
-        )
-
-        val currentList = _messages.value
-        _messages.value = currentList + userMessage + initialBotMessage
-        _isGenerating.value = true
-        _generatingStatus.value = "Analyzing prompt & drafting LaTeX..."
-
+    fun initialize(context: Context) {
+        if (repository == null) {
+            repository = LatexChatRepository(context)
+        }
         viewModelScope.launch(Dispatchers.Main) {
-            val service = LatexChatService(context)
-            try {
-                val result = service.generateChatResponse(
-                    history = currentList,
-                    userPrompt = trimmedPrompt
-                )
-
-                _generatingStatus.value = "Compiling document to PDF via XeLaTeX..."
-
-                updateMessage(botMessageId) {
-                    it.copy(
-                        text = result.conversationalText,
-                        latexCode = result.latexCode,
-                        pdfTitle = result.suggestedTitle,
-                        pdfStatus = if (result.latexCode != null) ChatPdfStatus.COMPILING else ChatPdfStatus.IDLE
-                    )
-                }
-
-                if (result.latexCode != null) {
-                    val compileResult = service.compileLatexToPdf(result.latexCode, result.suggestedTitle)
-                    if (compileResult.isSuccess) {
-                        val pdfFile = compileResult.getOrNull()
-                        updateMessage(botMessageId) {
-                            it.copy(
-                                pdfFile = pdfFile,
-                                pdfStatus = ChatPdfStatus.READY
-                            )
-                        }
-                    } else {
-                        val err = compileResult.exceptionOrNull()?.message ?: "Compilation error"
-                        updateMessage(botMessageId) {
-                            it.copy(
-                                pdfStatus = ChatPdfStatus.ERROR,
-                                errorMessage = err
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                updateMessage(botMessageId) {
-                    it.copy(
-                        text = "I encountered an issue generating your document: ${e.localizedMessage ?: "Unknown error"}",
-                        pdfStatus = ChatPdfStatus.ERROR,
-                        errorMessage = e.message
-                    )
-                }
-            } finally {
-                _isGenerating.value = false
-                _generatingStatus.value = "Thinking..."
+            val repo = repository ?: return@launch
+            val list = repo.getAllSessions()
+            _sessions.value = list
+            if (list.isNotEmpty() && _currentSession.value == null) {
+                selectSession(context, list.first().id)
+            } else if (list.isEmpty()) {
+                startNewChat(context)
             }
         }
     }
 
+    fun selectCategory(index: Int) {
+        _selectedCategoryIndex.value = index.coerceIn(0, promptCategories.size - 1)
+    }
+
+    fun startNewChat(context: Context) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            val newSession = repo.createSession("New Chat")
+            _sessions.value = repo.getAllSessions()
+            _currentSession.value = newSession
+            _messages.value = emptyList()
+            _isGenerating.value = false
+            observeJob?.cancel()
+        }
+    }
+
+    fun selectSession(context: Context, sessionId: String) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            val session = repo.getSession(sessionId) ?: return@launch
+            _currentSession.value = session
+            _messages.value = repo.getMessages(sessionId)
+            _isGenerating.value = false
+            observeJob?.cancel()
+        }
+    }
+
+    fun renameSession(context: Context, sessionId: String, newTitle: String) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            repo.updateSessionTitle(sessionId, newTitle)
+            _sessions.value = repo.getAllSessions()
+            if (_currentSession.value?.id == sessionId) {
+                _currentSession.value = _currentSession.value?.copy(title = newTitle)
+            }
+        }
+    }
+
+    fun deleteSession(context: Context, sessionId: String) {
+        viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            repo.deleteSession(sessionId)
+            val updated = repo.getAllSessions()
+            _sessions.value = updated
+            if (_currentSession.value?.id == sessionId) {
+                if (updated.isNotEmpty()) {
+                    selectSession(context, updated.first().id)
+                } else {
+                    startNewChat(context)
+                }
+            }
+        }
+    }
+
+    fun sendMessage(context: Context, prompt: String, runInBackground: Boolean = false) {
+        val trimmedPrompt = prompt.trim()
+        if (trimmedPrompt.isBlank() || _isGenerating.value) return
+
+        viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            var session = _currentSession.value
+            if (session == null) {
+                session = repo.createSession(suggestSessionTitle(trimmedPrompt))
+                _currentSession.value = session
+                _sessions.value = repo.getAllSessions()
+            }
+
+            val sessionId = session.id
+            val isFirstMessage = _messages.value.isEmpty()
+            if (isFirstMessage && (session.title == "New Chat" || session.title.isBlank())) {
+                val newTitle = suggestSessionTitle(trimmedPrompt)
+                repo.updateSessionTitle(sessionId, newTitle)
+                _currentSession.value = session.copy(title = newTitle)
+                _sessions.value = repo.getAllSessions()
+            }
+
+            val userMessage = ChatMessage(
+                id = UUID.randomUUID().toString(),
+                sessionId = sessionId,
+                isUser = true,
+                text = trimmedPrompt
+            )
+
+            val botMessageId = UUID.randomUUID().toString()
+            val initialBotMessage = ChatMessage(
+                id = botMessageId,
+                sessionId = sessionId,
+                isUser = false,
+                text = "Analyzing requirements and drafting your custom LaTeX document...",
+                pdfStatus = ChatPdfStatus.IDLE
+            )
+
+            val newMessages = _messages.value + userMessage + initialBotMessage
+            _messages.value = newMessages
+            repo.saveMessages(sessionId, newMessages)
+
+            _isGenerating.value = true
+            _generatingStatus.value = "Analyzing prompt & drafting LaTeX..."
+
+            // Enqueue WorkManager job for 100% reliable background execution
+            enqueueBackgroundJob(context, sessionId, trimmedPrompt, botMessageId)
+        }
+    }
+
+    private fun enqueueBackgroundJob(
+        context: Context,
+        sessionId: String,
+        prompt: String,
+        botMessageId: String
+    ) {
+        observeJob?.cancel()
+
+        val workManager = WorkManager.getInstance(context)
+        val workName = "LatexChat_${sessionId}_${botMsgIdClean(botMessageId)}"
+
+        val inputData = Data.Builder()
+            .putString(LatexChatWorker.KEY_SESSION_ID, sessionId)
+            .putString(LatexChatWorker.KEY_PROMPT, prompt)
+            .putString(LatexChatWorker.KEY_BOT_MSG_ID, botMessageId)
+            .build()
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<LatexChatWorker>()
+            .setConstraints(constraints)
+            .setInputData(inputData)
+            .addTag("LatexChatTag")
+            .build()
+
+        workManager.enqueueUniqueWork(
+            workName,
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
+
+        observeJob = viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            try {
+                workManager.getWorkInfoByIdLiveData(workRequest.id).asFlow().collect { workInfo ->
+                    if (workInfo != null) {
+                        val status = workInfo.progress.getString("STATUS")
+                        if (status != null) {
+                            _generatingStatus.value = status
+                        }
+
+                        when (workInfo.state) {
+                            WorkInfo.State.RUNNING -> {
+                                _isGenerating.value = true
+                                syncLatestMessages(repo, sessionId)
+                            }
+                            WorkInfo.State.SUCCEEDED -> {
+                                _isGenerating.value = false
+                                _generatingStatus.value = "Ready"
+                                syncLatestMessages(repo, sessionId)
+                            }
+                            WorkInfo.State.FAILED -> {
+                                _isGenerating.value = false
+                                _generatingStatus.value = "Failed"
+                                syncLatestMessages(repo, sessionId)
+                            }
+                            WorkInfo.State.CANCELLED -> {
+                                _isGenerating.value = false
+                                syncLatestMessages(repo, sessionId)
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.w("LatexChatViewModel", "Error observing worker: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun syncLatestMessages(repo: LatexChatRepository, sessionId: String) {
+        if (_currentSession.value?.id == sessionId) {
+            _messages.value = repo.getMessages(sessionId)
+            _sessions.value = repo.getAllSessions()
+        }
+    }
+
     fun recompileLatex(context: Context, messageId: String, newLatex: String) {
+        val session = _currentSession.value ?: return
         val msg = _messages.value.find { it.id == messageId } ?: return
         val docTitle = msg.pdfTitle ?: "Latex Document"
 
-        updateMessage(messageId) {
+        updateMessageInMemory(messageId) {
             it.copy(
                 latexCode = newLatex,
                 pdfStatus = ChatPdfStatus.COMPILING,
@@ -221,38 +350,46 @@ class LatexChatViewModel : ViewModel() {
         }
 
         viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
             val service = LatexChatService(context)
             try {
                 val compileResult = service.compileLatexToPdf(newLatex, docTitle)
                 if (compileResult.isSuccess) {
                     val pdfFile = compileResult.getOrNull()
-                    updateMessage(messageId) {
+                    repo.updateMessage(session.id, messageId) {
                         it.copy(
+                            latexCode = newLatex,
                             pdfFile = pdfFile,
                             pdfStatus = ChatPdfStatus.READY
                         )
                     }
+                    syncLatestMessages(repo, session.id)
                 } else {
                     val err = compileResult.exceptionOrNull()?.message ?: "Compilation error"
-                    updateMessage(messageId) {
+                    repo.updateMessage(session.id, messageId) {
                         it.copy(
+                            latexCode = newLatex,
                             pdfStatus = ChatPdfStatus.ERROR,
                             errorMessage = err
                         )
                     }
+                    syncLatestMessages(repo, session.id)
                 }
             } catch (e: Exception) {
-                updateMessage(messageId) {
+                repo.updateMessage(session.id, messageId) {
                     it.copy(
+                        latexCode = newLatex,
                         pdfStatus = ChatPdfStatus.ERROR,
                         errorMessage = e.message
                     )
                 }
+                syncLatestMessages(repo, session.id)
             }
         }
     }
 
     fun retryGeneration(context: Context, botMessageId: String) {
+        val session = _currentSession.value ?: return
         val msgList = _messages.value
         val botIdx = msgList.indexOfFirst { it.id == botMessageId }
         if (botIdx <= 0) return
@@ -260,10 +397,13 @@ class LatexChatViewModel : ViewModel() {
         val priorUserMsg = msgList[botIdx - 1]
         if (!priorUserMsg.isUser) return
 
-        // Remove the failed bot message
-        _messages.value = msgList.filter { it.id != botMessageId }
-        // Re-send the prompt
-        sendMessage(context, priorUserMsg.text)
+        viewModelScope.launch(Dispatchers.Main) {
+            val repo = repository ?: LatexChatRepository(context).also { repository = it }
+            val updated = msgList.filter { it.id != botMessageId }
+            _messages.value = updated
+            repo.saveMessages(session.id, updated)
+            sendMessage(context, priorUserMsg.text)
+        }
     }
 
     fun startEditingMessage(message: ChatMessage) {
@@ -274,13 +414,23 @@ class LatexChatViewModel : ViewModel() {
         _editingMessage.value = null
     }
 
-    fun clearChat() {
-        _messages.value = emptyList()
+    suspend fun exportCurrentChatMarkdown(context: Context): String {
+        val repo = repository ?: LatexChatRepository(context).also { repository = it }
+        val session = _currentSession.value ?: return ""
+        return repo.exportSessionAsMarkdown(session.id)
     }
 
-    private fun updateMessage(id: String, transform: (ChatMessage) -> ChatMessage) {
+    private fun updateMessageInMemory(id: String, transform: (ChatMessage) -> ChatMessage) {
         _messages.value = _messages.value.map { msg ->
             if (msg.id == id) transform(msg) else msg
         }
     }
+
+    private fun suggestSessionTitle(prompt: String): String {
+        val firstLine = prompt.lines().firstOrNull { it.isNotBlank() }?.trim() ?: "New Chat"
+        val clean = firstLine.replace(Regex("[^a-zA-Z0-9 _-]"), " ").trim()
+        return if (clean.length > 5) clean.take(30) else "New Chat"
+    }
+
+    private fun botMsgIdClean(id: String): String = id.replace("-", "").take(12)
 }

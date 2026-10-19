@@ -10,8 +10,17 @@ enum class ChatPdfStatus {
     ERROR
 }
 
+data class ChatSession(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String = "New Chat",
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastUpdatedAt: Long = System.currentTimeMillis(),
+    val previewText: String = ""
+)
+
 data class ChatMessage(
     val id: String = UUID.randomUUID().toString(),
+    val sessionId: String = "",
     val isUser: Boolean,
     val text: String,
     val latexCode: String? = null,

@@ -25,8 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -42,8 +40,10 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.models.chat.ChatMessage
 import com.example.domain.models.chat.ChatPdfStatus
+import com.example.domain.models.chat.ChatSession
 import com.example.ui.components.glass.GlassCard
 import com.example.utils.FileUtils
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,6 +55,15 @@ fun LatexChatScreen(
     onNavigateBack: () -> Unit = {},
     viewModel: LatexChatViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.initialize(context)
+    }
+
+    val sessions by viewModel.sessions.collectAsState()
+    val currentSession by viewModel.currentSession.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val isGenerating by viewModel.isGenerating.collectAsState()
     val generatingStatus by viewModel.generatingStatus.collectAsState()
@@ -62,9 +71,13 @@ fun LatexChatScreen(
     val selectedCategoryIndex by viewModel.selectedCategoryIndex.collectAsState()
 
     var inputText by remember { mutableStateOf("") }
-    var showClearDialog by remember { mutableStateOf(false) }
+    var showHistoryDrawer by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var sessionToDeleteId by remember { mutableStateOf<String?>(null) }
+    var renameTitleInput by remember { mutableStateOf("") }
+    var searchSessionQuery by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
     val listState = rememberLazyListState()
 
     // Auto-scroll to bottom on new message
@@ -74,33 +87,191 @@ fun LatexChatScreen(
         }
     }
 
-    // Confirmation dialog before clearing chat
-    if (showClearDialog) {
+    // Modal Bottom Sheet: Chat History & Sessions
+    if (showHistoryDrawer) {
+        ModalBottomSheet(
+            onDismissRequest = { showHistoryDrawer = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Chat History",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "${sessions.size} saved conversation${if (sessions.size != 1) "s" else ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    FilledTonalButton(
+                        onClick = {
+                            viewModel.startNewChat(context)
+                            showHistoryDrawer = false
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("New Chat")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Search session bar
+                OutlinedTextField(
+                    value = searchSessionQuery,
+                    onValueChange = { searchSessionQuery = it },
+                    placeholder = { Text("Search previous chats...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                    },
+                    trailingIcon = {
+                        if (searchSessionQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchSessionQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val filteredSessions = remember(sessions, searchSessionQuery) {
+                    if (searchSessionQuery.isBlank()) sessions
+                    else sessions.filter {
+                        it.title.contains(searchSessionQuery, ignoreCase = true) ||
+                        it.previewText.contains(searchSessionQuery, ignoreCase = true)
+                    }
+                }
+
+                if (filteredSessions.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (searchSessionQuery.isNotBlank()) "No chats found matching '$searchSessionQuery'" else "No conversation history yet",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredSessions, key = { it.id }) { session ->
+                            val isSelected = session.id == currentSession?.id
+                            SessionItemRow(
+                                session = session,
+                                isSelected = isSelected,
+                                onSelect = {
+                                    viewModel.selectSession(context, session.id)
+                                    showHistoryDrawer = false
+                                },
+                                onRename = {
+                                    renameTitleInput = session.title
+                                    showRenameDialog = true
+                                },
+                                onDelete = {
+                                    sessionToDeleteId = session.id
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+        }
+    }
+
+    // Rename Session Dialog
+    if (showRenameDialog && currentSession != null) {
         AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            icon = {
-                Icon(
-                    Icons.Default.DeleteSweep,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(28.dp)
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Rename Conversation", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameTitleInput,
+                    onValueChange = { renameTitleInput = it },
+                    label = { Text("Chat Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
-            title = { Text("Clear Chat History?", fontWeight = FontWeight.Bold) },
-            text = { Text("This will remove all current conversation messages. Generated PDF files will remain saved on your device.") },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.clearChat()
-                        showClearDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        val session = currentSession
+                        if (session != null && renameTitleInput.isNotBlank()) {
+                            viewModel.renameSession(context, session.id, renameTitleInput)
+                        }
+                        showRenameDialog = false
+                    }
                 ) {
-                    Text("Clear All")
+                    Text("Save")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete Session Confirmation Dialog
+    if (showDeleteDialog && sessionToDeleteId != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = {
+                Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            },
+            title = { Text("Delete Conversation?", fontWeight = FontWeight.Bold) },
+            text = { Text("This will permanently remove this chat session and its message history.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        sessionToDeleteId?.let { viewModel.deleteSession(context, it) }
+                        showDeleteDialog = false
+                        sessionToDeleteId = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -158,7 +329,6 @@ fun LatexChatScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Quick insertion snippet bar
                     val quickSnippets = remember {
                         listOf(
                             "\\section{}" to "\\section{Title}\n",
@@ -275,32 +445,35 @@ fun LatexChatScreen(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
+                var showMenu by remember { mutableStateOf(false) }
+
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(38.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                renameTitleInput = currentSession?.title ?: ""
+                                showRenameDialog = true
+                            }
+                        ) {
+                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = currentSession?.title ?: "New Chat",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
-                                        imageVector = Icons.Default.Forum,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
+                                        Icons.Default.Edit,
+                                        contentDescription = "Rename",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "LaTeX AI Architect",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    // Animated status dot
                                     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                                     val pulseAlpha by infiniteTransition.animateFloat(
                                         initialValue = 0.4f,
@@ -323,7 +496,7 @@ fun LatexChatScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isGenerating) generatingStatus else "Online • XeLaTeX Ready",
+                                        text = if (isGenerating) generatingStatus else "Online • Background Ready",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -339,23 +512,81 @@ fun LatexChatScreen(
                         }
                     },
                     actions = {
-                        if (messages.isNotEmpty()) {
-                            IconButton(onClick = { showClearDialog = true }) {
-                                Icon(
-                                    Icons.Default.DeleteSweep,
-                                    contentDescription = "Clear Chat",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Open Chat History Sheet
+                        IconButton(onClick = { showHistoryDrawer = true }) {
+                            BadgedBox(
+                                badge = {
+                                    if (sessions.isNotEmpty()) {
+                                        Badge(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+                                            Text(
+                                                text = sessions.size.toString(),
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                fontSize = 9.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.History, contentDescription = "History")
+                            }
+                        }
+
+                        // Start New Chat Button
+                        IconButton(onClick = { viewModel.startNewChat(context) }) {
+                            Icon(Icons.Default.Add, contentDescription = "New Chat")
+                        }
+
+                        // More Actions
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Rename Chat") },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        renameTitleInput = currentSession?.title ?: ""
+                                        showRenameDialog = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Export as Markdown") },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        coroutineScope.launch {
+                                            val md = viewModel.exportCurrentChatMarkdown(context)
+                                            if (md.isNotBlank()) {
+                                                shareText(context, md, "${currentSession?.title ?: "Chat"}.md")
+                                            } else {
+                                                Toast.makeText(context, "No messages to export", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete Chat", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        showMenu = false
+                                        currentSession?.let {
+                                            sessionToDeleteId = it.id
+                                            showDeleteDialog = true
+                                        }
+                                    }
                                 )
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             },
             bottomBar = {
-                // Sleek Floating Input Bar
                 Surface(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                     tonalElevation = 6.dp,
@@ -369,6 +600,44 @@ fun LatexChatScreen(
                             .navigationBarsPadding()
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
+                        // Background execution progress banner
+                        if (isGenerating) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(14.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = generatingStatus,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                    Text(
+                                        text = "Running in Background",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+
+                        // Input Box
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -449,7 +718,6 @@ fun LatexChatScreen(
             }
         ) { innerPadding ->
             if (messages.isEmpty()) {
-                // Modern Welcome Hero Screen
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -460,7 +728,6 @@ fun LatexChatScreen(
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Glowing Header Avatar
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer,
@@ -489,7 +756,7 @@ fun LatexChatScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Ask for any document, formula sheet, CV, exam paper, or TikZ diagram. The AI writes custom LaTeX and instantly compiles it into a downloadable PDF.",
+                            text = "Runs in foreground or background with Android WorkManager. Creates custom LaTeX, fixes syntax, and immediately compiles into a vector PDF.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -498,19 +765,17 @@ fun LatexChatScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Feature badges row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            FeatureBadge("⚡ Instant XeLaTeX")
+                            FeatureBadge("⚡ Instant Background Worker")
                             FeatureBadge("✏️ Live Code Editor")
-                            FeatureBadge("📄 Vector PDF")
+                            FeatureBadge("📄 Multi-Chat History")
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Category Selector Tabs
                         val categories = viewModel.promptCategories
                         ScrollableTabRow(
                             selectedTabIndex = selectedCategoryIndex,
@@ -543,7 +808,6 @@ fun LatexChatScreen(
                         Spacer(modifier = Modifier.height(14.dp))
                     }
 
-                    // Prompt Cards
                     val activeCategory = viewModel.promptCategories.getOrNull(selectedCategoryIndex)
                     if (activeCategory != null) {
                         items(activeCategory.prompts) { promptItem ->
@@ -592,6 +856,88 @@ fun LatexChatScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionItemRow(
+    session: ChatSession,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val dateStr = remember(session.lastUpdatedAt) {
+        SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(Date(session.lastUpdatedAt))
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+               else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.Chat else Icons.Default.History,
+                        contentDescription = null,
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = session.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = session.previewText.ifBlank { dateStr },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            IconButton(onClick = onRename, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Rename",
+                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                )
             }
         }
     }
@@ -785,14 +1131,12 @@ private fun BotChatBubble(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Conversational Explanation
                     Text(
                         text = message.text,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Live typing animation if generating
                     if (isGeneratingThis) {
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -810,7 +1154,7 @@ private fun BotChatBubble(
                         }
                     }
 
-                    // LaTeX Code Section
+                    // LaTeX Code Card
                     if (!message.latexCode.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -858,7 +1202,6 @@ private fun BotChatBubble(
                                     }
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        // Copy Button
                                         IconButton(
                                             onClick = {
                                                 clipboard.setText(AnnotatedString(message.latexCode))
@@ -874,7 +1217,6 @@ private fun BotChatBubble(
                                             )
                                         }
 
-                                        // Edit Button
                                         IconButton(
                                             onClick = onEditLatex,
                                             modifier = Modifier.size(30.dp)
@@ -912,7 +1254,7 @@ private fun BotChatBubble(
                         }
                     }
 
-                    // PDF Document Presentation Card
+                    // PDF Output Presentation Card
                     when (message.pdfStatus) {
                         ChatPdfStatus.COMPILING -> {
                             Spacer(modifier = Modifier.height(14.dp))
@@ -1091,6 +1433,19 @@ private fun sharePdf(context: android.content.Context, file: File) {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(shareIntent, "Share PDF Document"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Share failed: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun shareText(context: android.content.Context, text: String, title: String) {
+    try {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, title)
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share Conversation"))
     } catch (e: Exception) {
         Toast.makeText(context, "Share failed: ${e.message}", Toast.LENGTH_SHORT).show()
     }
