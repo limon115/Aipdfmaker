@@ -296,6 +296,7 @@ class MathSolverWorker(
                 ]{solaiman.ttf}
                 \title{$latexTitle}
                 \author{AI Tutor}
+                \date{}
                 \begin{document}
                 \XeTeXinterchartokenstate=1
                 \maketitle
