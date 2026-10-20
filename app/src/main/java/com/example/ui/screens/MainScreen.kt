@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -744,7 +745,7 @@ fun MainScreenContent(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Filled.SmartToy,
+                                imageVector = BottomNavItem.Chat.selectedIcon,
                                 contentDescription = "ChatBot",
                                 tint = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5),
                                 modifier = Modifier.size(26.dp)
