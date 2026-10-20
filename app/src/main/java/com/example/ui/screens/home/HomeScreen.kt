@@ -50,14 +50,16 @@ import com.example.data.database.ProjectEntity
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onNavigateToProject: (Int, String) -> Unit = { _, _ -> }
+    onNavigateToProject: (Int, String) -> Unit = { _, _ -> },
+    onBottomReached: (Boolean) -> Unit = {}
 ) {
     val projects by viewModel.projects.collectAsStateWithLifecycle()
     
     HomeScreenContent(
         projects = projects,
         onNavigateToProject = onNavigateToProject,
-        onDeleteProject = viewModel::deleteProject
+        onDeleteProject = viewModel::deleteProject,
+        onBottomReached = onBottomReached
     )
 }
 
@@ -66,9 +68,11 @@ fun HomeScreen(
 fun HomeScreenContent(
     projects: List<ProjectEntity>,
     onNavigateToProject: (Int, String) -> Unit = { _, _ -> },
-    onDeleteProject: (ProjectEntity) -> Unit = {}
+    onDeleteProject: (ProjectEntity) -> Unit = {},
+    onBottomReached: (Boolean) -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
@@ -76,6 +80,36 @@ fun HomeScreenContent(
     var projectForPdfAction by remember { mutableStateOf<Pair<ProjectEntity, File>?>(null) }
     
     val tabs = listOf("All", "Notes", "Debugged", "Tasks")
+
+    val isAtBottom by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            if (totalItems == 0) return@derivedStateOf false
+
+            val hasScrolled = listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+            if (!hasScrolled) return@derivedStateOf false
+
+            if (!listState.canScrollForward) return@derivedStateOf true
+
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
+            lastVisible.index == totalItems - 1 && (lastVisible.offset + lastVisible.size <= layoutInfo.viewportEndOffset)
+        }
+    }
+
+    LaunchedEffect(isAtBottom) {
+        onBottomReached(isAtBottom)
+    }
+
+    LaunchedEffect(selectedTab, searchQuery) {
+        onBottomReached(false)
+    }
+
+    LaunchedEffect(projects.isEmpty()) {
+        if (projects.isEmpty()) {
+            onBottomReached(false)
+        }
+    }
 
     if (projectForPdfAction != null) {
         val (actionProject, pdfFile) = projectForPdfAction!!
@@ -370,6 +404,7 @@ fun HomeScreenContent(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)

@@ -49,6 +49,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.unit.Velocity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -128,11 +132,32 @@ fun MainScreen() {
         }
     }
 
+    var isHomeAtBottom by remember { mutableStateOf(false) }
+    var isDashboardAtBottom by remember { mutableStateOf(false) }
+    var isSettingsAtBottom by remember { mutableStateOf(false) }
+    var isNestedAtBottom by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentRoute) {
+        isNestedAtBottom = false
+        isHomeAtBottom = false
+        isDashboardAtBottom = false
+        isSettingsAtBottom = false
+    }
+
+    val isBottomReached = when (currentRoute) {
+        BottomNavItem.Home.route -> isHomeAtBottom || isNestedAtBottom
+        BottomNavItem.Dashboard.route -> isDashboardAtBottom || isNestedAtBottom
+        BottomNavItem.Settings.route -> isSettingsAtBottom || isNestedAtBottom
+        else -> isNestedAtBottom
+    }
+
     MainScreenContent(
         navController = navController,
         currentRoute = currentRoute,
         onNavigate = onNavigate,
-        onNavigateToNewProject = onNavigateToNewProject
+        onNavigateToNewProject = onNavigateToNewProject,
+        isBottomReached = isBottomReached,
+        onNestedBottomReached = { atBottom -> isNestedAtBottom = atBottom }
     ) { innerPadding ->
         val bottomNavRoutes = remember {
             listOf(
@@ -218,7 +243,8 @@ fun MainScreen() {
                         } else {
                             navController.navigate("notes_viewer/$projectId")
                         }
-                    }
+                    },
+                    onBottomReached = { atBottom -> isHomeAtBottom = atBottom }
                 )
             }
             composable(BottomNavItem.Chat.route) {
@@ -235,10 +261,21 @@ fun MainScreen() {
                 )
             }
             composable(BottomNavItem.Dashboard.route) {
+                val dashboardScrollState = androidx.compose.foundation.rememberScrollState()
+                val isDashboardAtEnd by remember {
+                    derivedStateOf {
+                        dashboardScrollState.value > 0 && 
+                            dashboardScrollState.maxValue > 0 && 
+                            (dashboardScrollState.value >= dashboardScrollState.maxValue - 20 || !dashboardScrollState.canScrollForward)
+                    }
+                }
+                LaunchedEffect(isDashboardAtEnd) {
+                    isDashboardAtBottom = isDashboardAtEnd
+                }
                 Column(
                     modifier = androidx.compose.ui.Modifier
                         .fillMaxSize()
-                        .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                        .verticalScroll(dashboardScrollState)
                         .padding(start = 16.dp, end = 16.dp, top = 48.dp)
                 ) {
                     com.example.ui.screens.settings.AiUsageDashboardCard()
@@ -324,7 +361,8 @@ fun MainScreen() {
                     onNavigateToLogs = { navController.navigate("app_logs") },
                     onNavigateToProviderSelection = { aiIndex ->
                         navController.navigate("provider_selection/$aiIndex")
-                    }
+                    },
+                    onBottomReached = { atBottom -> isSettingsAtBottom = atBottom }
                 )
             }
             
@@ -564,6 +602,8 @@ fun MainScreenContent(
     currentRoute: String? = null,
     onNavigate: (String) -> Unit,
     onNavigateToNewProject: () -> Unit = {},
+    isBottomReached: Boolean = false,
+    onNestedBottomReached: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
 ) {
@@ -581,13 +621,40 @@ fun MainScreenContent(
 
     val bottomNavRoutes = remember(items) { items.map { it.route }.toSet() }
 
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y < -0.5f) {
+                    onNestedBottomReached(true)
+                } else if (consumed.y > 0.5f || available.y > 0.5f) {
+                    onNestedBottomReached(false)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (available.y < -1f) {
+                    onNestedBottomReached(true)
+                } else if (consumed.y > 1f || available.y > 1f) {
+                    onNestedBottomReached(false)
+                }
+                return super.onPostFling(consumed, available)
+            }
+        }
+    }
+
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(nestedScrollConnection),
         containerColor = Color.Transparent,
         bottomBar = {
             val isBottomBarVisible = (activeRoute in bottomNavRoutes) && 
                 activeRoute != BottomNavItem.Chat.route && 
-                activeRoute != "latex_chat"
+                activeRoute != "latex_chat" &&
+                !isBottomReached
             AnimatedVisibility(
                 visible = isBottomBarVisible,
                 enter = slideInVertically(

@@ -48,10 +48,23 @@ fun AiSettingsScreen(
     onNavigateToUpdates: () -> Unit = {},
     onNavigateToApiLab: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
-    onNavigateToProviderSelection: (aiIndex: Int) -> Unit = {}
+    onNavigateToProviderSelection: (aiIndex: Int) -> Unit = {},
+    onBottomReached: (Boolean) -> Unit = {}
 ) {
     val settingsNullable by viewModel.settings.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+
+    val isAtBottom by remember {
+        derivedStateOf {
+            scrollState.value > 0 &&
+                scrollState.maxValue > 0 &&
+                (scrollState.value >= scrollState.maxValue - 20 || !scrollState.canScrollForward)
+        }
+    }
+
+    LaunchedEffect(isAtBottom) {
+        onBottomReached(isAtBottom)
+    }
 
     Scaffold(
         topBar = {
