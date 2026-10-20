@@ -210,7 +210,11 @@ fun HomeScreenContent(
                                 singleLine = true
                             )
                         } else {
-                            Text("Projects", fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Projects",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 },
@@ -250,18 +254,29 @@ fun HomeScreenContent(
                 selectedTabIndex = selectedTab,
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 contentColor = MaterialTheme.colorScheme.onBackground,
+                divider = {
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                    )
+                },
                 indicator = { tabPositions ->
                     if (selectedTab < tabPositions.size) {
                         TabRowDefaults.SecondaryIndicator(
                             modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            color = MaterialTheme.colorScheme.primary
+                            height = 3.dp,
+                            color = androidx.compose.ui.graphics.Color(0xFF2563EB)
                         )
                     }
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             ) {
                 tabs.forEachIndexed { index, title ->
+                    val selected = selectedTab == index
                     Tab(
-                        selected = selectedTab == index,
+                        selected = selected,
                         onClick = { 
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                             selectedTab = index 
@@ -269,8 +284,9 @@ fun HomeScreenContent(
                         text = {
                             Text(
                                 text = title,
-                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) androidx.compose.ui.graphics.Color(0xFF2563EB) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     )
@@ -412,9 +428,7 @@ fun ProjectCard(
         ) {
             // Image Placeholder
             PdfIcon(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                modifier = Modifier.size(56.dp)
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -441,7 +455,8 @@ fun ProjectCard(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val daysAgo = ((System.currentTimeMillis() - project.lastUpdated) / (1000 * 60 * 60 * 24)).toInt()
                     val timeText = when (daysAgo) {
@@ -456,66 +471,47 @@ fun ProjectCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "•",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
                     val isDark = com.example.ui.theme.AppTheme.colors.isDark
+                    val (statusBg, statusTextColor) = when (project.status) {
+                        "Completed" -> if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) to Color(0xFF81C784) else Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+                        "Debugged" -> if (isDark) Color(0xFF4A148C).copy(alpha = 0.5f) to Color(0xFFCE93D8) else Color(0xFFF3E8FF) to Color(0xFF7E22CE)
+                        else -> if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) to MaterialTheme.colorScheme.primary else Color(0xFFEFF6FF) to Color(0xFF2563EB)
+                    }
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                when (project.status) {
-                                    "Completed" -> if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) else Color(0xFF4CAF50).copy(alpha = 0.15f)
-                                    "Debugged" -> if (isDark) Color(0xFF4A148C).copy(alpha = 0.5f) else Color(0xFF9C27B0).copy(alpha = 0.15f)
-                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                }
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(statusBg)
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = project.status,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = when (project.status) {
-                                "Completed" -> if (isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
-                                "Debugged" -> if (isDark) Color(0xFFCE93D8) else Color(0xFF7B1FA2)
-                                else -> MaterialTheme.colorScheme.primary
-                            }
+                            color = statusTextColor
                         )
                     }
                     if (compiledPdf != null && compiledPdf.exists()) {
-                        Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isDark) Color(0xFF0C4A6E).copy(alpha = 0.5f) else Color(0xFFE0F2FE))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PictureAsPdf,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = "PDF",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            Text(
+                                text = "PDF",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                            )
                         }
                     }
                 }
