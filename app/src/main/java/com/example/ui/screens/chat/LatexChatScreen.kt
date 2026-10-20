@@ -785,7 +785,7 @@ fun LatexChatScreen(
                             indicator = {},
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            categories.forEachIndexed { idx, cat ->
+                            categories.forEachIndexed { idx: Int, cat: PromptCategory ->
                                 val isSelected = idx == selectedCategoryIndex
                                 Surface(
                                     shape = RoundedCornerShape(20.dp),
@@ -810,7 +810,7 @@ fun LatexChatScreen(
 
                     val activeCategory = viewModel.promptCategories.getOrNull(selectedCategoryIndex)
                     if (activeCategory != null) {
-                        items(activeCategory.prompts) { promptItem ->
+                        items(activeCategory.prompts) { promptItem: PromptItem ->
                             PromptSuggestionCard(
                                 item = promptItem,
                                 onClick = {
@@ -961,7 +961,7 @@ private fun FeatureBadge(text: String) {
 
 @Composable
 private fun PromptSuggestionCard(
-    item: com.example.ui.screens.chat.PromptItem,
+    item: PromptItem,
     onClick: () -> Unit
 ) {
     GlassCard(

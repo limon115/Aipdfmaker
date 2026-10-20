@@ -27,6 +27,19 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
 
+data class PromptCategory(
+    val id: String,
+    val title: String,
+    val iconEmoji: String,
+    val prompts: List<PromptItem>
+)
+
+data class PromptItem(
+    val title: String,
+    val description: String,
+    val promptText: String
+)
+
 class LatexChatViewModel : ViewModel() {
 
     private val _sessions = MutableStateFlow<List<ChatSession>>(emptyList())
