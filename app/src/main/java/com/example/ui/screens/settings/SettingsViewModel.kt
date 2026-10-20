@@ -36,6 +36,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi1ApiKey(apiKey) }
     }
 
+    fun updateAi1Advanced(temperature: Float, maxTokens: Int, topP: Float) {
+        viewModelScope.launch { dataStore.updateAi1Advanced(temperature, maxTokens, topP) }
+    }
+
     fun updateAi2Provider(provider: AiProvider) {
         viewModelScope.launch { dataStore.updateAi2Provider(provider) }
     }
@@ -52,8 +56,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updateAi2Advanced(temperature, maxTokens, topP) }
     }
 
-
-    
     fun updateAi3Provider(provider: AiProvider) {
         viewModelScope.launch { dataStore.updateAi3Provider(provider) }
     }
@@ -62,6 +64,33 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
     fun updateAi3ApiKey(apiKey: String) {
         viewModelScope.launch { dataStore.updateAi3ApiKey(apiKey) }
+    }
+    fun updateAi3Advanced(temperature: Float, maxTokens: Int, topP: Float) {
+        viewModelScope.launch { dataStore.updateAi3Advanced(temperature, maxTokens, topP) }
+    }
+
+    fun updateStreamingEnabled(enabled: Boolean) {
+        viewModelScope.launch { dataStore.updateStreamingEnabled(enabled) }
+    }
+
+    fun updateCacheEnabled(enabled: Boolean) {
+        viewModelScope.launch { dataStore.updateCacheEnabled(enabled) }
+    }
+
+    fun updateContextPruningEnabled(enabled: Boolean) {
+        viewModelScope.launch { dataStore.updateContextPruningEnabled(enabled) }
+    }
+
+    fun updateSystemPrompt(prompt: String) {
+        viewModelScope.launch { dataStore.updateSystemPrompt(prompt) }
+    }
+
+    fun updateAutoCheckUpdates(enabled: Boolean) {
+        viewModelScope.launch { dataStore.updateAutoCheckUpdates(enabled) }
+    }
+
+    fun updatePreReleaseUpdates(enabled: Boolean) {
+        viewModelScope.launch { dataStore.updatePreReleaseUpdates(enabled) }
     }
 
     fun updateThemeMode(themeMode: ThemeMode) {

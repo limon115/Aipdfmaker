@@ -311,16 +311,71 @@ fun MainScreen() {
                 }
             }
             composable(BottomNavItem.Settings.route) {
+                val settingsViewModel: SettingsViewModel = viewModel()
                 AiSettingsScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateToTheme = { navController.navigate("settings_theme") },
+                    onNavigateToFonts = { navController.navigate("settings_fonts") },
+                    onNavigateToAiConfig = { aiIndex -> navController.navigate("settings_ai/$aiIndex") },
+                    onNavigateToAdvanced = { navController.navigate("settings_advanced") },
+                    onNavigateToBackground = { navController.navigate("settings_background") },
+                    onNavigateToUpdates = { navController.navigate("settings_updates") },
+                    onNavigateToApiLab = { navController.navigate("api_lab") },
+                    onNavigateToLogs = { navController.navigate("app_logs") },
                     onNavigateToProviderSelection = { aiIndex ->
                         navController.navigate("provider_selection/$aiIndex")
-                    },
-                    onNavigateToApiLab = {
-                        navController.navigate("api_lab")
-                    },
-                    onNavigateToLogs = {
-                        navController.navigate("app_logs")
                     }
+                )
+            }
+            
+            composable("settings_theme") {
+                val settingsViewModel: SettingsViewModel = viewModel()
+                com.example.ui.screens.settings.subscreens.AppThemeScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("settings_fonts") {
+                val settingsViewModel: SettingsViewModel = viewModel()
+                com.example.ui.screens.settings.subscreens.AppFontsScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("settings_ai/{aiIndex}") { backStackEntry ->
+                val aiIndex = backStackEntry.arguments?.getString("aiIndex")?.toIntOrNull() ?: 1
+                val settingsViewModel: SettingsViewModel = viewModel()
+                com.example.ui.screens.settings.subscreens.AiAssistantConfigScreen(
+                    aiIndex = aiIndex,
+                    viewModel = settingsViewModel,
+                    onNavigateToProviderSelection = { slotId ->
+                        navController.navigate("provider_selection/$slotId")
+                    },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("settings_advanced") {
+                val settingsViewModel: SettingsViewModel = viewModel()
+                com.example.ui.screens.settings.subscreens.AdvancedSettingsScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("settings_background") {
+                com.example.ui.screens.settings.subscreens.BackgroundProcessingScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("settings_updates") {
+                val settingsViewModel: SettingsViewModel = viewModel()
+                com.example.ui.screens.settings.subscreens.AppUpdatesScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             
