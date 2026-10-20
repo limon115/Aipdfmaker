@@ -295,7 +295,7 @@ class MathSolverWorker(
                     AutoFakeSlant=0.2
                 ]{solaiman.ttf}
                 \title{$latexTitle}
-                \author{AI Tutor}
+                \author{\textenglish{AI Tutor}}
                 \date{}
                 \begin{document}
                 \XeTeXinterchartokenstate=1

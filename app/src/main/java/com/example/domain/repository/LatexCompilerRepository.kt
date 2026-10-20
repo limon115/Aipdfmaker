@@ -62,9 +62,9 @@ class LatexCompilerRepository(private val context: Context) {
         \makeatother
         % --- Author Information ---
         \author{%
-            Khalid Hasan Limon \\[0.5em]
-            HSC 26 \\[0.5em]
-            \texttt{Study Notes}
+            \textenglish{Khalid Hasan Limon} \\[0.5em]
+            \textenglish{HSC 26} \\[0.5em]
+            \texttt{\textenglish{Study Notes}}
         }
         % --- Graphical Decoration ---
         \newcommand\titlepagedecoration{%

@@ -79,7 +79,7 @@ class ExportEngine(private val context: Context) {
                     ]{solaiman.ttf}
 
                     \title{$projectName}
-                    \author{AI Generated Notes}
+                    \author{\textenglish{AI Generated Notes}}
                     \date{\today}
 
                     \begin{document}

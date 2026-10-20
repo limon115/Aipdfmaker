@@ -223,7 +223,7 @@ class LatexChatService(private val context: Context) {
                 AutoFakeSlant=0.2
             ]{solaiman.ttf}
             \title{$escapedTitle}
-            \author{DocMorph AI Assistant}
+            \author{\textenglish{DocMorph AI Assistant}}
             \date{\today}
             \begin{document}
             \XeTeXinterchartokenstate=1
