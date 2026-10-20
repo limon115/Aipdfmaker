@@ -6,11 +6,13 @@ import com.example.ui.components.PdfIcon
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.DropdownMenu
@@ -20,8 +22,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureAsPdf
@@ -42,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.database.ProjectEntity
@@ -63,6 +69,12 @@ fun HomeScreen(
     )
 }
 
+data class HomeTabItem(
+    val title: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val count: Int
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(
@@ -79,7 +91,19 @@ fun HomeScreenContent(
     var projectToDelete by remember { mutableStateOf<ProjectEntity?>(null) }
     var projectForPdfAction by remember { mutableStateOf<Pair<ProjectEntity, File>?>(null) }
     
-    val tabs = listOf("All", "Notes", "Debugged", "Tasks")
+    val allCount = projects.size
+    val notesCount = remember(projects) { projects.count { it.status == "Completed" } }
+    val debugCount = remember(projects) { projects.count { it.status == "Debugged" } }
+    val tasksCount = remember(projects) { projects.count { it.status != "Completed" && it.status != "Debugged" } }
+
+    val tabs = remember(allCount, notesCount, debugCount, tasksCount) {
+        listOf(
+            HomeTabItem("All", Icons.Default.GridView, allCount),
+            HomeTabItem("Notes", Icons.Default.Description, notesCount),
+            HomeTabItem("Debug", Icons.Default.Code, debugCount),
+            HomeTabItem("Tasks", Icons.Default.CheckBox, tasksCount)
+        )
+    }
 
     val isAtBottom by remember {
         derivedStateOf {
@@ -284,46 +308,89 @@ fun HomeScreenContent(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                divider = {
-                    HorizontalDivider(
-                        thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-                    )
-                },
-                indicator = { tabPositions ->
-                    if (selectedTab < tabPositions.size) {
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                            height = 3.dp,
-                            color = androidx.compose.ui.graphics.Color(0xFF2563EB)
-                        )
-                    }
-                },
+            val isDarkTheme = com.example.ui.theme.AppTheme.colors.isDark
+
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(percent = 50),
+                color = if (isDarkTheme) Color(0xFF1E2235).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.85f),
+                border = BorderStroke(
+                    1.dp,
+                    if (isDarkTheme) Color.White.copy(alpha = 0.08f) else Color(0xFFE2E8F0)
+                ),
+                shadowElevation = if (isDarkTheme) 4.dp else 2.dp
             ) {
-                tabs.forEachIndexed { index, title ->
-                    val selected = selectedTab == index
-                    Tab(
-                        selected = selected,
-                        onClick = { 
-                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                            selectedTab = index 
-                        },
-                        text = {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selected) androidx.compose.ui.graphics.Color(0xFF2563EB) else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    tabs.forEachIndexed { index, tab ->
+                        val isSelected = selectedTab == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(percent = 50))
+                                .background(
+                                    if (isSelected) {
+                                        if (isDarkTheme) Color(0xFF1E3A8A).copy(alpha = 0.60f) else Color(0xFFDBEAFE)
+                                    } else Color.Transparent
+                                )
+                                .clickable {
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                    selectedTab = index
+                                }
+                                .padding(vertical = 8.dp, horizontal = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = tab.icon,
+                                    contentDescription = tab.title,
+                                    tint = if (isSelected) Color(0xFF2563EB) else if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = tab.title,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    color = if (isSelected) Color(0xFF2563EB) else if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFF475569),
+                                    maxLines = 1
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) Color(0xFF2563EB)
+                                            else if (isDarkTheme) Color(0xFF334155)
+                                            else Color(0xFFE2E8F0)
+                                        )
+                                        .padding(horizontal = 5.dp, vertical = 1.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = tab.count.toString(),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = if (isSelected) Color.White else if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+                                    )
+                                }
+                            }
                         }
-                    )
+                    }
                 }
             }
             

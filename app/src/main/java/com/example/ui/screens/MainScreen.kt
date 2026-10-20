@@ -83,7 +83,6 @@ fun MainScreen() {
 
     val items = listOf(
         BottomNavItem.Home,
-        BottomNavItem.Chat,
         BottomNavItem.Dashboard,
         BottomNavItem.Settings
     )
@@ -162,7 +161,6 @@ fun MainScreen() {
         val bottomNavRoutes = remember {
             listOf(
                 BottomNavItem.Home.route,
-                BottomNavItem.Chat.route,
                 BottomNavItem.Dashboard.route,
                 BottomNavItem.Settings.route
             )
@@ -613,7 +611,6 @@ fun MainScreenContent(
     val items = remember {
         listOf(
             BottomNavItem.Home,
-            BottomNavItem.Chat,
             BottomNavItem.Dashboard,
             BottomNavItem.Settings
         )
@@ -737,7 +734,25 @@ fun MainScreenContent(
                         }
                     }
 
-                    // 2. Separate circular Floating Action Button (FAB) immediately to the right of the main capsule
+                    // 2. ChatBot circular button placed outside the nav bar, alongside the plus button with similar circular shape
+                    Surface(
+                        onClick = { onNavigate(BottomNavItem.Chat.route) },
+                        shape = CircleShape,
+                        color = if (isDark) Color(0xFF262A40) else Color(0xFFEDE9FE),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.SmartToy,
+                                contentDescription = "ChatBot",
+                                tint = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+
+                    // 3. Separate circular Floating Action Button (FAB) immediately to the right
                     FloatingActionButton(
                         onClick = onNavigateToNewProject,
                         shape = CircleShape,
