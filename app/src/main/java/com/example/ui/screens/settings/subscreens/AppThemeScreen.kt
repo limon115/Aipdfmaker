@@ -228,7 +228,7 @@ fun AppThemeScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$",
+                                    text = "\$\$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}\$\$",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.primary,
