@@ -74,7 +74,7 @@ class LatexChatViewModel : ViewModel() {
             prompts = listOf(
                 PromptItem(
                     title = "Quantum Physics Sheet",
-                    description = "Formulas, bra-ket notation, and Schrödinger eq",
+                    description = "Formulas, bra-ket notation, and Schrödinger equation",
                     promptText = "Create a comprehensive 1-page Quantum Mechanics formula cheat sheet with Dirac notation, operators, and particle-in-a-box equations."
                 ),
                 PromptItem(
@@ -89,7 +89,7 @@ class LatexChatViewModel : ViewModel() {
                 ),
                 PromptItem(
                     title = "Electromagnetism Maxwell Equations",
-                    description = "Vector calculus & Maxwell's 4 laws",
+                    description = "Vector calculus and Maxwell’s 4 laws",
                     promptText = "Write a clear mathematical summary of Maxwell's Equations in both differential and integral forms with physical interpretations."
                 )
             )
@@ -123,7 +123,7 @@ class LatexChatViewModel : ViewModel() {
         ),
         PromptCategory(
             id = "diagrams_tables",
-            title = "Tables & TikZ",
+            title = "Tables",
             iconEmoji = "📊",
             prompts = listOf(
                 PromptItem(

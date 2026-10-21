@@ -5,16 +5,20 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -25,7 +29,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -33,6 +43,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -41,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.models.chat.ChatMessage
 import com.example.domain.models.chat.ChatPdfStatus
 import com.example.domain.models.chat.ChatSession
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.utils.FileUtils
 import kotlinx.coroutines.launch
@@ -437,10 +449,8 @@ fun LatexChatScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding()
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
     ) {
         Scaffold(
             containerColor = Color.Transparent,
@@ -462,17 +472,20 @@ fun LatexChatScreen(
                                         text = currentSession?.title ?: "New Chat",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF10172A),
+                                        fontSize = 18.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         Icons.Default.Edit,
                                         contentDescription = "Rename",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(14.dp)
+                                        tint = Color(0xFF536580),
+                                        modifier = Modifier.size(15.dp)
                                     )
                                 }
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                                     val pulseAlpha by infiniteTransition.animateFloat(
@@ -487,18 +500,19 @@ fun LatexChatScreen(
 
                                     Box(
                                         modifier = Modifier
-                                            .size(7.dp)
+                                            .size(8.dp)
                                             .clip(CircleShape)
                                             .background(
-                                                if (isGenerating) MaterialTheme.colorScheme.primary.copy(alpha = pulseAlpha)
-                                                else Color(0xFF4CAF50).copy(alpha = pulseAlpha)
+                                                if (isGenerating) Color(0xFF246BFA).copy(alpha = pulseAlpha)
+                                                else Color(0xFF22C55E).copy(alpha = pulseAlpha)
                                             )
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (isGenerating) generatingStatus else "Online • Background Ready",
+                                        text = if (isGenerating) generatingStatus else "Online · Background Ready",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = Color(0xFF536580),
+                                        fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -508,7 +522,11 @@ fun LatexChatScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color(0xFF10172A)
+                            )
                         }
                     },
                     actions = {
@@ -517,29 +535,44 @@ fun LatexChatScreen(
                             BadgedBox(
                                 badge = {
                                     if (sessions.isNotEmpty()) {
-                                        Badge(containerColor = MaterialTheme.colorScheme.primaryContainer) {
+                                        Badge(
+                                            containerColor = Color(0xFFE0E7FF),
+                                            contentColor = Color(0xFF3730A3)
+                                        ) {
                                             Text(
                                                 text = sessions.size.toString(),
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                fontSize = 9.sp
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.History, contentDescription = "History")
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = "History",
+                                    tint = Color(0xFF10172A)
+                                )
                             }
                         }
 
                         // Start New Chat Button
                         IconButton(onClick = { viewModel.startNewChat(context) }) {
-                            Icon(Icons.Default.Add, contentDescription = "New Chat")
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "New Chat",
+                                tint = Color(0xFF10172A)
+                            )
                         }
 
                         // More Actions
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More")
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    tint = Color(0xFF10172A)
+                                )
                             }
                             DropdownMenu(
                                 expanded = showMenu,
@@ -587,127 +620,128 @@ fun LatexChatScreen(
                 )
             },
             bottomBar = {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                    tonalElevation = 6.dp,
-                    shadowElevation = 8.dp,
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        // Background execution progress banner
-                        if (isGenerating) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 6.dp)
+                    // Background execution progress banner
+                    if (isGenerating) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color.White.copy(alpha = 0.70f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.85f)),
+                            shadowElevation = 2.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(14.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = generatingStatus,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color(0xFF246BFA)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Running in Background",
+                                        text = generatingStatus,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = Color(0xFF10172A),
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
+                                Text(
+                                    text = "Running in Background",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF246BFA)
+                                )
                             }
                         }
+                    }
 
-                        // Input Box
+                    // Floating Frosted-Glass Prompt Container
+                    Surface(
+                        shape = RoundedCornerShape(36.dp),
+                        color = Color.White.copy(alpha = 0.60f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.90f)),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 20.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            OutlinedTextField(
+                            BasicTextField(
                                 value = inputText,
                                 onValueChange = { inputText = it },
-                                placeholder = {
-                                    Text(
-                                        text = "Ask for any LaTeX doc, formula sheet, CV...",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .heightIn(min = 50.dp, max = 130.dp),
-                                shape = RoundedCornerShape(25.dp),
-                                trailingIcon = {
-                                    if (inputText.isNotBlank()) {
-                                        IconButton(onClick = { inputText = "" }) {
-                                            Icon(
-                                                Icons.Default.Close,
-                                                contentDescription = "Clear",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
+                                    .padding(end = 8.dp),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = Color(0xFF10172A),
+                                    fontSize = 14.5.sp
+                                ),
+                                singleLine = true,
+                                decorationBox = { innerTextField ->
+                                    Box(contentAlignment = Alignment.CenterStart) {
+                                        if (inputText.isEmpty()) {
+                                            Text(
+                                                text = "Ask for any LaTeX document, formula sheet...",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = Color(0xFF536580),
+                                                fontSize = 14.5.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
+                                        innerTextField()
                                     }
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                                ),
-                                maxLines = 4
+                                }
                             )
 
                             val canSend = inputText.isNotBlank() && !isGenerating
-                            FilledIconButton(
-                                onClick = {
-                                    if (canSend) {
-                                        val text = inputText
-                                        inputText = ""
-                                        viewModel.sendMessage(context, text)
-                                    }
-                                },
-                                enabled = canSend,
-                                modifier = Modifier.size(48.dp),
-                                shape = CircleShape,
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF2563EB),
+                                                Color(0xFF4F46E5)
+                                            )
+                                        )
+                                    )
+                                    .clickable(enabled = canSend) {
+                                        if (canSend) {
+                                            val text = inputText
+                                            inputText = ""
+                                            viewModel.sendMessage(context, text)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
                             ) {
                                 if (isGenerating) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
+                                        modifier = Modifier.size(18.dp),
                                         strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = Color.White
                                     )
                                 } else {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.Send,
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
                                         contentDescription = "Send",
+                                        tint = Color.White,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -723,106 +757,148 @@ fun LatexChatScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                         .padding(horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
                 ) {
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shadowElevation = 6.dp,
-                            modifier = Modifier.size(68.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Forum,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(34.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = "AI LaTeX to PDF Architect",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = "Runs in foreground or background with Android WorkManager. Creates custom LaTeX, fixes syntax, and immediately compiles into a vector PDF.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            FeatureBadge("⚡ Instant Background Worker")
-                            FeatureBadge("✏️ Live Code Editor")
-                            FeatureBadge("📄 Multi-Chat History")
-                        }
+                            // Translucent softly illuminated orb
+                            IridescentOrb(size = 92.dp)
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(18.dp))
 
-                        val categories = viewModel.promptCategories
-                        ScrollableTabRow(
-                            selectedTabIndex = selectedCategoryIndex,
-                            edgePadding = 0.dp,
-                            containerColor = Color.Transparent,
-                            divider = {},
-                            indicator = {},
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            categories.forEachIndexed { idx: Int, cat: PromptCategory ->
-                                val isSelected = idx == selectedCategoryIndex
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            // Centered Title
+                            Text(
+                                text = "AI LaTeX to PDF Architect",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF10172A),
+                                fontSize = 24.sp,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Balanced wrapped subtitle
+                            Text(
+                                text = "Create and edit LaTeX, fix syntax, and compile polished vector PDFs in foreground or background.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF536580),
+                                textAlign = TextAlign.Center,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                modifier = Modifier
+                                    .widthIn(max = 330.dp)
+                                    .padding(horizontal = 8.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // Text-only feature chips
+                            BoxWithConstraints(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val minW = maxWidth
+                                Row(
                                     modifier = Modifier
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                        .clickable { viewModel.selectCategory(idx) }
+                                        .horizontalScroll(rememberScrollState())
+                                        .widthIn(min = minW),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "${cat.iconEmoji} ${cat.title}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                    FeaturePill(
+                                        text = "Instant Background Worker",
+                                        containerColor = Color(0xFFDCEBFF).copy(alpha = 0.70f),
+                                        borderColor = Color(0xFF93C5FD).copy(alpha = 0.85f),
+                                        textColor = Color(0xFF1D4ED8)
+                                    )
+                                    FeaturePill(
+                                        text = "Live Code Editor",
+                                        containerColor = Color(0xFFEADBFF).copy(alpha = 0.70f),
+                                        borderColor = Color(0xFFC084FC).copy(alpha = 0.85f),
+                                        textColor = Color(0xFF6B21A8)
+                                    )
+                                    FeaturePill(
+                                        text = "Multi-Chat History",
+                                        containerColor = Color(0xFFE2E8F0).copy(alpha = 0.70f),
+                                        borderColor = Color(0xFFCBD5E1).copy(alpha = 0.90f),
+                                        textColor = Color(0xFF334155)
                                     )
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // Category Tabs in a single horizontal row
+                            Surface(
+                                shape = RoundedCornerShape(32.dp),
+                                color = Color.White.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.85f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val categories = viewModel.promptCategories
+                                    categories.forEachIndexed { idx, cat ->
+                                        val isSelected = idx == selectedCategoryIndex
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(26.dp))
+                                                .then(
+                                                    if (isSelected) {
+                                                        Modifier.background(
+                                                            Brush.horizontalGradient(
+                                                                listOf(
+                                                                    Color(0xFF246BFA),
+                                                                    Color(0xFF00B0FF)
+                                                                )
+                                                            )
+                                                        )
+                                                    } else {
+                                                        Modifier.background(Color.Transparent)
+                                                    }
+                                                )
+                                                .clickable { viewModel.selectCategory(idx) }
+                                                .padding(vertical = 10.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = cat.title,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                                color = if (isSelected) Color.White else Color(0xFF10172A),
+                                                fontSize = 13.5.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     val activeCategory = viewModel.promptCategories.getOrNull(selectedCategoryIndex)
                     if (activeCategory != null) {
-                        items(activeCategory.prompts) { promptItem: PromptItem ->
-                            PromptSuggestionCard(
+                        items(activeCategory.prompts, key = { it.title }) { promptItem: PromptItem ->
+                            GlassPromptSuggestionCard(
                                 item = promptItem,
                                 onClick = {
                                     viewModel.sendMessage(context, promptItem.promptText)
                                 }
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
                         }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             } else {
@@ -944,58 +1020,220 @@ private fun SessionItemRow(
 }
 
 @Composable
-private fun FeatureBadge(text: String) {
+private fun IridescentOrb(
+    modifier: Modifier = Modifier,
+    size: Dp = 92.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .shadow(
+                elevation = 16.dp,
+                shape = CircleShape,
+                ambientColor = Color(0xFF818CF8).copy(alpha = 0.35f),
+                spotColor = Color(0xFFA78BFA).copy(alpha = 0.45f)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+        ) {
+            val r = this.size.minDimension / 2f
+            val centerOffset = Offset(r, r)
+
+            // 1. Base translucent iridescent radial gradient
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFE2F4FF).copy(alpha = 0.95f),
+                        Color(0xFFB8DBFD).copy(alpha = 0.85f),
+                        Color(0xFFCDBEFE).copy(alpha = 0.80f),
+                        Color(0xFFF3BFE8).copy(alpha = 0.75f)
+                    ),
+                    center = Offset(r * 0.75f, r * 0.65f),
+                    radius = r * 1.05f
+                ),
+                radius = r,
+                center = centerOffset
+            )
+
+            // 2. Soft violet/pink bloom on bottom right
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFE9D5FF).copy(alpha = 0.60f),
+                        Color.Transparent
+                    ),
+                    center = Offset(r * 1.35f, r * 1.35f),
+                    radius = r * 0.75f
+                ),
+                radius = r,
+                center = centerOffset
+            )
+
+            // 3. Specular upper crescent highlight
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.90f),
+                        Color.White.copy(alpha = 0.30f),
+                        Color.Transparent
+                    ),
+                    center = Offset(r * 0.65f, r * 0.42f),
+                    radius = r * 0.48f
+                ),
+                radius = r * 0.46f,
+                center = Offset(r * 0.65f, r * 0.42f)
+            )
+
+            // 4. Subtle frosted outer rim stroke
+            drawCircle(
+                color = Color.White.copy(alpha = 0.85f),
+                radius = r - 0.75.dp.toPx(),
+                center = centerOffset,
+                style = Stroke(width = 1.5.dp.toPx())
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeaturePill(
+    text: String,
+    containerColor: Color,
+    borderColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+            color = textColor,
+            fontSize = 12.5.sp,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
         )
     }
 }
 
 @Composable
-private fun PromptSuggestionCard(
+private fun GlassPromptSuggestionCard(
     item: PromptItem,
     onClick: () -> Unit
 ) {
-    GlassCard(
+    Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(26.dp),
+        color = Color.White.copy(alpha = 0.58f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.90f)),
+        shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Subtle ambient wave flare on right side of the card matching the mockup
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(26.dp))
+            ) {
+                val w = size.width
+                val h = size.height
+
+                // Gentle translucent wave wash
+                val wavePath = Path().apply {
+                    moveTo(w * 0.55f, h)
+                    cubicTo(
+                        w * 0.68f, h * 0.82f,
+                        w * 0.74f, h * 0.35f,
+                        w, h * 0.12f
+                    )
+                    lineTo(w, h)
+                    close()
+                }
+                drawPath(
+                    path = wavePath,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.10f),
+                            Color(0xFFCEEAFF).copy(alpha = 0.28f)
+                        ),
+                        start = Offset(w * 0.60f, h),
+                        end = Offset(w, 0f)
+                    )
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = item.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                // Thin white wave stroke
+                val strokePath = Path().apply {
+                    moveTo(w * 0.55f, h)
+                    cubicTo(
+                        w * 0.68f, h * 0.82f,
+                        w * 0.74f, h * 0.35f,
+                        w, h * 0.12f
+                    )
+                }
+                drawPath(
+                    path = strokePath,
+                    color = Color.White.copy(alpha = 0.45f),
+                    style = Stroke(width = 1.dp.toPx())
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp, vertical = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF10172A),
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = item.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF536580),
+                        fontSize = 13.5.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                // Circular chevron button
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFE5F0FC).copy(alpha = 0.90f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.95f)),
+                    shadowElevation = 1.dp,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = Color(0xFF1E293B),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
