@@ -141,6 +141,25 @@ class LatexCompilerRepository(private val context: Context) {
         """.trimIndent()
     }
 
+    fun writeTexFile(project: ProjectEntity, latexContent: String): File {
+        val safeName = com.example.utils.FileUtils.getSafeFileName(project.title, "Project")
+        val baseDir = com.example.utils.FileUtils.getExportDirectory(context, "aipdfs/$safeName")
+        if (!baseDir.exists() && !baseDir.mkdirs()) {
+            Timber.w("Could not make directory: ${baseDir.absolutePath}")
+        }
+        val fullLatex = buildFullLatex(project, latexContent)
+        val texFile = File(baseDir, "main.tex")
+        var fileOutputStream: FileOutputStream? = null
+        try {
+            fileOutputStream = FileOutputStream(texFile)
+            fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
+            fileOutputStream.flush()
+        } finally {
+            fileOutputStream?.close()
+        }
+        return texFile
+    }
+
     suspend fun compileAndExportPdf(
         onProgress: (Float) -> Unit = {},
 
@@ -159,22 +178,9 @@ class LatexCompilerRepository(private val context: Context) {
             }
 
             onProgress(0.2f)
-            val fullLatex = buildFullLatex(project, latexContent)
-            val texFile = File(baseDir, "main.tex")
+            val texFile = writeTexFile(project, latexContent)
             onProgress(0.4f)
-            Timber.i("Writing LaTeX file to: ${texFile.absolutePath}")
-            var fileOutputStream: FileOutputStream? = null
-            try {
-                fileOutputStream = FileOutputStream(texFile)
-                fileOutputStream.write(fullLatex.toByteArray(Charsets.UTF_8))
-                fileOutputStream.flush()
-                Timber.d("LaTeX file writing complete.")
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to write LaTeX file")
-                throw e
-            } finally {
-                fileOutputStream?.close()
-            }
+            Timber.i("LaTeX file written to: ${texFile.absolutePath}")
 
             onProgress(0.6f)
             val result = TermuxXeLaTeXBridge.compile(
