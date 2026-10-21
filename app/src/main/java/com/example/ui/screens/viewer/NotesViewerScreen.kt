@@ -91,7 +91,7 @@ fun NotesViewerScreen(
         if (!state.isLoading && !isInitialContentLoaded && state.latexContent.isNotEmpty()) {
             val initial = TextFieldValue(
                 text = state.latexContent,
-                selection = TextRange(state.latexContent.length)
+                selection = TextRange(0)
             )
             editorValue = initial
             undoRedoManager.reset(initial)
@@ -117,14 +117,17 @@ fun NotesViewerScreen(
             while (idx < editorValue.text.length) {
                 val found = editorValue.text.indexOf(searchQuery, idx, ignoreCase = true)
                 if (found == -1) break
-                matches.add(TextRange(found, found + searchQuery.length))
-                idx = found + searchQuery.length
+                val end = (found + searchQuery.length).coerceAtMost(editorValue.text.length)
+                matches.add(TextRange(found, end))
+                idx = maxOf(idx + 1, end)
             }
             matches
         }
     }
 
-    val currentMatchRange = searchMatches.getOrNull(currentMatchIndex)
+    val currentMatchRange = searchMatches.getOrNull(
+        if (searchMatches.isEmpty()) 0 else currentMatchIndex.coerceIn(0, searchMatches.lastIndex)
+    )
 
     // Debounced autosave mechanism
     LaunchedEffect(editorValue.text) {
