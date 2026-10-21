@@ -1,5 +1,6 @@
 package com.example.ui.screens.home
 
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
 import com.example.ui.components.PdfIcon
@@ -240,7 +241,10 @@ fun HomeScreenContent(
         )
     }
     
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = {
@@ -507,6 +511,7 @@ fun HomeScreenContent(
             }
         }
     }
+}
 }
 @Composable
 fun ProjectCard(

@@ -48,6 +48,7 @@ import androidx.core.content.FileProvider
 import com.example.domain.services.pdf.PdfNotificationManager
 import com.example.ui.components.LatexCodeEditor
 import com.example.ui.components.UndoRedoManager
+import com.example.ui.components.glass.GlassBackground
 import com.example.utils.FileUtils
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -209,7 +210,7 @@ fun NotesViewerScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    GlassBackground(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -255,12 +256,13 @@ fun NotesViewerScreen(
                     )
                 )
             },
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = Color.Transparent,
             bottomBar = {
                 // Fixed bottom actions: View PDF and Recompile (Primary Action)
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                     tonalElevation = 2.dp
                 ) {
                     Row(

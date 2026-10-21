@@ -1,6 +1,7 @@
 package com.example.ui.screens.project
 
 import com.example.ui.components.glass.GlassTextField
+import com.example.ui.components.glass.GlassBackground
 
 
 import androidx.compose.foundation.layout.*
@@ -22,7 +23,10 @@ fun PasteTranscriptScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Paste Transcript", fontWeight = FontWeight.Bold) },
@@ -117,4 +121,5 @@ fun PasteTranscriptScreen(
             }
         }
     }
+}
 }

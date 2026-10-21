@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
 import com.example.ui.screens.settings.SettingsViewModel
@@ -52,8 +53,11 @@ fun AdvancedSettingsScreen(
 
     var localPrompt by remember(systemPrompt) { mutableStateOf(systemPrompt) }
 
-    Scaffold(
-        topBar = {
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = {
                     Text(
@@ -367,4 +371,5 @@ fun AdvancedSettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
 }

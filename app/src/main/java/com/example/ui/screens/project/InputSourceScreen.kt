@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.glass.GlassBackground
 import com.example.domain.services.file.TxtFileReaderService
 import com.example.domain.services.ocr.LocalOcrEngine
 import kotlinx.coroutines.launch
@@ -119,7 +120,10 @@ fun InputSourceScreen(
         )
     )
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("New Project", fontWeight = FontWeight.Bold) },
@@ -202,6 +206,7 @@ fun InputSourceScreen(
             }
         }
     }
+}
 }
 
 @Composable

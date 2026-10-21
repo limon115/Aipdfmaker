@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.models.ThemeMode
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,8 +67,11 @@ fun AiSettingsScreen(
         onBottomReached(isAtBottom)
     }
 
-    Scaffold(
-        topBar = {
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = {
                     Text(
@@ -222,6 +226,7 @@ fun AiSettingsScreen(
             }
         }
     }
+}
 }
 
 @Composable

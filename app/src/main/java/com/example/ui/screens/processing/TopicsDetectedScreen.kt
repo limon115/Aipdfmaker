@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.glass.GlassBackground
 
 import com.example.domain.models.Topic
 import com.example.ui.screens.blueprint.BlueprintViewModel
@@ -143,7 +144,10 @@ fun TopicsDetectedScreen(
         )
     }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Topics Detected", fontWeight = FontWeight.Bold) },
@@ -252,6 +256,7 @@ fun TopicsDetectedScreen(
             }
         }
     }
+}
 }
 
 @Composable

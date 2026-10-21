@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.screens.settings.SettingsViewModel
 import java.io.File
@@ -63,8 +64,11 @@ fun AppFontsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = {
                     Text(
@@ -336,4 +340,5 @@ fun AppFontsScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
 }

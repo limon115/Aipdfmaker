@@ -1,5 +1,6 @@
 package com.example.ui.screens.settings
 
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassTextField
 
 
@@ -54,10 +55,13 @@ fun ApiLabScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("API Lab", fontWeight = FontWeight.Bold) },
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("API Lab", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -119,6 +123,7 @@ fun ApiLabScreen(
             }
         }
     }
+}
 }
 
 @Composable

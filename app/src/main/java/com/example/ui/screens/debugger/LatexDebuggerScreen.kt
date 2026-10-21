@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
 
@@ -61,7 +62,10 @@ fun LatexDebuggerScreen(
         )
     }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("LaTeX Debugger", fontWeight = FontWeight.Bold) },
@@ -239,4 +243,5 @@ fun LatexDebuggerScreen(
             }
         }
     }
+}
 }

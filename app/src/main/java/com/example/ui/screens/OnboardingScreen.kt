@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.glass.GlassBackground
 
 @Composable
 fun OnboardingScreen(
@@ -58,13 +59,16 @@ fun OnboardingScreen(
         isVisible = true
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
         Spacer(modifier = Modifier.weight(1f))
         
         AnimatedVisibility(
@@ -164,4 +168,5 @@ fun OnboardingScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
     }
+}
 }

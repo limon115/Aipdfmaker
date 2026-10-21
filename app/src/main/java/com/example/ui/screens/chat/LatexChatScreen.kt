@@ -30,12 +30,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -668,16 +671,20 @@ fun LatexChatScreen(
                     }
 
                     // Floating Frosted-Glass Prompt Container
+                    val promptShape = RoundedCornerShape(36.dp)
                     Surface(
-                        shape = RoundedCornerShape(36.dp),
+                        shape = promptShape,
                         color = Color.White.copy(alpha = 0.60f),
                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.90f)),
                         shadowElevation = 6.dp,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(promptShape)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(promptShape)
                                 .padding(start = 20.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -835,15 +842,19 @@ fun LatexChatScreen(
                             Spacer(modifier = Modifier.height(18.dp))
 
                             // Category Tabs in a single horizontal row
+                            val categoryShape = RoundedCornerShape(32.dp)
                             Surface(
-                                shape = RoundedCornerShape(32.dp),
+                                shape = categoryShape,
                                 color = Color.White.copy(alpha = 0.45f),
                                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.85f)),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(categoryShape)
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(categoryShape)
                                         .padding(4.dp),
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -1107,9 +1118,10 @@ private fun FeaturePill(
     textColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val pillShape = RoundedCornerShape(22.dp)
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
+        modifier = modifier.clip(pillShape),
+        shape = pillShape,
         color = containerColor,
         border = BorderStroke(1.dp, borderColor)
     ) {
@@ -1130,66 +1142,91 @@ private fun GlassPromptSuggestionCard(
     item: PromptItem,
     onClick: () -> Unit
 ) {
+    val cardShape = RoundedCornerShape(26.dp)
+
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(26.dp),
+        shape = cardShape,
         color = Color.White.copy(alpha = 0.58f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.90f)),
         shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(cardShape)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(cardShape)
+        ) {
             // Subtle ambient wave flare on right side of the card matching the mockup
             Canvas(
                 modifier = Modifier
                     .matchParentSize()
-                    .clip(RoundedCornerShape(26.dp))
+                    .clip(cardShape)
             ) {
                 val w = size.width
                 val h = size.height
+                val cornerRadiusPx = 26.dp.toPx()
 
-                // Gentle translucent wave wash
-                val wavePath = Path().apply {
-                    moveTo(w * 0.55f, h)
-                    cubicTo(
-                        w * 0.68f, h * 0.82f,
-                        w * 0.74f, h * 0.35f,
-                        w, h * 0.12f
-                    )
-                    lineTo(w, h)
-                    close()
-                }
-                drawPath(
-                    path = wavePath,
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.10f),
-                            Color(0xFFCEEAFF).copy(alpha = 0.28f)
-                        ),
-                        start = Offset(w * 0.60f, h),
-                        end = Offset(w, 0f)
-                    )
-                )
-
-                // Thin white wave stroke
-                val strokePath = Path().apply {
-                    moveTo(w * 0.55f, h)
-                    cubicTo(
-                        w * 0.68f, h * 0.82f,
-                        w * 0.74f, h * 0.35f,
-                        w, h * 0.12f
+                // Precise rounded clipping path to guarantee zero corner bleed
+                val cardBounds = Path().apply {
+                    addRoundRect(
+                        RoundRect(
+                            left = 0f,
+                            top = 0f,
+                            right = w,
+                            bottom = h,
+                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)
+                        )
                     )
                 }
-                drawPath(
-                    path = strokePath,
-                    color = Color.White.copy(alpha = 0.45f),
-                    style = Stroke(width = 1.dp.toPx())
-                )
+
+                clipPath(cardBounds) {
+                    // Gentle translucent wave wash
+                    val wavePath = Path().apply {
+                        moveTo(w * 0.55f, h)
+                        cubicTo(
+                            w * 0.68f, h * 0.82f,
+                            w * 0.74f, h * 0.35f,
+                            w, h * 0.12f
+                        )
+                        lineTo(w, h)
+                        close()
+                    }
+                    drawPath(
+                        path = wavePath,
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.10f),
+                                Color(0xFFCEEAFF).copy(alpha = 0.28f)
+                            ),
+                            start = Offset(w * 0.60f, h),
+                            end = Offset(w, 0f)
+                        )
+                    )
+
+                    // Thin white wave stroke
+                    val strokePath = Path().apply {
+                        moveTo(w * 0.55f, h)
+                        cubicTo(
+                            w * 0.68f, h * 0.82f,
+                            w * 0.74f, h * 0.35f,
+                            w, h * 0.12f
+                        )
+                    }
+                    drawPath(
+                        path = strokePath,
+                        color = Color.White.copy(alpha = 0.45f),
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                }
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(cardShape)
                     .padding(horizontal = 22.dp, vertical = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1222,7 +1259,9 @@ private fun GlassPromptSuggestionCard(
                     color = Color(0xFFE5F0FC).copy(alpha = 0.90f),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.95f)),
                     shadowElevation = 1.dp,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(

@@ -1,6 +1,7 @@
 package com.example.ui.screens.project
 
 import com.example.ui.components.glass.GlassTextField
+import com.example.ui.components.glass.GlassBackground
 
 
 import android.widget.Toast
@@ -33,7 +34,10 @@ fun YouTubeLinkScreen(
     val context = LocalContext.current
     val extractor = remember { YouTubeCaptionExtractor() }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("YouTube Link", fontWeight = FontWeight.Bold) },
@@ -172,4 +176,5 @@ fun YouTubeLinkScreen(
             }
         }
     }
+}
 }

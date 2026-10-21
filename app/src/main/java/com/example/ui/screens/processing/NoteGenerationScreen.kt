@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.glass.GlassBackground
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.screens.blueprint.BlueprintViewModel
@@ -85,7 +86,10 @@ fun NoteGenerationScreen(
         }
     }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(state.title, fontWeight = FontWeight.Bold) },
@@ -272,4 +276,5 @@ fun NoteGenerationScreen(
             }
         }
     }
+}
 }

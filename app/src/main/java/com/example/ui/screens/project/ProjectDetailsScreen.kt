@@ -1,6 +1,7 @@
 package com.example.ui.screens.project
 
 import com.example.ui.components.glass.GlassTextField
+import com.example.ui.components.glass.GlassBackground
 
 
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -74,7 +75,10 @@ fun ProjectDetailsScreen(
         }
     }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Project Details", fontWeight = FontWeight.Bold) },
@@ -439,4 +443,5 @@ fun ProjectDetailsScreen(
             }
         }
     }
+}
 }

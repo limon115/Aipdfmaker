@@ -16,7 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ui.screens.MainScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.theme.ThemeProvider
-import com.example.ui.components.glass.LiquidBackground
+import com.example.ui.components.glass.GlassBackground
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
           initialDarkTheme = isDarkTheme,
           customFontPath = settings?.customFontPath ?: ""
       ) {
-        LiquidBackground {
+        GlassBackground {
         DocMorphApp(
             initialRoute = initialRoute,
             onCompleteOnboarding = {

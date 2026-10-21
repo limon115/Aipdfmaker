@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import android.provider.OpenableColumns
+import com.example.ui.components.glass.GlassBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +46,10 @@ fun PdfUploadScreen(
             viewModel.processFile(uri, context, fileName)
         }
     }
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Upload Document", fontWeight = FontWeight.Bold) },
@@ -200,4 +204,5 @@ fun PdfUploadScreen(
             }
         }
     }
+}
 }

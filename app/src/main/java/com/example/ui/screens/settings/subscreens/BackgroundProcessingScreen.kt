@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,8 +62,11 @@ fun BackgroundProcessingScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = {
                     Text(
@@ -304,6 +308,7 @@ fun BackgroundProcessingScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
 }
 
 @Composable

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.glass.GlassBackground
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
 import com.example.ui.components.WavyCircularProgressIndicator
@@ -94,7 +95,10 @@ fun ProcessingScreen(
         }
     }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         containerColor = Color.Transparent
     ) { innerPadding ->
         Column(
@@ -269,6 +273,7 @@ fun ProcessingScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
 }
 
 @Composable

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
 import com.example.domain.services.pdf.PdfNotificationManager
@@ -144,7 +145,10 @@ fun MathSolverScreen(
         )
     }
 
-    Scaffold(
+    GlassBackground(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Math Solver", fontWeight = FontWeight.Bold) },
@@ -441,6 +445,7 @@ fun MathSolverScreen(
             }
         }
     }
+}
 }
 
 private fun openPdf(context: android.content.Context, file: File) {

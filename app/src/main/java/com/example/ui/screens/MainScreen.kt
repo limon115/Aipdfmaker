@@ -271,12 +271,15 @@ fun MainScreen() {
                 LaunchedEffect(isDashboardAtEnd) {
                     isDashboardAtBottom = isDashboardAtEnd
                 }
-                Column(
-                    modifier = androidx.compose.ui.Modifier
-                        .fillMaxSize()
-                        .verticalScroll(dashboardScrollState)
-                        .padding(start = 16.dp, end = 16.dp, top = 48.dp)
+                com.example.ui.components.glass.GlassBackground(
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    Column(
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxSize()
+                            .verticalScroll(dashboardScrollState)
+                            .padding(start = 16.dp, end = 16.dp, top = 48.dp)
+                    ) {
                     com.example.ui.screens.settings.AiUsageDashboardCard()
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
                     
@@ -344,6 +347,7 @@ fun MainScreen() {
                     }
                     
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(100.dp))
+                }
                 }
             }
             composable(BottomNavItem.Settings.route) {
@@ -463,8 +467,12 @@ fun MainScreen() {
                 )
             }
             composable("file_input") {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Import from File (Placeholder)")
+                com.example.ui.components.glass.GlassBackground(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Import from File (Placeholder)")
+                    }
                 }
             }
             composable(
