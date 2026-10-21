@@ -162,10 +162,10 @@ class LatexCompilerRepository(private val context: Context) {
 
     suspend fun compileAndExportPdf(
         onProgress: (Float) -> Unit = {},
-
         project: ProjectEntity,
         latexContent: String,
-        fixScript: String? = null
+        fixScript: String? = null,
+        previousPdf: File? = null
     ): Result<Pair<File, File>> = withContext(Dispatchers.IO) {
         runCatching {
             val safeName = com.example.utils.FileUtils.getSafeFileName(project.title, "Project")
@@ -194,13 +194,22 @@ class LatexCompilerRepository(private val context: Context) {
                 )
             }
 
+            onProgress(0.85f)
+            // Replace previous PDF and any legacy/cached variants with the recompiled output
+            com.example.utils.FileUtils.replacePreviousCompiledPdf(
+                context = context,
+                projectTitle = project.title,
+                newPdf = result,
+                newTex = texFile,
+                previousPdf = previousPdf
+            )
+
             onProgress(1.0f)
-            // result is already main.pdf in baseDir
             Pair(result, texFile)
         }
     }
 
     fun getCompiledPdf(project: ProjectEntity): File? {
-        return com.example.utils.FileUtils.findCompiledPdf(context, project.title)
+        return com.example.utils.FileUtils.findCompiledPdf(context, project.title, project.lastUpdated)
     }
 }

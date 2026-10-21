@@ -235,15 +235,20 @@ class LatexChatService(private val context: Context) {
 
     suspend fun compileLatexToPdf(
         latexCode: String,
-        documentTitle: String
+        documentTitle: String,
+        targetFile: File? = null
     ): Result<File> = withContext(Dispatchers.IO) {
         val safeTitle = FileUtils.getSafeFileName(documentTitle, "LatexDoc")
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val outputDir = FileUtils.getExportDirectory(context, "aipdfs/latex_chat")
         if (!outputDir.exists()) outputDir.mkdirs()
 
-        val finalPdfFile = File(outputDir, "${safeTitle}_$timestamp.pdf")
-        val finalTexFile = File(outputDir, "${safeTitle}_$timestamp.tex")
+        val finalPdfFile = targetFile ?: File(outputDir, "${safeTitle}_$timestamp.pdf")
+        val finalTexFile = if (targetFile != null) {
+            File(targetFile.parentFile ?: outputDir, "${targetFile.nameWithoutExtension}.tex")
+        } else {
+            File(outputDir, "${safeTitle}_$timestamp.tex")
+        }
 
         val fullLatex = prepareFullLatexDocument(latexCode, documentTitle)
 

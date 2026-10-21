@@ -178,36 +178,36 @@ object FileUtils {
         )
         val possibleDirs = mutableListOf<File>()
 
-        // 1. Math solver dedicated directory (/storage/emulated/0/Documents/aipdfs/mathsolver)
-        try {
-            possibleDirs.add(getMathSolverDirectory(context))
-        } catch (_: Exception) {}
-
-        // 2. Primary export directory
+        // 1. Primary export directory for this project
         try {
             possibleDirs.add(getExportDirectory(context, "aipdfs/$safeName"))
+        } catch (_: Exception) {}
+
+        // 2. Math solver dedicated directory (/storage/emulated/0/Documents/aipdfs/mathsolver)
+        try {
+            possibleDirs.add(getMathSolverDirectory(context))
         } catch (_: Exception) {}
 
         // 3. Public Documents directory
         try {
             val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            possibleDirs.add(File(pub, "aipdfs/mathsolver"))
             possibleDirs.add(File(pub, "aipdfs/$safeName"))
+            possibleDirs.add(File(pub, "aipdfs/mathsolver"))
             possibleDirs.add(File(pub, "AiPdfMaker"))
         } catch (_: Exception) {}
 
         // 4. External app documents
         try {
             context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)?.let {
-                possibleDirs.add(File(it, "aipdfs/mathsolver"))
                 possibleDirs.add(File(it, "aipdfs/$safeName"))
+                possibleDirs.add(File(it, "aipdfs/mathsolver"))
                 possibleDirs.add(File(it, "AiPdfMaker"))
             }
         } catch (_: Exception) {}
 
         // 5. Internal app files
-        possibleDirs.add(File(context.filesDir, "aipdfs/mathsolver"))
         possibleDirs.add(File(context.filesDir, "aipdfs/$safeName"))
+        possibleDirs.add(File(context.filesDir, "aipdfs/mathsolver"))
         possibleDirs.add(File(context.filesDir, "AiPdfMaker"))
 
         val targetNames = mutableListOf("main.pdf", "document.pdf", "solution.pdf", "solution_native.pdf", "$safeName.pdf")
@@ -261,6 +261,140 @@ object FileUtils {
         }
         compiledPdfCache[cacheKey] = NOT_FOUND_FILE
         return null
+    }
+
+    /**
+     * Replaces previous compiled PDF and companion files for a project with newly compiled output.
+     * Ensures any previous PDF file (in project dir, mathsolver dir, public Documents, or custom location)
+     * is completely replaced so that subsequent opens, exports, and previews reflect the latest compilation.
+     */
+    fun replacePreviousCompiledPdf(
+        context: Context,
+        projectTitle: String,
+        newPdf: File,
+        newTex: File? = null,
+        previousPdf: File? = null
+    ) {
+        val safeName = getSafeFileName(projectTitle, "Project")
+        val strippedTitle = getSafeFileName(
+            projectTitle.removePrefix("Math:").removePrefix("Math -").trim(),
+            ""
+        )
+        val updatedFiles = mutableListOf<File>()
+        updatedFiles.add(newPdf)
+
+        // 1. If an explicit previous PDF path was tracked and exists, overwrite it directly
+        if (previousPdf != null && previousPdf.exists() && previousPdf.canonicalPath != newPdf.canonicalPath) {
+            try {
+                newPdf.copyTo(previousPdf, overwrite = true)
+                updatedFiles.add(previousPdf)
+                AppLogger.i("FileUtils", "Replaced explicit previous PDF at: ${previousPdf.absolutePath}")
+                if (newTex != null && newTex.exists()) {
+                    val companionTex = File(previousPdf.parentFile, "${previousPdf.nameWithoutExtension}.tex")
+                    if (companionTex.exists() && companionTex.canonicalPath != newTex.canonicalPath) {
+                        newTex.copyTo(companionTex, overwrite = true)
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.w("FileUtils", "Failed to overwrite explicit previous PDF: ${e.message}")
+            }
+        }
+
+        // 2. Overwrite any alternate/legacy PDF names in the project's export directory
+        val baseDir = try { getExportDirectory(context, "aipdfs/$safeName") } catch (_: Exception) { null }
+        if (baseDir != null && baseDir.exists()) {
+            val legacyNames = listOf("document.pdf", "$safeName.pdf", "solution.pdf", "solution_native.pdf", "main.pdf")
+            for (name in legacyNames) {
+                val candidate = File(baseDir, name)
+                if (candidate.exists() && candidate.isFile && candidate.canonicalPath != newPdf.canonicalPath) {
+                    try {
+                        newPdf.copyTo(candidate, overwrite = true)
+                        updatedFiles.add(candidate)
+                        AppLogger.i("FileUtils", "Replaced legacy PDF variant: ${candidate.absolutePath}")
+                    } catch (e: Exception) {
+                        AppLogger.w("FileUtils", "Failed to overwrite legacy PDF $name: ${e.message}")
+                    }
+                }
+            }
+            if (newTex != null && newTex.exists()) {
+                val legacyTexNames = listOf("document.tex", "$safeName.tex", "solution.tex", "main.tex")
+                for (tName in legacyTexNames) {
+                    val texCandidate = File(baseDir, tName)
+                    if (texCandidate.exists() && texCandidate.isFile && texCandidate.canonicalPath != newTex.canonicalPath) {
+                        try {
+                            newTex.copyTo(texCandidate, overwrite = true)
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+        }
+
+        // 3. Overwrite matching PDFs in dedicated Math Solver directory if applicable
+        val mathDir = try { getMathSolverDirectory(context) } catch (_: Exception) { null }
+        if (mathDir != null && mathDir.exists()) {
+            val mathCandidates = mathDir.listFiles { f ->
+                f.isFile && f.name.endsWith(".pdf", ignoreCase = true) && (
+                    f.nameWithoutExtension.equals(safeName, ignoreCase = true) ||
+                    (strippedTitle.isNotBlank() && f.nameWithoutExtension.equals(strippedTitle, ignoreCase = true)) ||
+                    (strippedTitle.isNotBlank() && f.nameWithoutExtension.contains(strippedTitle.take(15), ignoreCase = true))
+                )
+            }
+            mathCandidates?.forEach { mathPdf ->
+                if (mathPdf.canonicalPath != newPdf.canonicalPath) {
+                    try {
+                        newPdf.copyTo(mathPdf, overwrite = true)
+                        updatedFiles.add(mathPdf)
+                        AppLogger.i("FileUtils", "Replaced mathsolver PDF at: ${mathPdf.absolutePath}")
+                        if (newTex != null && newTex.exists()) {
+                            val mathTex = File(mathDir, "${mathPdf.nameWithoutExtension}.tex")
+                            if (mathTex.exists() && mathTex.canonicalPath != newTex.canonicalPath) {
+                                newTex.copyTo(mathTex, overwrite = true)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        AppLogger.w("FileUtils", "Failed to overwrite mathsolver PDF: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        // 4. Overwrite matching PDFs in AiPdfMaker / Public / External dirs
+        try {
+            val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val aiPdfMakerDir = File(pub, "AiPdfMaker")
+            if (aiPdfMakerDir.exists() && aiPdfMakerDir.isDirectory) {
+                val cleanWord = safeName.replace("Math_", "").replace("Project", "").trim('_')
+                if (cleanWord.isNotBlank()) {
+                    val matched = aiPdfMakerDir.listFiles { f ->
+                        f.isFile && f.name.endsWith(".pdf", ignoreCase = true) && f.name.contains(cleanWord.take(15), ignoreCase = true)
+                    }
+                    matched?.forEach { oldFile ->
+                        if (oldFile.canonicalPath != newPdf.canonicalPath) {
+                            try {
+                                newPdf.copyTo(oldFile, overwrite = true)
+                                updatedFiles.add(oldFile)
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 5. Invalidate the in-memory findCompiledPdf cache
+        invalidateCompiledPdfCache()
+
+        // 6. Notify MediaScanner for all updated paths
+        try {
+            val paths = updatedFiles.map { it.absolutePath }.toTypedArray()
+            android.media.MediaScannerConnection.scanFile(
+                context,
+                paths,
+                Array(paths.size) { "application/pdf" },
+                null
+            )
+        } catch (e: Exception) {
+            AppLogger.w("FileUtils", "MediaScanner notification failed: ${e.message}")
+        }
     }
 
     /**

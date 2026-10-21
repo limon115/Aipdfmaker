@@ -25,7 +25,8 @@ data class NotesViewerState(
     val exportProgress: Float = 0f,
     val isSaving: Boolean = false,
     val hasUnsavedChanges: Boolean = false,
-    val lastSaveTimestamp: Long = 0L
+    val lastSaveTimestamp: Long = 0L,
+    val recompileTimestamp: Long = 0L
 )
 
 class NotesViewerViewModel(
@@ -86,7 +87,8 @@ class NotesViewerViewModel(
             try {
                 val currentProject = _state.value.project
                 val projectId = currentProject?.id
-                if (projectId != null) {
+                var updatedProject = currentProject
+                if (projectId != null && currentProject != null) {
                     val snippets = snippetDao.getSnippetsForProject(projectId).first()
                     val latexSnippet = snippets.find { it.topicTitle != "fix_script" }
                     if (latexSnippet != null) {
@@ -106,12 +108,22 @@ class NotesViewerViewModel(
                     } catch (e: Exception) {
                         timber.log.Timber.w(e, "Failed to write main.tex during save")
                     }
+                    val now = System.currentTimeMillis()
+                    val proj = currentProject.copy(lastUpdated = now)
+                    try {
+                        projectDao.updateProject(proj)
+                        updatedProject = proj
+                    } catch (e: Exception) {
+                        timber.log.Timber.w(e, "Failed to update project timestamp")
+                    }
                 }
+                val now = System.currentTimeMillis()
                 _state.update {
                     it.copy(
+                        project = updatedProject,
                         isSaving = false,
                         hasUnsavedChanges = false,
-                        lastSaveTimestamp = System.currentTimeMillis()
+                        lastSaveTimestamp = now
                     )
                 }
                 onComplete?.invoke()
@@ -129,6 +141,7 @@ class NotesViewerViewModel(
             onError("Project details are still loading. Please wait a moment and try again.")
             return
         }
+        val previousPdf = _state.value.generatedPdfFile ?: compilerRepository.getCompiledPdf(currentProject)
         _state.update { it.copy(isExporting = true, exportProgress = 0f) }
         viewModelScope.launch {
             try {
@@ -152,11 +165,31 @@ class NotesViewerViewModel(
                     },
                     project = currentProject,
                     latexContent = _state.value.latexContent,
-                    fixScript = _state.value.fixScript
+                    fixScript = _state.value.fixScript,
+                    previousPdf = previousPdf
                 )
                 if (result.isSuccess) {
                     val (pdf, tex) = result.getOrThrow()
-                    _state.update { it.copy(generatedPdfFile = pdf, generatedTexFile = tex, isExporting = false) }
+                    val now = System.currentTimeMillis()
+                    val updatedProject = currentProject.copy(
+                        lastUpdated = now,
+                        status = "Completed"
+                    )
+                    try {
+                        projectDao.updateProject(updatedProject)
+                    } catch (e: Exception) {
+                        timber.log.Timber.w(e, "Failed to update project lastUpdated in database")
+                    }
+                    com.example.utils.FileUtils.invalidateCompiledPdfCache()
+                    _state.update {
+                        it.copy(
+                            generatedPdfFile = pdf,
+                            generatedTexFile = tex,
+                            project = updatedProject,
+                            isExporting = false,
+                            recompileTimestamp = now
+                        )
+                    }
                     onComplete(pdf, tex)
                 } else {
                     val error = result.exceptionOrNull()?.message ?: "Unknown error"

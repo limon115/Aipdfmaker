@@ -123,6 +123,12 @@ class ExportEngine(private val context: Context) {
                     if (generatedPdf != null && generatedPdf.exists()) {
                         val targetPdf = File(baseDir, "document.pdf")
                         generatedPdf.copyTo(targetPdf, overwrite = true)
+                        com.example.utils.FileUtils.replacePreviousCompiledPdf(
+                            context = context,
+                            projectTitle = projectName,
+                            newPdf = targetPdf,
+                            newTex = texFile
+                        )
                         _exportProgress.value = 1f
                         withContext(Dispatchers.Main) { onComplete(targetPdf, texFile) }
                         return@launch

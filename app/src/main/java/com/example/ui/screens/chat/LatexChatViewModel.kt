@@ -366,7 +366,7 @@ class LatexChatViewModel : ViewModel() {
             val repo = repository ?: LatexChatRepository(context).also { repository = it }
             val service = LatexChatService(context)
             try {
-                val compileResult = service.compileLatexToPdf(newLatex, docTitle)
+                val compileResult = service.compileLatexToPdf(newLatex, docTitle, targetFile = msg.pdfFile)
                 if (compileResult.isSuccess) {
                     val pdfFile = compileResult.getOrNull()
                     repo.updateMessage(session.id, messageId) {

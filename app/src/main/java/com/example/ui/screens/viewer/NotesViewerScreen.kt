@@ -734,6 +734,7 @@ fun NotesViewerScreen(
                                 if (pdfFile != null && pdfFile.exists()) {
                                     PdfDocumentPreview(
                                         pdfFile = pdfFile,
+                                        recompileKey = state.recompileTimestamp,
                                         modifier = Modifier.fillMaxSize(),
                                         onOpenExternal = {
                                             FileUtils.openPdf(context, pdfFile, "Open ${state.project?.title ?: "PDF"}")
@@ -849,18 +850,19 @@ fun NotesViewerScreen(
 fun PdfDocumentPreview(
     pdfFile: File,
     modifier: Modifier = Modifier,
+    recompileKey: Long = 0L,
     onOpenExternal: () -> Unit
 ) {
     val context = LocalContext.current
-    var pages by remember(pdfFile.lastModified(), pdfFile.absolutePath) {
+    var pages by remember(pdfFile.absolutePath, recompileKey, pdfFile.lastModified()) {
         mutableStateOf<List<Bitmap>>(emptyList())
     }
-    var isLoading by remember(pdfFile.lastModified(), pdfFile.absolutePath) {
+    var isLoading by remember(pdfFile.absolutePath, recompileKey, pdfFile.lastModified()) {
         mutableStateOf(true)
     }
     var renderError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(pdfFile.lastModified(), pdfFile.absolutePath) {
+    LaunchedEffect(pdfFile.absolutePath, recompileKey, pdfFile.lastModified()) {
         isLoading = true
         renderError = null
         withContext(Dispatchers.IO) {
