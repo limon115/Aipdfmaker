@@ -89,7 +89,7 @@ fun LatexCodeEditor(
                         val scheme = colorScheme
                         scheme.setColor(EditorColorScheme.WHOLE_BACKGROUND, android.graphics.Color.TRANSPARENT)
                         scheme.setColor(EditorColorScheme.TEXT_NORMAL, android.graphics.Color.parseColor("#0F172A"))
-                        scheme.setColor(EditorColorScheme.LINE_NUMBER_NORMAL, android.graphics.Color.parseColor("#94A3B8"))
+                        scheme.setColor(EditorColorScheme.LINE_NUMBER_PANEL_TEXT, android.graphics.Color.parseColor("#94A3B8"))
                         scheme.setColor(EditorColorScheme.LINE_DIVIDER, android.graphics.Color.parseColor("#E2E8F0"))
                         scheme.setColor(EditorColorScheme.CURRENT_LINE, android.graphics.Color.parseColor("#EFF6FF"))
                         scheme.setColor(EditorColorScheme.SELECTION_INSERT, android.graphics.Color.parseColor("#2563EB"))
