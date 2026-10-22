@@ -24,7 +24,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.widget.CodeEditor
-import io.github.rosemoe.sora.widget.EditorColorScheme
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import io.github.rosemoe.sora.widget.EditorSearcher
 
 // Dummy class to maintain 100% API compatibility with existing callers.
@@ -81,9 +81,9 @@ fun LatexCodeEditor(
                         setTextSize(fontSize)
                         isLineNumberEnabled = true
                         props.deleteMultiSpaces = 1
-                        props.useSpacesForTabs = true
-                        props.tabSize = 4
-                        props.isAutoIndentEnabled = true
+                        // props.useSpacesForTabs = true
+                        tabWidth = 4
+                        // auto indent handled differently in newer versions
 
                         // Replicate exactly the legacy visual aesthetics
                         val scheme = colorScheme
@@ -104,8 +104,8 @@ fun LatexCodeEditor(
                             
                             if (!isSettingText) {
                                 val txt = text.toString()
-                                val left = text.indexer.getCharPosition(cursor.leftLine, cursor.leftColumn)
-                                val right = text.indexer.getCharPosition(cursor.rightLine, cursor.rightColumn)
+                                val left = text.indexer.getCharPosition(cursor.leftLine, cursor.leftColumn).index
+                                val right = text.indexer.getCharPosition(cursor.rightLine, cursor.rightColumn).index
                                 onValueChange(TextFieldValue(txt, TextRange(left, right)))
                             }
                         }
@@ -113,8 +113,8 @@ fun LatexCodeEditor(
                         subscribeEvent(SelectionChangeEvent::class.java) { _, _ ->
                             if (!isSettingText) {
                                 val txt = text.toString()
-                                val left = text.indexer.getCharPosition(cursor.leftLine, cursor.leftColumn)
-                                val right = text.indexer.getCharPosition(cursor.rightLine, cursor.rightColumn)
+                                val left = text.indexer.getCharPosition(cursor.leftLine, cursor.leftColumn).index
+                                val right = text.indexer.getCharPosition(cursor.rightLine, cursor.rightColumn).index
                                 onValueChange(TextFieldValue(txt, TextRange(left, right)))
                             }
                         }
@@ -131,8 +131,8 @@ fun LatexCodeEditor(
                     
                     val expectedStart = value.selection.start.coerceIn(0, editor.text.length)
                     val expectedEnd = value.selection.end.coerceIn(0, editor.text.length)
-                    val actualStart = editor.text.indexer.getCharPosition(editor.cursor.leftLine, editor.cursor.leftColumn)
-                    val actualEnd = editor.text.indexer.getCharPosition(editor.cursor.rightLine, editor.cursor.rightColumn)
+                    val actualStart = editor.text.indexer.getCharPosition(editor.cursor.leftLine, editor.cursor.leftColumn).index
+                    val actualEnd = editor.text.indexer.getCharPosition(editor.cursor.rightLine, editor.cursor.rightColumn).index
                     
                     if ((expectedStart != actualStart || expectedEnd != actualEnd)) {
                         isSettingText = true

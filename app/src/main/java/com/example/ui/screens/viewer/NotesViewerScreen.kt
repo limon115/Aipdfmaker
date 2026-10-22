@@ -66,6 +66,33 @@ enum class EditorSaveStatus {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+
+/**
+ * In-memory search index caching full document text and query results.
+ */
+class LatexSearchIndex(val sourceText: String) {
+    private val queryCache = mutableMapOf<String, List<androidx.compose.ui.text.TextRange>>()
+    val length: Int get() = sourceText.length
+    fun search(query: String): List<androidx.compose.ui.text.TextRange> {
+        if (query.isBlank() || sourceText.isEmpty()) return emptyList()
+        val normalized = query.lowercase()
+        val cached = queryCache[normalized]
+        if (cached != null) return cached
+        val matches = ArrayList<androidx.compose.ui.text.TextRange>()
+        val qLen = query.length
+        var idx = 0
+        while (idx < sourceText.length) {
+            val found = sourceText.indexOf(query, idx, ignoreCase = true)
+            if (found == -1) break
+            val end = (found + qLen).coerceAtMost(sourceText.length)
+            matches.add(androidx.compose.ui.text.TextRange(found, end))
+            idx = maxOf(idx + 1, end)
+        }
+        queryCache[normalized] = matches
+        return matches
+    }
+}
+
 @Composable
 fun NotesViewerScreen(
     viewModel: NotesViewerViewModel,
