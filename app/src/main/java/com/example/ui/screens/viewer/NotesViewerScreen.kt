@@ -903,73 +903,30 @@ private fun LatexEditorCard(
                         )
                     }
 
-                    // Dedicated Fast Save Button
+                    // Dedicated Search Toggle Button
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = when (saveStatus) {
-                            EditorSaveStatus.UNSAVED -> Color(0xFF2563EB)
-                            EditorSaveStatus.SAVING -> Color(0xFFEFF6FF)
-                            EditorSaveStatus.SAVED -> Color(0xFFF1F5F9)
-                        },
-                        border = BorderStroke(
-                            1.dp,
-                            when (saveStatus) {
-                                EditorSaveStatus.UNSAVED -> Color(0xFF2563EB)
-                                EditorSaveStatus.SAVING -> Color(0xFFBFDBFE)
-                                EditorSaveStatus.SAVED -> Color(0xFFE2E8F0)
-                            }
-                        ),
-                        modifier = Modifier
-                            .clickable(enabled = saveStatus != EditorSaveStatus.SAVING) {
-                                onSave()
-                            }
+                        color = if (isSearchOpen) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
+                        border = BorderStroke(1.dp, if (isSearchOpen) Color(0xFFBFDBFE) else Color(0xFFE2E8F0)),
+                        modifier = Modifier.clickable { onToggleSearch() }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (saveStatus == EditorSaveStatus.SAVING) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(13.dp),
-                                    strokeWidth = 2.dp,
-                                    color = Color(0xFF2563EB)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Saving...",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF2563EB)
-                                )
-                            } else if (saveStatus == EditorSaveStatus.SAVED) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "Saved",
-                                    tint = Color(0xFF10B981),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Saved",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF475569)
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Save,
-                                    contentDescription = "Save",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Save",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF64748B),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Search",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSearchOpen) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF475569)
+                            )
                         }
                     }
 
