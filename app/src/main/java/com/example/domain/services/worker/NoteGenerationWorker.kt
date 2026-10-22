@@ -94,7 +94,7 @@ class NoteGenerationWorker(
             featureName = "Note Generation"
         )
         val cache = AiResponseCache(context)
-        val service = NoteGenerationService(dummyClient, cache)
+        val service = NoteGenerationService(dummyClient, cache, settings.promptNoteGeneration)
         val snippetDao = db.documentSnippetDao()
         val totalTopics = blueprint.topics.size
 

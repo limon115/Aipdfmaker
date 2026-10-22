@@ -50,6 +50,9 @@ class AiSettingsDataStore(private val context: Context) {
         val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
         val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
         val PRE_RELEASE_UPDATES = booleanPreferencesKey("pre_release_updates")
+        val PROMPT_NOTE_GENERATION = stringPreferencesKey("prompt_note_generation")
+        val PROMPT_MATH_SOLVER = stringPreferencesKey("prompt_math_solver")
+        val PROMPT_LATEX_CHAT = stringPreferencesKey("prompt_latex_chat")
     }
 
     val aiSettingsFlow: Flow<AiSettings> = context.dataStore.data
@@ -84,7 +87,10 @@ class AiSettingsDataStore(private val context: Context) {
                 contextPruningEnabled = preferences[CONTEXT_PRUNING_ENABLED] ?: true,
                 systemPrompt = preferences[SYSTEM_PROMPT] ?: "",
                 autoCheckUpdates = preferences[AUTO_CHECK_UPDATES] ?: true,
-                preReleaseUpdates = preferences[PRE_RELEASE_UPDATES] ?: false
+                preReleaseUpdates = preferences[PRE_RELEASE_UPDATES] ?: false,
+                promptNoteGeneration = preferences[PROMPT_NOTE_GENERATION]?.ifBlank { null } ?: com.example.domain.models.DefaultPrompts.DEFAULT_NOTE_GENERATION_PROMPT,
+                promptMathSolver = preferences[PROMPT_MATH_SOLVER]?.ifBlank { null } ?: com.example.domain.models.DefaultPrompts.DEFAULT_MATH_SOLVER_PROMPT,
+                promptLatexChat = preferences[PROMPT_LATEX_CHAT]?.ifBlank { null } ?: com.example.domain.models.DefaultPrompts.DEFAULT_LATEX_CHAT_PROMPT
             )
         }
 
@@ -183,6 +189,26 @@ class AiSettingsDataStore(private val context: Context) {
     suspend fun updatePreReleaseUpdates(enabled: Boolean) {
         context.dataStore.edit { it[PRE_RELEASE_UPDATES] = enabled }
     }
+
+    suspend fun updatePromptNoteGeneration(prompt: String) {
+        context.dataStore.edit { it[PROMPT_NOTE_GENERATION] = prompt }
+    }
+
+    suspend fun updatePromptMathSolver(prompt: String) {
+        context.dataStore.edit { it[PROMPT_MATH_SOLVER] = prompt }
+    }
+
+    suspend fun updatePromptLatexChat(prompt: String) {
+        context.dataStore.edit { it[PROMPT_LATEX_CHAT] = prompt }
+    }
+
+    suspend fun resetPromptsToDefault() {
+        context.dataStore.edit {
+            it.remove(PROMPT_NOTE_GENERATION)
+            it.remove(PROMPT_MATH_SOLVER)
+            it.remove(PROMPT_LATEX_CHAT)
+        }
+    }
 }
 
 data class AiSettings(
@@ -215,7 +241,10 @@ data class AiSettings(
     val contextPruningEnabled: Boolean = true,
     val systemPrompt: String = "",
     val autoCheckUpdates: Boolean = true,
-    val preReleaseUpdates: Boolean = false
+    val preReleaseUpdates: Boolean = false,
+    val promptNoteGeneration: String = com.example.domain.models.DefaultPrompts.DEFAULT_NOTE_GENERATION_PROMPT,
+    val promptMathSolver: String = com.example.domain.models.DefaultPrompts.DEFAULT_MATH_SOLVER_PROMPT,
+    val promptLatexChat: String = com.example.domain.models.DefaultPrompts.DEFAULT_LATEX_CHAT_PROMPT
 ) {
     fun resolveCandidates(
         primarySlot: Int = 1,

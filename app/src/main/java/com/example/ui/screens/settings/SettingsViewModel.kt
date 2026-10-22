@@ -93,6 +93,22 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { dataStore.updatePreReleaseUpdates(enabled) }
     }
 
+    fun updatePromptNoteGeneration(prompt: String) {
+        viewModelScope.launch { dataStore.updatePromptNoteGeneration(prompt) }
+    }
+
+    fun updatePromptMathSolver(prompt: String) {
+        viewModelScope.launch { dataStore.updatePromptMathSolver(prompt) }
+    }
+
+    fun updatePromptLatexChat(prompt: String) {
+        viewModelScope.launch { dataStore.updatePromptLatexChat(prompt) }
+    }
+
+    fun resetPromptsToDefault() {
+        viewModelScope.launch { dataStore.resetPromptsToDefault() }
+    }
+
     fun updateThemeMode(themeMode: ThemeMode) {
         viewModelScope.launch { dataStore.updateThemeMode(themeMode) }
     }

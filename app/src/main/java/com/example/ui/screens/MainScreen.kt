@@ -362,10 +362,19 @@ fun MainScreen() {
                     onNavigateToUpdates = { navController.navigate("settings_updates") },
                     onNavigateToApiLab = { navController.navigate("api_lab") },
                     onNavigateToLogs = { navController.navigate("app_logs") },
+                    onNavigateToPrompts = { navController.navigate("settings_prompts") },
                     onNavigateToProviderSelection = { aiIndex ->
                         navController.navigate("provider_selection/$aiIndex")
                     },
                     onBottomReached = { atBottom -> isSettingsAtBottom = atBottom }
+                )
+            }
+            
+            composable("settings_prompts") {
+                val settingsViewModel: SettingsViewModel = viewModel()
+                com.example.ui.screens.settings.subscreens.AiPromptsConfigScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             

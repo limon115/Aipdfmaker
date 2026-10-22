@@ -80,66 +80,14 @@ class MathSolverWorker(
                 return Result.failure(workDataOf(KEY_ERROR to errorMsg))
             }
 
-            val prompt = """
-                Act as an expert mathematics tutor. I have a specific math problem for you to solve. Please provide a comprehensive breakdown by strictly following these instructions:
-                
-                0. Problem Statement (MANDATORY AT THE VERY BEGINNING):
-                Always write the question/problem provided at the very beginning of the PDF before solving. Present the complete original question clearly at the start of your document body inside an elegant box or dedicated section (e.g., \begin{tcolorbox}[title={\textbf{Problem Statement}}] ... \end{tcolorbox} or \section*{Problem Statement}).
-                CRITICAL: NEVER output raw bracketed option text like "title=Problem Statement]" without the enclosing \begin{tcolorbox} environment and properly paired brackets!
-                
-                1. Related Theory & Fundamentals:
-                Explain all the core theories, concepts, and fundamental formulas related to this problem. Strictly use fundamental core formulas for your proofs and explanations. Do not use derived memory tricks or shortcuts unless you ask for my permission first.
-                
-                2. The Solution:
-                Always explain the logical steps before writing out the mathematical calculations.
-                Keep the mathematical equations clean, separate from the descriptive text, and properly formatted.
-                
-                3. Variations:
-                Show me all possible variations of this specific type of math problem that I might encounter. For each variation, provide the complete solution.
-
-                CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
-                0. ALWAYS WRITE THE QUESTION FIRST: You MUST write the provided question/problem statement at the very top of the generated document body inside \begin{tcolorbox}[title={\textbf{Problem Statement}}] ... \end{tcolorbox} or \section*{Problem Statement} before beginning the theory or solution.
-                1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
-                2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
-                3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
-                   - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
-                   - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
-                4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \midrule ... \bottomrule \end{tabular} \end{table}.
-                   - IMPORTANT: Always end table rows with `\\` (double backslash).
-                   - IMPORTANT: ALWAYS use exactly `\bottomrule` at the end of the table. NEVER use `\bottom.`, `\bottom>`, or any other typo.
-                5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or `${"$$"} ... ${"$$"}`.
-                   - NEVER use `\begin{aligned}` completely alone in the text.
-                   - CRITICAL: Ensure EVERY `\begin` has a matching `\end`. For example, `\begin{aligned}` MUST be closed with `\end{aligned}`. Do not leave stray `\end{gather}` or `\end{pmatrix}` without a `\begin`.
-                   - CRITICAL: Delimiters must match. If you open with `\left[`, close with `\right]`. Do NOT close with `\end{pmatrix}`.
-                6. HEADINGS: You MUST use actual structural commands for headings like `\section{Topic}`, `\subsection{Subtopic}`. NEVER write bare text in braces like `{Topic}` as a heading.
-                7. SCRIPT CONSISTENCY: When writing in Bengali, strictly stick to pure Bengali and English characters. ABSOLUTELY DO NOT insert Arabic, Gujarati, or Devanagari characters (e.g., avoid inserting wrong script glyphs into Bengali words).
-                8. TIKZ VALIDITY: Avoid zero-length draw commands (e.g., `\draw (2,2) -- (2,2)`). Ensure every path has actual length.
-                9. ENVIRONMENT BALANCING: You MUST meticulously balance every `\begin` with its corresponding `\end`. Do NOT leave `\begin{tikzpicture}` without `\end{tikzpicture}`. Do NOT add stray `\end{center}` without a matching `\begin{center}`.
-                10. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
-                
-                **STRICT XELATEX, POLYGLOSSIA & BENGALI RULES FOR THIS GENERATION:**
-                1. **Polyglossia Language Management (CRITICAL):** The main document font is Bengali (`solaiman.ttf`) and the main document language is Bengali (`\setmainlanguage{bengali}`, `\setotherlanguage{english}`).
-                   - Because Bangla is the main font, all Bengali text renders directly by default without needing wrappers.
-                   - CRITICAL: Since the main document font is Bangla, you MUST explicitly wrap ALL English texts inside Polyglossia's english environment:
-                     * For multi-line solutions, paragraphs, or blocks in English, wrap them in `\begin{english} ... \end{english}`.
-                     * For inline English words, terms, headings, or phrases, wrap them in `\textenglish{<English text>}`.
-                   - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, `\setotherlanguage`, or font definitions; they are already loaded in the preamble.
-                2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (${'$'}...${'$'}, `\[ ... \]`, `align`, `equation`). Whenever writing Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
-                   - WRONG: `\text{সাফল্য}`
-                   - CORRECT: `\text{\bengalifont সাফল্য}`
-                3. **Numerals and English in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing. For English text inside math formulas via `\text{...}`, wrap in `\text{\textenglish{...}}`.
-                4. **No Em-Dashes:** The SolaimanLipi font does not support the Unicode Em-Dash (`—`). Never generate `—`. Always use standard LaTeX dashes (`---` for em-dash, `--` for en-dash).
-                5. **No Floats in Boxes:** NEVER use floating environments (`\begin{table}` or `\begin{figure}`) inside a `tcolorbox`, `minipage`, or any other box. Use `\begin{center}` and `\begin{tabular}` directly.
-                6. **Environment Hygiene:** Double-check that every `\begin{...}` has a matching `\end{...}`. 
-                7. **No Stray Line Breaks:** Do not use `\\` to create new paragraphs in standard text. Use a blank line for a new paragraph or `\vspace{}`.
-                8. **Script Consistency:** Output only English and Bengali text. Do not generate Arabic, Tamil, or other non-Latin scripts.
-                9. **No Wrapping of Standard Text (CRITICAL):** Never wrap paragraphs or standard body text inside `\text{}`, `\mbox{}`, or font-switching commands like `\text{\bengalifont{...}}`. Write all standard text directly in the document body so the XeLaTeX compiler can apply automatic line breaks naturally. Only use `\text{}` for brief text snippets inside math environments or TikZ node labels.
-                
-                * Outputs should be in the same language as input by user.
-                
-                Here is the problem:
-                $problemText
-            """.trimIndent()
+            val template = settings.promptMathSolver.ifBlank {
+                com.example.domain.models.DefaultPrompts.DEFAULT_MATH_SOLVER_PROMPT
+            }
+            val prompt = if (template.contains("${'$'}problemText")) {
+                template.replace("${'$'}problemText", problemText)
+            } else {
+                "$template\n\nHere is the problem:\n$problemText"
+            }
 
             var aiResponse: String? = null
             var lastError: Exception? = null

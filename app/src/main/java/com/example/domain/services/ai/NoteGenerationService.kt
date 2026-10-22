@@ -5,7 +5,8 @@ import com.example.data.cache.AiResponseCache
 
 class NoteGenerationService(
     private val aiClient: AiNetworkClient,
-    private val cache: AiResponseCache
+    private val cache: AiResponseCache,
+    private val customPromptTemplate: String? = null
 ) {
     suspend fun generateDocumentForTopic(
         topicTitle: String,
@@ -25,7 +26,13 @@ class NoteGenerationService(
         )
 
         val isHscLevel = noteStyle.contains("HSC", ignoreCase = true)
-        val systemPrompt = if (isHscLevel) {
+        val systemPrompt = if (!customPromptTemplate.isNullOrBlank()) {
+            if (customPromptTemplate.contains("${'$'}topicTitle")) {
+                customPromptTemplate.replace("${'$'}topicTitle", topicTitle)
+            } else {
+                "$customPromptTemplate\n\nTopic: $topicTitle"
+            }
+        } else if (isHscLevel) {
             getHscPrompt(topicTitle)
         } else {
             getUniversityPrompt(topicTitle)
@@ -64,12 +71,12 @@ class NoteGenerationService(
     private fun getHscPrompt(topicTitle: String): String = """
         You are an expert textbook author and top-tier college educator specializing in the HSC (Higher Secondary Certificate - Class 11-12) curriculum. Write COMPREHENSIVE, conceptually rigorous, and board-exam-focused study notes for the topic: '$topicTitle'. 
 
-        Use an encouraging tone and expressive emojis 💡✨ appropriately in your textual descriptions to keep the student engaged and make complex topics feel approachable!
+        Use an encouraging, clear, and professional tone in your textual descriptions to keep the student engaged and make complex topics feel approachable.
 
         CRITICAL PEDAGOGY RULES:
         1. **First-Principles & Core Formulas:** Always use fundamental core formulas and first-principles derivations for math and physics proofs. NO derived memory tricks or shortcuts unless explicitly stated as a "helpful shortcut" *after* the formal proof is complete. 
         2. **Strict Separation of Math and Text:** Keep the mathematical workings strictly separate and visually clean from the textual descriptions. You MUST state the procedural steps and logic explicitly BEFORE executing the math.
-        3. **HSC-Level Depth:** Write exhaustive explanations tailored to the HSC NCTB curriculum. Strike the perfect balance between board exam preparation and building a strong foundation for university admission tests. 🎯
+        3. **HSC-Level Depth:** Write exhaustive explanations tailored to the HSC NCTB curriculum. Strike the perfect balance between board exam preparation and building a strong foundation for university admission tests.
 
         CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
         1. Return ONLY valid LaTeX code for the document body. Do NOT include `\documentclass` or `\begin{document}`.
@@ -97,57 +104,8 @@ class NoteGenerationService(
            - CRITICAL: Since the main document font is Bangla, you MUST explicitly wrap ALL English texts inside Polyglossia's english environment:
              * For multi-line text, paragraphs, sections, or blocks in English, wrap them in `\begin{english} ... \end{english}`.
              * For inline English words, terms, headings, or phrases, wrap them in `\textenglish{<English text>}`.
-           - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, `\setotherlanguage`, or font definitions; they are already loaded in the preamble.
-        2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (\`${'$'} ... ${'$'}\`, `\[ ... \]`, `align`, `equation`). Whenever you write Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
-           - WRONG: `\text{সাফল্য}`
-           - CORRECT: `\text{\bengalifont সাফল্য}`
-        3. **Numerals and English in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing. For English text inside math formulas via `\text{...}`, wrap in `\text{\textenglish{...}}`.
-        4. **No Em-Dashes:** The SolaimanLipi font does not support the Unicode Em-Dash (`—`). Never generate `—`. Always use standard LaTeX dashes (`---` for em-dash, `--` for en-dash).
-        5. **No Floats in Boxes:** NEVER use floating environments (`\begin{table}` or `\begin{figure}`) inside a `tcolorbox`, `minipage`, or any other box. Use `\begin{center}` and `\begin{tabular}` directly.
-        6. **Environment Hygiene:** Double-check that every `\begin{...}` has a matching `\end{...}`. 
-        7. **No Stray Line Breaks:** Do not use `\\` to create new paragraphs in standard text. Use a blank line for a new paragraph or `\vspace{}`.
-        8. **Script Consistency:** Output only English, emojis, and Bengali text. Do not generate Arabic, Tamil, or other non-Latin scripts.
-        9. **No Wrapping of Standard Text (CRITICAL):** Never wrap paragraphs or standard body text inside `\text{}`, `\mbox{}`, or font-switching commands like `\text{\bengalifont{...}}`. Write all standard text directly in the document body so the XeLaTeX compiler can apply automatic line breaks naturally. Only use `\text{}` for brief text snippets inside math environments or TikZ node labels.
-
-        LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
-    """.trimIndent()
-
-    private fun getUniversityPrompt(topicTitle: String): String = """
-        You are an expert textbook author and university professor. Write EXHAUSTIVE, rigorous study notes for the topic: '$topicTitle'.
-
-        CRITICAL PEDAGOGY RULES:
-        1. Use fundamental core formulas and first-principles derivations. NO derived memory tricks unless explicitly stated as a helpful shortcut after the proof.
-        2. Keep the math strictly separate and clean from descriptions. State the procedural steps explicitly BEFORE doing the math.
-        3. Write exhaustive explanations with college-level depth.
-
-        CRITICAL LATEX & FORMATTING RULES (FAILURE IS NOT AN OPTION):
-        1. Return ONLY valid LaTeX code for the document body. Do NOT include \documentclass or \begin{document}.
-        2. ABSOLUTELY NO MARKDOWN. NEVER use **bold**, *italics*, # headers, --- dividers, or markdown lists. Use \textbf{}, \textit{}, \section{}, \subsection{}, and \begin{itemize} \item ... \end{itemize}.
-        3. ALL DIAGRAMS MUST BE WRAPPED IN ENVIRONMENTS. Never write raw coordinates or [scale=...] properties without the proper wrapper.
-           - Math/Geometry graphs MUST be enclosed in \begin{tikzpicture} ... \end{tikzpicture}.
-           - Physics Circuits MUST be enclosed in \begin{circuitikz} ... \end{circuitikz}.
-        4. ALL TABLES MUST BE STRICT LATEX. NEVER use Markdown tables. Use \begin{table}[h] \centering \begin{tabular}{...} \toprule ... \midrule ... \bottomrule \end{tabular} \end{table}.
-           - IMPORTANT: Always end table rows with `\\` (double backslash).
-           - IMPORTANT: ALWAYS use exactly `\bottomrule` at the end of the table. NEVER use \bottom., \bottom>, or any other typo.
-        5. MATH MODE STRICTNESS: The `aligned` environment MUST be nested inside `equation`, `align`, `\[ ... \]`, or ${"$$"} ... ${"$$"}.
-           - NEVER use `\begin{aligned}` completely alone in the text.
-           - CRITICAL: Ensure EVERY `\begin` has a matching `\end`. For example, `\begin{aligned}` MUST be closed with `\end{aligned}`. Do not leave stray `\end{gather}` or `\end{pmatrix}` without a `\begin`.
-           - CRITICAL: Delimiters must match. If you open with `\left[`, close with `\right]`. Do NOT close with `\end{pmatrix}`.
-        6. Do NOT invent custom environments like `rectbox`. Use standard environments or `\begin{tcolorbox}` (we have the tcolorbox package).
-        7. HEADINGS: You MUST use actual structural commands for headings like `\section{Topic}`, `\subsection{Subtopic}`. NEVER write bare text in braces like `{Topic}` as a heading.
-        8. SCRIPT CONSISTENCY: When writing in Bengali, strictly stick to pure Bengali and English characters. ABSOLUTELY DO NOT insert Arabic, Gujarati, or Devanagari characters (e.g., avoid inserting wrong script glyphs into Bengali words).
-        9. TIKZ VALIDITY: Avoid zero-length draw commands (e.g., `\draw (2,2) -- (2,2)`). Ensure every path has actual length.
-        10. ENVIRONMENT BALANCING: You MUST meticulously balance every `\begin` with its corresponding `\end`. Do NOT leave `\begin{tikzpicture}` without `\end{tikzpicture}`. Do NOT add stray `\end{center}` without a matching `\begin{center}`.
-        11. DIAGRAM LABELING: When labeling TikZ graphs or diagrams, carefully position text nodes (e.g., using `above`, `below`, `left`, `right`, or explicit shifts) to ensure text NEVER overlaps with lines, curves, or other text.
-
-        **STRICT XELATEX, POLYGLOSSIA & BENGALI RULES FOR THIS GENERATION:**
-        1. **Polyglossia Language Management (CRITICAL):** The main document font is Bengali (`solaiman.ttf`) and the main document language is Bengali (`\setmainlanguage{bengali}`, `\setotherlanguage{english}`).
-           - Because Bangla is the main font, all Bengali text renders directly by default without needing wrappers.
-           - CRITICAL: Since the main document font is Bangla, you MUST explicitly wrap ALL English texts inside Polyglossia's english environment:
-             * For multi-line text, paragraphs, sections, or blocks in English, wrap them in `\begin{english} ... \end{english}`.
-             * For inline English words, terms, headings, or phrases, wrap them in `\textenglish{<English text>}`.
              - Do NOT redeclare `\usepackage{polyglossia}`, `\setmainlanguage`, `\setotherlanguage`, or font definitions; they are already loaded in the preamble.
-        2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (${'$'}...${'$'}, `\[ ... \]`, `align`, `equation`). Whenever you write Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
+        2. **Bengali in Math Mode (CRITICAL):** Polyglossia language environments do NOT automatically switch fonts inside LaTeX math mode (\`${'$'} ... ${'$'}\`, `\[ ... \]`, `align`, `equation`). Whenever you write Bengali text inside an equation, you MUST explicitly invoke `\text{\bengalifont ...}`:
            - WRONG: `\text{সাফল্য}`
            - CORRECT: `\text{\bengalifont সাফল্য}`
         3. **Numerals and English in Math:** Keep equations, variables, and numerical values in standard ASCII numerals (`0-9`) for clean mathematical alignment and parsing. For English text inside math formulas via `\text{...}`, wrap in `\text{\textenglish{...}}`.
@@ -160,6 +118,16 @@ class NoteGenerationService(
 
         LANGUAGE RULE: You MUST write the entire output in the EXACT SAME LANGUAGE as the provided source text.
     """.trimIndent()
+
+    private fun getUniversityPrompt(topicTitle: String): String {
+        val template = customPromptTemplate?.ifBlank { null }
+            ?: com.example.domain.models.DefaultPrompts.DEFAULT_NOTE_GENERATION_PROMPT
+        return if (template.contains("${'$'}topicTitle")) {
+            template.replace("${'$'}topicTitle", topicTitle)
+        } else {
+            "$template\n\nWrite notes for: $topicTitle"
+        }
+    }
 
     private fun cleanLatex(raw: String): String {
         return raw.trim()

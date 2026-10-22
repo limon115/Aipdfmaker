@@ -49,6 +49,7 @@ fun AiSettingsScreen(
     onNavigateToUpdates: () -> Unit = {},
     onNavigateToApiLab: () -> Unit = {},
     onNavigateToLogs: () -> Unit = {},
+    onNavigateToPrompts: () -> Unit = {},
     onNavigateToProviderSelection: (aiIndex: Int) -> Unit = {},
     onBottomReached: (Boolean) -> Unit = {}
 ) {
@@ -169,7 +170,18 @@ fun AiSettingsScreen(
                     )
                 }
 
-                // Category 3: Generation & Performance
+                // Category 3: AI Prompts & Instructions
+                CategorySection(title = "AI PROMPTS & INSTRUCTIONS") {
+                    SettingsMenuRow(
+                        title = "System Prompts & Templates",
+                        subtitle = "Customize Note Generator, Math Solver & LaTeX Chat instructions",
+                        icon = Icons.Default.Terminal,
+                        iconColor = Color(0xFF8B5CF6),
+                        onClick = onNavigateToPrompts
+                    )
+                }
+
+                // Category 4: Generation & Performance
                 CategorySection(title = "GENERATION & PERFORMANCE") {
                     SettingsMenuRow(
                         title = "Advanced Settings",
