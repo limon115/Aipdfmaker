@@ -27,8 +27,68 @@ jobs:
       - name: Generate Gradle Wrapper (Cloud Execution)
         run: gradle wrapper --gradle-version 9.3.1
 
-      - name: Verify Debug Keystore
+      - name: Setup and Decode Debug Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding debug.keystore from GitHub Secrets..."
+            echo "$KEYSTORE_BASE64" | base64 -d > debug.keystore
+          elif [ -f rebuilt.keystore ]; then
+            echo "Using rebuilt.keystore from repository..."
+            cp rebuilt.keystore debug.keystore
+          elif [ ! -f debug.keystore ]; then
+            echo "Decoding embedded Ubuntu debug.keystore..."
+            cat << 'EOF' | base64 -d > debug.keystore
+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
+EOF
+          fi
           test -f debug.keystore || (echo "Error: debug.keystore is missing from repository root" && exit 1)
 
       - name: Grant Execute Permissions
