@@ -82,6 +82,7 @@ googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.W
 dependencies {
   implementation("com.tom-roush:pdfbox-android:2.0.27.0")
   implementation(libs.timber)
+  implementation("io.github.Rosemoe.sora-editor:editor:0.23.6")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
