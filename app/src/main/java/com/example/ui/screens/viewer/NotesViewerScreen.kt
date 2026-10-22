@@ -1,6 +1,6 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.example.ui.screens.viewer
 
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 import android.Manifest
 import android.content.ClipData
