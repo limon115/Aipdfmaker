@@ -31,15 +31,24 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
+          echo "=== Provisioning debug.keystore ==="
+          
+          # Priority 1: GitHub Secrets (if defined and non-empty)
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Decoding debug.keystore from GitHub Secrets..."
-            echo "$KEYSTORE_BASE64" | base64 -d > debug.keystore
-          elif [ -f rebuilt.keystore ]; then
+            echo "Attempting decode from secrets.DEBUG_KEYSTORE_BASE64..."
+            echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > debug.keystore 2>/dev/null || true
+          fi
+
+          # Priority 2: Repository rebuilt.keystore if present and non-empty
+          if [ ! -s debug.keystore ] && [ -s rebuilt.keystore ]; then
             echo "Using rebuilt.keystore from repository..."
             cp rebuilt.keystore debug.keystore
-          elif [ ! -f debug.keystore ]; then
+          fi
+
+          # Priority 3: Embedded Ubuntu workspace debug keystore
+          if [ ! -s debug.keystore ]; then
             echo "Decoding embedded Ubuntu debug.keystore..."
-            cat << 'EOF' | base64 -d > debug.keystore
+            cat << 'EOF' | tr -d '\r\n ' | base64 -d > debug.keystore
 MIIKZgIBAzCCChAGCSqGSIb3DQEHAaCCCgEEggn9MIIJ+TCCBcAGCSqGSIb3DQEHAaCCBbEEggWt
 MIIFqTCCBaUGCyqGSIb3DQEMCgECoIIFQDCCBTwwZgYJKoZIhvcNAQUNMFkwOAYJKoZIhvcNAQUM
 MCsEFKwsxmGvd0sOWr2tAS1+L0nSiGwmAgInEAIBIDAMBggqhkiG9w0CCQUAMB0GCWCGSAFlAwQB
@@ -89,7 +98,20 @@ vkvuJSxm70Frz//bxYDQDPoXqILMWTBNMDEwDQYJYIZIAWUDBAIBBQAEIA1gYiiZiCbN0ugnPMcu
 dzK6cGDB4GrULQexIW7GBgxzBBTS/cMwvZG6mSb60nTZLmPknKT2JwICJxA=
 EOF
           fi
-          test -f debug.keystore || (echo "Error: debug.keystore is missing from repository root" && exit 1)
+
+          # Priority 4: Dynamic generation if file is missing or empty
+          if [ ! -s debug.keystore ]; then
+            echo "Generating fallback debug.keystore using keytool..."
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          # Ensure keystore exists in both root and app/ directory
+          mkdir -p app
+          cp debug.keystore app/debug.keystore
+
+          echo "Keystore verified successfully:"
+          ls -la debug.keystore app/debug.keystore
+          keytool -list -v -keystore debug.keystore -storepass android | grep -E "Alias name|SHA1:"
 
       - name: Grant Execute Permissions
         run: chmod +x gradlew || true
