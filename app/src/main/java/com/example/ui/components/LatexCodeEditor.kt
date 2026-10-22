@@ -36,15 +36,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * High-performance undo/redo manager tracking [TextFieldValue] history.
+ * High-performance state-based undo/redo manager tracking [TextFieldValue] history.
+ * Features intelligent typing batching, deep history stack, and Compose-reactive [canUndo]/[canRedo] states.
  */
-class UndoRedoManager(private val maxHistory: Int = 100) {
+class UndoRedoManager(private val maxHistory: Int = 300) {
     private val undoStack = mutableListOf<TextFieldValue>()
     private val redoStack = mutableListOf<TextFieldValue>()
     private var isPerforming = false
+    private var lastPushTimestamp = 0L
 
-    val canUndo: Boolean get() = undoStack.isNotEmpty()
-    val canRedo: Boolean get() = redoStack.isNotEmpty()
+    var canUndo by mutableStateOf(false)
+        private set
+    var canRedo by mutableStateOf(false)
+        private set
+
+    private fun updateStateFlags() {
+        canUndo = undoStack.isNotEmpty()
+        canRedo = redoStack.isNotEmpty()
+    }
+
+    fun reset(initial: TextFieldValue) {
+        undoStack.clear()
+        redoStack.clear()
+        lastPushTimestamp = System.currentTimeMillis()
+        updateStateFlags()
+    }
 
     fun push(value: TextFieldValue) {
         if (isPerforming) return
@@ -57,35 +73,104 @@ class UndoRedoManager(private val maxHistory: Int = 100) {
             undoStack.removeAt(0)
         }
         redoStack.clear()
+        lastPushTimestamp = System.currentTimeMillis()
+        updateStateFlags()
+    }
+
+    fun push(oldValue: TextFieldValue, newValue: TextFieldValue, forceCheckpoint: Boolean = false) {
+        if (isPerforming) return
+        if (oldValue.text == newValue.text) {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val timeSinceLast = now - lastPushTimestamp
+        val lengthDiff = kotlin.math.abs(newValue.text.length - oldValue.text.length)
+
+        val isNewline = newValue.text.length > oldValue.text.length &&
+                newValue.selection.start > 0 &&
+                newValue.text.getOrNull(newValue.selection.start - 1) == '\n'
+        val isWordBoundary = newValue.text.length > oldValue.text.length &&
+                newValue.selection.start > 0 &&
+                newValue.text.getOrNull(newValue.selection.start - 1) in listOf(' ', '\t', '{', '}', '[', ']', '$', '\\', '%', '&')
+        val isLargeEdit = lengthDiff > 1
+        val isPause = timeSinceLast > 750L
+
+        if (undoStack.isEmpty() || forceCheckpoint || isPause || isLargeEdit || isNewline || isWordBoundary) {
+            undoStack.add(oldValue)
+            if (undoStack.size > maxHistory) {
+                undoStack.removeAt(0)
+            }
+        }
+        redoStack.clear()
+        lastPushTimestamp = now
+        updateStateFlags()
     }
 
     fun undo(current: TextFieldValue): TextFieldValue? {
         if (undoStack.isEmpty()) return null
         isPerforming = true
         redoStack.add(current)
-        val prev = undoStack.removeAt(undoStack.lastIndex)
+        val target = undoStack.removeAt(undoStack.lastIndex)
         isPerforming = false
-        return prev
+        lastPushTimestamp = System.currentTimeMillis()
+        updateStateFlags()
+        return target
     }
 
     fun redo(current: TextFieldValue): TextFieldValue? {
         if (redoStack.isEmpty()) return null
         isPerforming = true
         undoStack.add(current)
-        val next = redoStack.removeAt(redoStack.lastIndex)
+        val target = redoStack.removeAt(redoStack.lastIndex)
         isPerforming = false
-        return next
+        lastPushTimestamp = System.currentTimeMillis()
+        updateStateFlags()
+        return target
     }
 
-    fun reset(initial: TextFieldValue) {
+    fun clear() {
         undoStack.clear()
         redoStack.clear()
-        undoStack.add(initial)
+        updateStateFlags()
     }
 }
 
 /**
- * Real-time syntax highlighter for LaTeX source code.
+ * In-memory search index caching full LaTeX document text and query results.
+ * Delivers instantaneous sub-millisecond search results without re-scanning
+ * the entire code on every frame.
+ */
+class LatexSearchIndex(val sourceText: String) {
+    private val queryCache = mutableMapOf<String, List<TextRange>>()
+
+    val length: Int get() = sourceText.length
+
+    fun search(query: String): List<TextRange> {
+        if (query.isBlank() || sourceText.isEmpty()) return emptyList()
+        val normalized = query.lowercase()
+        val cached = queryCache[normalized]
+        if (cached != null) return cached
+
+        val matches = ArrayList<TextRange>()
+        val qLen = query.length
+        var idx = 0
+        while (idx < sourceText.length) {
+            val found = sourceText.indexOf(query, idx, ignoreCase = true)
+            if (found == -1) break
+            val end = (found + qLen).coerceAtMost(sourceText.length)
+            matches.add(TextRange(found, end))
+            idx = maxOf(idx + 1, end)
+        }
+        queryCache[normalized] = matches
+        return matches
+    }
+}
+
+/**
+ * Real-time syntax highlighter for LaTeX source code with memoized transformation.
+ * Uses precompiled regex constants and caches span transformations to prevent
+ * frame drops on cursor movements, scrolling, or recomposition.
  * Preserves the exact underlying text verbatim with [OffsetMapping.Identity]
  * to ensure zero cursor drift and 100% exact text fidelity.
  */
@@ -93,10 +178,33 @@ class LatexSyntaxVisualTransformation(
     private val searchQuery: String = "",
     private val currentMatchRange: TextRange? = null
 ) : VisualTransformation {
+
+    companion object {
+        private val COMMENT_REGEX = Regex("%.*$", RegexOption.MULTILINE)
+        private val COMMAND_REGEX = Regex("""\\[a-zA-Z@]+""")
+        private val NUMBER_REGEX = Regex("""\b\d+(\.\d+)?\b""")
+        private val KEY_REGEX = Regex("""[\[,]\s*([a-zA-Z0-9_\-]+)\s*=""")
+        private val MATH_REGEX = Regex("""\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$""")
+    }
+
+    // Memoization cache to make cursor moves, scroll, and identical text transformations instantaneous
+    private var lastRawText: String? = null
+    private var lastSearchQuery: String? = null
+    private var lastMatchRange: TextRange? = null
+    private var cachedResult: TransformedText? = null
+
     override fun filter(text: AnnotatedString): TransformedText {
         val raw = text.text
         if (raw.isEmpty()) {
             return TransformedText(text, OffsetMapping.Identity)
+        }
+
+        if (raw == lastRawText &&
+            searchQuery == lastSearchQuery &&
+            currentMatchRange == lastMatchRange &&
+            cachedResult != null
+        ) {
+            return cachedResult!!
         }
 
         val highlighted = buildAnnotatedString {
@@ -112,8 +220,7 @@ class LatexSyntaxVisualTransformation(
 
             try {
                 // 1. Comments: % ... (slate gray, italic)
-                val commentRegex = Regex("%.*$", RegexOption.MULTILINE)
-                for (match in commentRegex.findAll(raw)) {
+                for (match in COMMENT_REGEX.findAll(raw)) {
                     safeAddStyle(
                         SpanStyle(color = Color(0xFF64748B), fontStyle = FontStyle.Italic),
                         match.range.first,
@@ -122,8 +229,7 @@ class LatexSyntaxVisualTransformation(
                 }
 
                 // 2. Control sequences / Commands: \documentclass, \usepackage, etc. (vibrant blue)
-                val commandRegex = Regex("""\\[a-zA-Z@]+""")
-                for (match in commandRegex.findAll(raw)) {
+                for (match in COMMAND_REGEX.findAll(raw)) {
                     safeAddStyle(
                         SpanStyle(
                             color = Color(0xFF0284C7),
@@ -135,8 +241,7 @@ class LatexSyntaxVisualTransformation(
                 }
 
                 // 3. Numbers & floats: 1.18, 1.5, 0.2, 80 (magenta / violet)
-                val numberRegex = Regex("""\b\d+(\.\d+)?\b""")
-                for (match in numberRegex.findAll(raw)) {
+                for (match in NUMBER_REGEX.findAll(raw)) {
                     safeAddStyle(
                         SpanStyle(
                             color = Color(0xFFC026D3),
@@ -148,9 +253,7 @@ class LatexSyntaxVisualTransformation(
                 }
 
                 // 4. Key names in brackets / options: Path=, Script=, AutoFakeBold=, AutoFakeSlant=, compat=, title=
-                // Avoid lookbehind with variable length which crashes on Android
-                val keyRegex = Regex("""[\[,]\s*([a-zA-Z0-9_\-]+)\s*=""")
-                for (match in keyRegex.findAll(raw)) {
+                for (match in KEY_REGEX.findAll(raw)) {
                     val keyGroup = match.groups[1]
                     if (keyGroup != null) {
                         safeAddStyle(
@@ -165,8 +268,7 @@ class LatexSyntaxVisualTransformation(
                 }
 
                 // 5. Math mode: $...$ or $$...$$ (teal green delimiters)
-                val mathRegex = Regex("""\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$""")
-                for (match in mathRegex.findAll(raw)) {
+                for (match in MATH_REGEX.findAll(raw)) {
                     val isDouble = match.value.startsWith("$$")
                     val delimLen = if (isDouble) 2 else 1
                     safeAddStyle(
@@ -190,10 +292,11 @@ class LatexSyntaxVisualTransformation(
                 // 6. Highlight search matches (yellow and orange for current match)
                 if (searchQuery.isNotBlank()) {
                     var searchIndex = 0
+                    val qLen = searchQuery.length
                     while (searchIndex < raw.length) {
                         val found = raw.indexOf(searchQuery, searchIndex, ignoreCase = true)
                         if (found == -1) break
-                        val end = found + searchQuery.length
+                        val end = (found + qLen).coerceAtMost(raw.length)
                         val isCurrentMatch = currentMatchRange != null &&
                                 currentMatchRange.start == found && currentMatchRange.end == end
                         safeAddStyle(
@@ -210,7 +313,12 @@ class LatexSyntaxVisualTransformation(
                 }
             } catch (_: Exception) {}
         }
-        return TransformedText(highlighted, OffsetMapping.Identity)
+        val result = TransformedText(highlighted, OffsetMapping.Identity)
+        lastRawText = raw
+        lastSearchQuery = searchQuery
+        lastMatchRange = currentMatchRange
+        cachedResult = result
+        return result
     }
 }
 
@@ -245,6 +353,12 @@ fun LatexCodeEditor(
         LatexSyntaxVisualTransformation(searchQuery, currentMatchRange)
     }
 
+    LaunchedEffect(value) {
+        if (previousValue != value) {
+            previousValue = value
+        }
+    }
+
     val textFontSize = fontSize.sp
     val textLineHeight = (fontSize * 1.5f).sp
 
@@ -258,6 +372,7 @@ fun LatexCodeEditor(
 
     val handleTextChange: (TextFieldValue) -> Unit = { newValue ->
         var finalValue = newValue
+        var indentApplied = false
         try {
             // Auto-indentation when pressing Enter
             if (newValue.text.length == previousValue.text.length + 1 &&
@@ -276,11 +391,12 @@ fun LatexCodeEditor(
                     val insertPos = newValue.selection.start.coerceIn(0, newValue.text.length)
                     val indented = newValue.text.substring(0, insertPos) + indent + newValue.text.substring(insertPos)
                     finalValue = TextFieldValue(indented, selection = TextRange(insertPos + indent.length))
+                    indentApplied = true
                 }
             }
         } catch (_: Exception) {}
+        undoRedoManager.push(previousValue, finalValue, forceCheckpoint = indentApplied)
         previousValue = finalValue
-        undoRedoManager.push(finalValue)
         onUndoStateChange?.invoke()
         onValueChange(finalValue)
     }
@@ -319,10 +435,10 @@ fun LatexCodeEditor(
                     try {
                         var currentOffset = 0
                         var lineNum = 1
-                        val lines = rawText.split('\n')
+                        var nextBreak = rawText.indexOf('\n', currentOffset)
 
                         drawIntoCanvas { canvas ->
-                            for (line in lines) {
+                            while (currentOffset <= rawText.length) {
                                 val baseline = if (isLayoutValid && layout != null && layout.lineCount > 0) {
                                     val safeOffset = currentOffset.coerceIn(0, layout.layoutInput.text.length)
                                     val visualLine = try {
@@ -337,7 +453,7 @@ fun LatexCodeEditor(
                                     (lineNum - 1) * textLineHeight.toPx() + textFontSize.toPx()
                                 }
 
-                                if (baseline >= 0f && baseline <= size.height + 200f) {
+                                if (baseline >= -50f && baseline <= size.height + 200f) {
                                     canvas.nativeCanvas.drawText(
                                         lineNum.toString(),
                                         size.width - 8.dp.toPx(),
@@ -345,7 +461,10 @@ fun LatexCodeEditor(
                                         textPaint
                                     )
                                 }
-                                currentOffset += line.length + 1
+
+                                if (nextBreak == -1) break
+                                currentOffset = nextBreak + 1
+                                nextBreak = rawText.indexOf('\n', currentOffset)
                                 lineNum++
                             }
                         }
@@ -397,6 +516,7 @@ fun LatexCodeEditor(
                                     if (event.isCtrlPressed && event.key == Key.Z && !event.isShiftPressed) {
                                         val undone = undoRedoManager.undo(value)
                                         if (undone != null) {
+                                            previousValue = undone
                                             onValueChange(undone)
                                             onUndoStateChange?.invoke()
                                             return@onPreviewKeyEvent true
@@ -404,6 +524,7 @@ fun LatexCodeEditor(
                                     } else if (event.isCtrlPressed && (event.key == Key.Y || (event.key == Key.Z && event.isShiftPressed))) {
                                         val redone = undoRedoManager.redo(value)
                                         if (redone != null) {
+                                            previousValue = redone
                                             onValueChange(redone)
                                             onUndoStateChange?.invoke()
                                             return@onPreviewKeyEvent true
@@ -450,69 +571,53 @@ fun LatexCodeEditor(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val insertSnippet: (String, (String) -> Pair<String, Int>) -> Unit = { _, transform ->
+                    val start = value.selection.start.coerceIn(0, value.text.length)
+                    val end = value.selection.end.coerceIn(0, value.text.length)
+                    val selected = value.text.substring(start, end)
+                    val (replacement, cursorOffset) = transform(selected)
+                    val newText = value.text.substring(0, start) + replacement + value.text.substring(end)
+                    val newCursor = (start + cursorOffset).coerceIn(0, newText.length)
+                    val newVal = TextFieldValue(newText, selection = TextRange(newCursor))
+                    undoRedoManager.push(previousValue, newVal, forceCheckpoint = true)
+                    previousValue = newVal
+                    onUndoStateChange?.invoke()
+                    onValueChange(newVal)
+                }
+
                 QuickKeyButton(label = "Tab") {
-                    val pos = value.selection.start.coerceIn(0, value.text.length)
-                    val newText = value.text.substring(0, pos) + "    " + value.text.substring(value.selection.end.coerceIn(0, value.text.length))
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(pos + 4)))
+                    insertSnippet("Tab") { "    " to 4 }
                 }
                 QuickKeyButton(label = "\\") {
-                    val pos = value.selection.start.coerceIn(0, value.text.length)
-                    val newText = value.text.substring(0, pos) + "\\" + value.text.substring(value.selection.end.coerceIn(0, value.text.length))
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(pos + 1)))
+                    insertSnippet("\\") { "\\" to 1 }
                 }
                 QuickKeyButton(label = "{ }") {
-                    val start = value.selection.start.coerceIn(0, value.text.length)
-                    val end = value.selection.end.coerceIn(0, value.text.length)
-                    val selected = value.text.substring(start, end)
-                    val newText = value.text.substring(0, start) + "{" + selected + "}" + value.text.substring(end)
-                    val newCursor = if (start == end) start + 1 else start + selected.length + 2
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(newCursor)))
+                    insertSnippet("{ }") { sel -> if (sel.isEmpty()) "{}" to 1 else "{$sel}" to (sel.length + 2) }
                 }
                 QuickKeyButton(label = "[ ]") {
-                    val start = value.selection.start.coerceIn(0, value.text.length)
-                    val end = value.selection.end.coerceIn(0, value.text.length)
-                    val selected = value.text.substring(start, end)
-                    val newText = value.text.substring(0, start) + "[" + selected + "]" + value.text.substring(end)
-                    val newCursor = if (start == end) start + 1 else start + selected.length + 2
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(newCursor)))
+                    insertSnippet("[ ]") { sel -> if (sel.isEmpty()) "[]" to 1 else "[$sel]" to (sel.length + 2) }
                 }
                 QuickKeyButton(label = "$") {
-                    val start = value.selection.start.coerceIn(0, value.text.length)
-                    val end = value.selection.end.coerceIn(0, value.text.length)
-                    val selected = value.text.substring(start, end)
-                    val newText = if (start == end) {
-                        value.text.substring(0, start) + "$" + value.text.substring(end)
-                    } else {
-                        value.text.substring(0, start) + "$" + selected + "$" + value.text.substring(end)
-                    }
-                    val newCursor = if (start == end) start + 1 else start + selected.length + 2
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(newCursor)))
+                    insertSnippet("$") { sel -> if (sel.isEmpty()) "$" to 1 else "$$sel$" to (sel.length + 2) }
                 }
                 QuickKeyButton(label = "^") {
-                    val pos = value.selection.start.coerceIn(0, value.text.length)
-                    val newText = value.text.substring(0, pos) + "^" + value.text.substring(value.selection.end.coerceIn(0, value.text.length))
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(pos + 1)))
+                    insertSnippet("^") { "^" to 1 }
                 }
                 QuickKeyButton(label = "_") {
-                    val pos = value.selection.start.coerceIn(0, value.text.length)
-                    val newText = value.text.substring(0, pos) + "_" + value.text.substring(value.selection.end.coerceIn(0, value.text.length))
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(pos + 1)))
+                    insertSnippet("_") { "_" to 1 }
                 }
                 QuickKeyButton(label = "%") {
-                    val pos = value.selection.start.coerceIn(0, value.text.length)
-                    val newText = value.text.substring(0, pos) + "%" + value.text.substring(value.selection.end.coerceIn(0, value.text.length))
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(pos + 1)))
+                    insertSnippet("%") { "%" to 1 }
                 }
                 QuickKeyButton(label = "&") {
-                    val pos = value.selection.start.coerceIn(0, value.text.length)
-                    val newText = value.text.substring(0, pos) + "&" + value.text.substring(value.selection.end.coerceIn(0, value.text.length))
-                    handleTextChange(TextFieldValue(newText, selection = TextRange(pos + 1)))
+                    insertSnippet("&") { "&" to 1 }
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 IconButton(
                     onClick = {
                         val undone = undoRedoManager.undo(value)
                         if (undone != null) {
+                            previousValue = undone
                             onValueChange(undone)
                             onUndoStateChange?.invoke()
                         }
@@ -531,6 +636,7 @@ fun LatexCodeEditor(
                     onClick = {
                         val redone = undoRedoManager.redo(value)
                         if (redone != null) {
+                            previousValue = redone
                             onValueChange(redone)
                             onUndoStateChange?.invoke()
                         }

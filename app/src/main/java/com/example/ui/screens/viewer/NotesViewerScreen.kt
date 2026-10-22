@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -27,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,6 +50,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.domain.services.pdf.PdfNotificationManager
 import com.example.ui.components.LatexCodeEditor
+import com.example.ui.components.LatexSearchIndex
 import com.example.ui.components.UndoRedoManager
 import com.example.ui.components.glass.GlassBackground
 import com.example.utils.FileUtils
@@ -103,42 +107,57 @@ fun NotesViewerScreen(
 
     // Font size scaling control (10sp - 20sp, default 12sp)
     var fontSizeScale by remember { mutableFloatStateOf(12f) }
-    var fontSizeMenuExpanded by remember { mutableStateOf(false) }
+
+    // In-memory cached search index upon viewing and editing LaTeX code
+    val searchIndex = remember(editorValue.text) {
+        LatexSearchIndex(editorValue.text)
+    }
 
     // Search inside code editor
     var isSearchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var currentMatchIndex by remember { mutableIntStateOf(0) }
 
-    val searchMatches = remember(editorValue.text, searchQuery) {
-        if (searchQuery.isBlank()) emptyList<TextRange>()
-        else {
-            val matches = mutableListOf<TextRange>()
-            var idx = 0
-            while (idx < editorValue.text.length) {
-                val found = editorValue.text.indexOf(searchQuery, idx, ignoreCase = true)
-                if (found == -1) break
-                val end = (found + searchQuery.length).coerceAtMost(editorValue.text.length)
-                matches.add(TextRange(found, end))
-                idx = maxOf(idx + 1, end)
-            }
-            matches
-        }
+    val searchMatches = remember(searchIndex, searchQuery) {
+        searchIndex.search(searchQuery)
     }
 
     val currentMatchRange = searchMatches.getOrNull(
         if (searchMatches.isEmpty()) 0 else currentMatchIndex.coerceIn(0, searchMatches.lastIndex)
     )
 
-    // Debounced autosave mechanism
-    LaunchedEffect(editorValue.text) {
-        if (isInitialContentLoaded && editorValue.text != state.latexContent) {
+    // Fast explicit save function: persists directly to Room DB on user demand without continuous keystroke lag
+    val performSave: () -> Unit = {
+        if (saveStatus != EditorSaveStatus.SAVING) {
             saveStatus = EditorSaveStatus.SAVING
-            delay(800) // 800ms debounce
             viewModel.saveLatexContent(editorValue.text) {
                 saveStatus = EditorSaveStatus.SAVED
+                Toast.makeText(context, "LaTeX document saved", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    val handleUndo: () -> Unit = {
+        val undone = undoRedoManager.undo(editorValue)
+        if (undone != null) {
+            editorValue = undone
+            saveStatus = EditorSaveStatus.UNSAVED
+        }
+    }
+
+    val handleRedo: () -> Unit = {
+        val redone = undoRedoManager.redo(editorValue)
+        if (redone != null) {
+            editorValue = redone
+            saveStatus = EditorSaveStatus.UNSAVED
+        }
+    }
+
+    BackHandler {
+        if (saveStatus == EditorSaveStatus.UNSAVED) {
+            viewModel.saveLatexContent(editorValue.text)
+        }
+        onNavigateBack()
     }
 
     // Export execution
@@ -216,11 +235,35 @@ fun NotesViewerScreen(
                 TopAppBar(
                     title = { Text("Final Document", fontWeight = FontWeight.Bold) },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        IconButton(onClick = {
+                            if (saveStatus == EditorSaveStatus.UNSAVED) {
+                                viewModel.saveLatexContent(editorValue.text)
+                            }
+                            onNavigateBack()
+                        }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
                     actions = {
+                        // Quick Save action in top bar
+                        IconButton(
+                            onClick = { performSave() },
+                            enabled = saveStatus != EditorSaveStatus.SAVING
+                        ) {
+                            if (saveStatus == EditorSaveStatus.SAVING) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color(0xFF2563EB)
+                                )
+                            } else {
+                                Icon(
+                                    if (saveStatus == EditorSaveStatus.SAVED) Icons.Default.Check else Icons.Default.Save,
+                                    contentDescription = "Save LaTeX Document",
+                                    tint = if (saveStatus == EditorSaveStatus.UNSAVED) Color(0xFF2563EB) else MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
                         val pdfFile = state.generatedPdfFile
                         IconButton(onClick = {
                             if (pdfFile != null && pdfFile.exists()) {
@@ -367,29 +410,31 @@ fun NotesViewerScreen(
                         ) {
                             // Segmented Source / Preview Tabs
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // Source Tab
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
                                     color = if (selectedTab == 0) Color(0xFF2563EB) else Color(0xFFF1F5F9),
-                                    modifier = Modifier.clickable { selectedTab = 0 }
+                                    modifier = Modifier.clickable {
+                                        selectedTab = 0
+                                    }
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
                                             Icons.Default.Code,
                                             contentDescription = "Source",
                                             tint = if (selectedTab == 0) Color.White else Color(0xFF64748B),
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(5.dp))
                                         Text(
                                             text = "Source",
-                                            style = MaterialTheme.typography.labelLarge,
+                                            style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold,
                                             color = if (selectedTab == 0) Color.White else Color(0xFF64748B)
                                         )
@@ -400,22 +445,30 @@ fun NotesViewerScreen(
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
                                     color = if (selectedTab == 1) Color(0xFF2563EB) else Color(0xFFF1F5F9),
-                                    modifier = Modifier.clickable { selectedTab = 1 }
+                                    modifier = Modifier.clickable {
+                                        if (saveStatus == EditorSaveStatus.UNSAVED) {
+                                            saveStatus = EditorSaveStatus.SAVING
+                                            viewModel.saveLatexContent(editorValue.text) {
+                                                saveStatus = EditorSaveStatus.SAVED
+                                            }
+                                        }
+                                        selectedTab = 1
+                                    }
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
                                             Icons.Default.Visibility,
                                             contentDescription = "Preview",
                                             tint = if (selectedTab == 1) Color.White else Color(0xFF64748B),
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(5.dp))
                                         Text(
                                             text = "Preview",
-                                            style = MaterialTheme.typography.labelLarge,
+                                            style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold,
                                             color = if (selectedTab == 1) Color.White else Color(0xFF64748B)
                                         )
@@ -456,333 +509,70 @@ fun NotesViewerScreen(
                             }
                         }
 
-                        // Tab 0: Editable LaTeX Source Code Editor Card
-                        if (selectedTab == 0) {
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                            ) {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    // Card Toolbar Header
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "LaTeX source",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF0F172A)
-                                        )
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            // Save status indicator
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(end = 4.dp)
-                                            ) {
-                                                when (saveStatus) {
-                                                    EditorSaveStatus.SAVED -> {
-                                                        Icon(
-                                                            Icons.Filled.CheckCircle,
-                                                            contentDescription = "Saved",
-                                                            tint = Color(0xFF10B981),
-                                                            modifier = Modifier.size(16.dp)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(5.dp))
-                                                        Text(
-                                                            text = "All changes saved",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = Color(0xFF334155),
-                                                            fontWeight = FontWeight.Normal
-                                                        )
-                                                    }
-                                                    EditorSaveStatus.SAVING -> {
-                                                        CircularProgressIndicator(
-                                                            modifier = Modifier.size(14.dp),
-                                                            strokeWidth = 2.dp,
-                                                            color = Color(0xFF2563EB)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(5.dp))
-                                                        Text(
-                                                            text = "Saving...",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = Color(0xFF64748B)
-                                                        )
-                                                    }
-                                                    EditorSaveStatus.UNSAVED -> {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(8.dp)
-                                                                .background(Color(0xFFF59E0B), CircleShape)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(5.dp))
-                                                        Text(
-                                                            text = "Unsaved edits",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = Color(0xFF64748B)
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            // Font-size Dropdown Control
-                                            Box {
-                                                Surface(
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                                    color = Color(0xFFF8FAFC),
-                                                    modifier = Modifier.clickable { fontSizeMenuExpanded = true }
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Text(
-                                                            text = "${fontSizeScale.toInt()}sp",
-                                                            style = MaterialTheme.typography.labelMedium,
-                                                            fontWeight = FontWeight.Medium,
-                                                            color = Color(0xFF1E293B)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(2.dp))
-                                                        Icon(
-                                                            Icons.Default.KeyboardArrowDown,
-                                                            contentDescription = "Font size",
-                                                            tint = Color(0xFF64748B),
-                                                            modifier = Modifier.size(16.dp)
-                                                        )
-                                                    }
-                                                }
-                                                DropdownMenu(
-                                                    expanded = fontSizeMenuExpanded,
-                                                    onDismissRequest = { fontSizeMenuExpanded = false }
-                                                ) {
-                                                    listOf(10f, 12f, 14f, 16f, 18f, 20f).forEach { size ->
-                                                        DropdownMenuItem(
-                                                            text = { Text("${size.toInt()}sp") },
-                                                            onClick = {
-                                                                fontSizeScale = size
-                                                                fontSizeMenuExpanded = false
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            // Search Icon Button
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                                color = if (isSearchOpen) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
-                                                modifier = Modifier.clickable {
-                                                    isSearchOpen = !isSearchOpen
-                                                    if (!isSearchOpen) searchQuery = ""
-                                                }
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier.padding(6.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Search,
-                                                        contentDescription = "Search in code",
-                                                        tint = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF64748B),
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
+                        when (selectedTab) {
+                            0 -> {
+                                // Tab 0: Editable LaTeX Source Code Editor Card
+                                LatexEditorCard(
+                                    value = editorValue,
+                                    onValueChange = { newValue ->
+                                        editorValue = newValue
+                                        saveStatus = EditorSaveStatus.UNSAVED
+                                    },
+                                    saveStatus = saveStatus,
+                                    onSave = performSave,
+                                    onUndo = handleUndo,
+                                    onRedo = handleRedo,
+                                    fontSizeScale = fontSizeScale,
+                                    onFontSizeChange = { fontSizeScale = it },
+                                    isSearchOpen = isSearchOpen,
+                                    onToggleSearch = {
+                                        isSearchOpen = !isSearchOpen
+                                        if (!isSearchOpen) searchQuery = ""
+                                    },
+                                    searchQuery = searchQuery,
+                                    onSearchQueryChange = {
+                                        searchQuery = it
+                                        currentMatchIndex = 0
+                                    },
+                                    searchMatches = searchMatches,
+                                    currentMatchIndex = currentMatchIndex,
+                                    currentMatchRange = currentMatchRange,
+                                    onNavigateMatch = { direction ->
+                                        if (searchMatches.isNotEmpty()) {
+                                            currentMatchIndex = (currentMatchIndex + direction + searchMatches.size) % searchMatches.size
+                                            val match = searchMatches[currentMatchIndex]
+                                            editorValue = editorValue.copy(selection = match)
                                         }
-                                    }
-
-                                    // Expandable Search Bar
-                                    AnimatedVisibility(visible = isSearchOpen) {
-                                        Surface(
-                                            color = Color(0xFFF8FAFC),
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                                            shape = RoundedCornerShape(8.dp),
-                                            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Search,
-                                                    contentDescription = null,
-                                                    tint = Color(0xFF64748B),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                BasicTextField(
-                                                    value = searchQuery,
-                                                    onValueChange = { searchQuery = it },
-                                                    modifier = Modifier.weight(1f),
-                                                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF0F172A)),
-                                                    singleLine = true,
-                                                    decorationBox = { inner ->
-                                                        if (searchQuery.isEmpty()) {
-                                                            Text(
-                                                                "Find in LaTeX code...",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = Color(0xFF94A3B8)
-                                                            )
-                                                        }
-                                                        inner()
-                                                    }
-                                                )
-                                                if (searchMatches.isNotEmpty()) {
-                                                    Text(
-                                                        text = "${currentMatchIndex + 1}/${searchMatches.size}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = Color(0xFF64748B),
-                                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                                    )
-                                                    IconButton(
-                                                        onClick = {
-                                                            if (searchMatches.isNotEmpty()) {
-                                                                currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size) % searchMatches.size
-                                                                val match = searchMatches[currentMatchIndex]
-                                                                editorValue = editorValue.copy(selection = match)
-                                                            }
-                                                        },
-                                                        modifier = Modifier.size(24.dp)
-                                                    ) {
-                                                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Previous match", modifier = Modifier.size(16.dp))
-                                                    }
-                                                    IconButton(
-                                                        onClick = {
-                                                            if (searchMatches.isNotEmpty()) {
-                                                                currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size
-                                                                val match = searchMatches[currentMatchIndex]
-                                                                editorValue = editorValue.copy(selection = match)
-                                                            }
-                                                        },
-                                                        modifier = Modifier.size(24.dp)
-                                                    ) {
-                                                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next match", modifier = Modifier.size(16.dp))
-                                                    }
-                                                } else if (searchQuery.isNotEmpty()) {
-                                                    Text(
-                                                        text = "No matches",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = Color(0xFFDC2626),
-                                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        isSearchOpen = false
-                                                        searchQuery = ""
-                                                    },
-                                                    modifier = Modifier.size(24.dp)
-                                                ) {
-                                                    Icon(Icons.Default.Close, contentDescription = "Close search", modifier = Modifier.size(16.dp))
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    HorizontalDivider(color = Color(0xFFF1F5F9))
-
-                                    // Real Multiline Code-Editing Component
-                                    LatexCodeEditor(
-                                        value = editorValue,
-                                        onValueChange = { newValue ->
-                                            editorValue = newValue
-                                            saveStatus = EditorSaveStatus.UNSAVED
-                                            viewModel.updateLatexContent(newValue.text)
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .weight(1f),
-                                        fontSize = fontSizeScale,
-                                        searchQuery = searchQuery,
-                                        currentMatchRange = currentMatchRange,
-                                        undoRedoManager = undoRedoManager,
-                                        onUndoStateChange = {
-                                            saveStatus = EditorSaveStatus.UNSAVED
-                                            viewModel.updateLatexContent(editorValue.text)
-                                        }
-                                    )
-                                }
+                                    },
+                                    onCloseSearch = {
+                                        isSearchOpen = false
+                                        searchQuery = ""
+                                    },
+                                    undoRedoManager = undoRedoManager,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    isCompactHeader = false
+                                )
                             }
-                        } else {
-                            // Tab 1: Live Document PDF Preview Card
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color.White,
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                            ) {
-                                val pdfFile = state.generatedPdfFile
-                                if (pdfFile != null && pdfFile.exists()) {
-                                    PdfDocumentPreview(
-                                        pdfFile = pdfFile,
-                                        recompileKey = state.recompileTimestamp,
-                                        modifier = Modifier.fillMaxSize(),
-                                        onOpenExternal = {
-                                            FileUtils.openPdf(context, pdfFile, "Open ${state.project?.title ?: "PDF"}")
+                            1 -> {
+                                // Tab 1: Full Live Document PDF Preview Card
+                                PdfPreviewCard(
+                                    pdfFile = state.generatedPdfFile,
+                                    recompileKey = state.recompileTimestamp,
+                                    onOpenExternal = {
+                                        state.generatedPdfFile?.let { file ->
+                                            FileUtils.openPdf(context, file, "Open ${state.project?.title ?: "PDF"}")
                                         }
-                                    )
-                                } else {
-                                    // Empty state when PDF hasn't been generated yet
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.PictureAsPdf,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(64.dp),
-                                            tint = Color(0xFF2563EB).copy(alpha = 0.5f)
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text(
-                                            text = "No Document Preview Yet",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1E293B)
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = "Switch to the Source tab to edit LaTeX code, then tap Recompile below to build and view the document.",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = Color(0xFF64748B),
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Spacer(modifier = Modifier.height(20.dp))
-                                        Button(
-                                            onClick = handleRecompile,
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                                        ) {
-                                            Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Compile Document", fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
+                                    },
+                                    onRecompile = handleRecompile,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    isCompactHeader = false
+                                )
                             }
                         }
                     }
@@ -981,6 +771,464 @@ fun PdfDocumentPreview(
                             modifier = Modifier.fillMaxWidth(),
                             contentScale = ContentScale.FillWidth
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Modular card container for the LaTeX Code Editor.
+ * Includes header toolbar with autosave status, font-size picker,
+ * in-memory cached search bar with match navigation, and code editor.
+ */
+@Composable
+private fun LatexEditorCard(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    saveStatus: EditorSaveStatus,
+    onSave: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    fontSizeScale: Float,
+    onFontSizeChange: (Float) -> Unit,
+    isSearchOpen: Boolean,
+    onToggleSearch: () -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    searchMatches: List<TextRange>,
+    currentMatchIndex: Int,
+    currentMatchRange: TextRange?,
+    onNavigateMatch: (Int) -> Unit,
+    onCloseSearch: () -> Unit,
+    undoRedoManager: UndoRedoManager,
+    modifier: Modifier = Modifier,
+    isCompactHeader: Boolean = false
+) {
+    var fontSizeMenuExpanded by remember { mutableStateOf(false) }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        modifier = modifier
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Card Toolbar Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = if (isCompactHeader) 10.dp else 16.dp,
+                        vertical = if (isCompactHeader) 8.dp else 12.dp
+                    ),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Code,
+                        contentDescription = null,
+                        tint = Color(0xFF2563EB),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "LaTeX source",
+                        style = if (isCompactHeader) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // State-based Undo Button
+                    IconButton(
+                        onClick = onUndo,
+                        enabled = undoRedoManager.canUndo,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Undo,
+                            contentDescription = "Undo",
+                            tint = if (undoRedoManager.canUndo) Color(0xFF2563EB) else Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // State-based Redo Button
+                    IconButton(
+                        onClick = onRedo,
+                        enabled = undoRedoManager.canRedo,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Redo,
+                            contentDescription = "Redo",
+                            tint = if (undoRedoManager.canRedo) Color(0xFF2563EB) else Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Dedicated Fast Save Button
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = when (saveStatus) {
+                            EditorSaveStatus.UNSAVED -> Color(0xFF2563EB)
+                            EditorSaveStatus.SAVING -> Color(0xFFEFF6FF)
+                            EditorSaveStatus.SAVED -> Color(0xFFF1F5F9)
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            when (saveStatus) {
+                                EditorSaveStatus.UNSAVED -> Color(0xFF2563EB)
+                                EditorSaveStatus.SAVING -> Color(0xFFBFDBFE)
+                                EditorSaveStatus.SAVED -> Color(0xFFE2E8F0)
+                            }
+                        ),
+                        modifier = Modifier
+                            .clickable(enabled = saveStatus != EditorSaveStatus.SAVING) {
+                                onSave()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (saveStatus == EditorSaveStatus.SAVING) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(13.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color(0xFF2563EB)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Saving...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF2563EB)
+                                )
+                            } else if (saveStatus == EditorSaveStatus.SAVED) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Saved",
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Saved",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF475569)
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Save,
+                                    contentDescription = "Save",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Save",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    // Font-size Dropdown Control
+                    Box {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                            color = Color(0xFFF8FAFC),
+                            modifier = Modifier.clickable { fontSizeMenuExpanded = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${fontSizeScale.toInt()}sp",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF1E293B)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Font size",
+                                    tint = Color(0xFF64748B),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = fontSizeMenuExpanded,
+                            onDismissRequest = { fontSizeMenuExpanded = false }
+                        ) {
+                            listOf(10f, 12f, 14f, 16f, 18f, 20f).forEach { size ->
+                                DropdownMenuItem(
+                                    text = { Text("${size.toInt()}sp") },
+                                    onClick = {
+                                        onFontSizeChange(size)
+                                        fontSizeMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Search Icon Button
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        color = if (isSearchOpen) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
+                        modifier = Modifier.clickable { onToggleSearch() }
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Search in code",
+                                tint = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF64748B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Expandable In-Memory Search Bar
+            AnimatedVisibility(visible = isSearchOpen) {
+                Surface(
+                    color = Color(0xFFF8FAFC),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Color(0xFF64748B),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            modifier = Modifier.weight(1f),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF0F172A)),
+                            singleLine = true,
+                            decorationBox = { inner ->
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        "Find in LaTeX code...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                        if (searchMatches.isNotEmpty()) {
+                            Text(
+                                text = "${currentMatchIndex + 1}/${searchMatches.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF64748B),
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            IconButton(
+                                onClick = { onNavigateMatch(-1) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Previous match", modifier = Modifier.size(16.dp))
+                            }
+                            IconButton(
+                                onClick = { onNavigateMatch(1) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next match", modifier = Modifier.size(16.dp))
+                            }
+                        } else if (searchQuery.isNotEmpty()) {
+                            Text(
+                                text = "No matches",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFDC2626),
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onCloseSearch,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close search", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(color = Color(0xFFF1F5F9))
+
+            // Real Multiline Code-Editing Component
+            LatexCodeEditor(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                fontSize = fontSizeScale,
+                searchQuery = searchQuery,
+                currentMatchRange = currentMatchRange,
+                undoRedoManager = undoRedoManager,
+                onUndoStateChange = null
+            )
+        }
+    }
+}
+
+/**
+ * Reusable PDF Preview Card used in Full Preview mode.
+ * Displays compiled PDF rendered bitmaps or an empty-state card with a Recompile action.
+ */
+@Composable
+private fun PdfPreviewCard(
+    pdfFile: File?,
+    recompileKey: Long,
+    onOpenExternal: () -> Unit,
+    onRecompile: () -> Unit,
+    modifier: Modifier = Modifier,
+    isCompactHeader: Boolean = false
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        modifier = modifier
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = if (isCompactHeader) 10.dp else 16.dp,
+                        vertical = if (isCompactHeader) 8.dp else 12.dp
+                    ),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        tint = Color(0xFF2563EB),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Document preview",
+                        style = if (isCompactHeader) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (pdfFile != null && pdfFile.exists()) {
+                        IconButton(
+                            onClick = onOpenExternal,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.OpenInNew,
+                                contentDescription = "Open in external viewer",
+                                tint = Color(0xFF2563EB),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = onRecompile,
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Recompile", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = Color(0xFFF1F5F9))
+
+            if (pdfFile != null && pdfFile.exists()) {
+                PdfDocumentPreview(
+                    pdfFile = pdfFile,
+                    recompileKey = recompileKey,
+                    modifier = Modifier.fillMaxSize(),
+                    onOpenExternal = onOpenExternal
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color(0xFF2563EB).copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No Document Preview Yet",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Tap Recompile to compile the LaTeX code and render the PDF preview.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF64748B),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Button(
+                        onClick = onRecompile,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                    ) {
+                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Compile Document", fontWeight = FontWeight.Bold)
                     }
                 }
             }

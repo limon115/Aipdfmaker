@@ -42,7 +42,7 @@ class ExportEngine(private val context: Context) {
                 val fullLatex = """
                     \documentclass{article}
 
-                    % 🎯 TEXTBOOK UPGRADE: Essential Packages
+                    % TEXTBOOK UPGRADE: Essential Packages
                     \usepackage{amsmath}
                     \usepackage{amsfonts}
                     \usepackage{amssymb}

@@ -131,7 +131,7 @@ fun ProviderSelection() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Provider", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         GlassTextField(
-            value = "✦ Google Gemini",
+            value = "Google Gemini",
             onValueChange = {},
             readOnly = true,
             modifier = Modifier.fillMaxWidth(),

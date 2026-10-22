@@ -16,10 +16,10 @@ class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
         for (snippet in snippets) {
             var safeJson = snippet.jsonContent.trim()
 
-            // 🛡️ SURGICAL FIX 1: Auto-correct the AI hallucinating "value" instead of "latex"
+            // SURGICAL FIX 1: Auto-correct the AI hallucinating "value" instead of "latex"
             safeJson = safeJson.replace(Regex("\"type\"\\s*:\\s*\"inline_math\"\\s*,\\s*\"value\""), "\"type\":\"inline_math\",\"latex\"")
 
-            // 🛡️ SURGICAL FIX 2: Auto-escape LaTeX commands so \f and \t don't crash the JSON parser
+            // SURGICAL FIX 2: Auto-escape LaTeX commands so \f and \t don't crash the JSON parser
             val latexCommands = listOf("\\frac", "\\times", "\\text", "\\rightarrow", "\\leftarrow", "\\approx", "\\mu", "\\Delta", "\\[", "\\]", "\\{", "\\}", "\\sigma", "\\alpha", "\\quad", "\\implies")
             for (cmd in latexCommands) {
                 safeJson = safeJson.replace(cmd, "\\" + cmd)
@@ -35,7 +35,7 @@ class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
                     val blockList = jsonFormat.decodeFromString<List<DocumentBlock>>(safeJson)
                     mergedBlocks.addAll(blockList)
                 } catch (e2: Exception) {
-                    // 🛡️ SURGICAL FIX 3: Intelligent Regex Extraction
+                    // SURGICAL FIX 3: Intelligent Regex Extraction
                     // Do not dump raw schema text. Extract only the readable content.
                     val contentRegex = Regex("\"(?:text|latex|value)\"\\s*:\\s*\"(.*?)\"")
                     val matches = contentRegex.findAll(safeJson)
@@ -44,7 +44,7 @@ class DocumentMergeEngine(private val documentSnippetDao: DocumentSnippetDao) {
                         val extracted = matches.joinToString(" ") { it.groupValues[1] }
                         mergedBlocks.add(ParagraphBlock(text = extracted))
                     } else {
-                        mergedBlocks.add(ParagraphBlock(text = "⚠️ [Data Extraction Error] The AI generated invalid mathematical JSON that could not be parsed."))
+                        mergedBlocks.add(ParagraphBlock(text = "[Warning] [Data Extraction Error] The AI generated invalid mathematical JSON that could not be parsed."))
                     }
                 }
             }

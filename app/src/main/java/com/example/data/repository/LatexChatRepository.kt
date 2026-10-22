@@ -121,7 +121,7 @@ class LatexChatRepository(private val context: Context) {
                 val idx = sessions.indexOfFirst { it.id == sessionId }
                 if (idx != -1) {
                     val preview = if (!lastMsg.latexCode.isNullOrBlank()) {
-                        "📄 ${lastMsg.text.take(60)}"
+                        "[LaTeX] ${lastMsg.text.take(60)}"
                     } else {
                         lastMsg.text.take(60)
                     }
@@ -193,7 +193,7 @@ class LatexChatRepository(private val context: Context) {
                     sb.append("```latex\n${msg.latexCode}\n```\n\n")
                 }
                 if (msg.pdfFile != null && msg.pdfFile.exists()) {
-                    sb.append("> 📄 Generated PDF: `${msg.pdfFile.name}` (${com.example.utils.FileUtils.formatFileSize(msg.pdfFile.length())})\n\n")
+                    sb.append("> Generated PDF: `${msg.pdfFile.name}` (${com.example.utils.FileUtils.formatFileSize(msg.pdfFile.length())})\n\n")
                 }
                 sb.append("---\n\n")
             }

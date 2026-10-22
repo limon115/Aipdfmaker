@@ -30,7 +30,7 @@ import java.util.UUID
 data class PromptCategory(
     val id: String,
     val title: String,
-    val iconEmoji: String,
+    val iconName: String,
     val prompts: List<PromptItem>
 )
 
@@ -70,7 +70,7 @@ class LatexChatViewModel : ViewModel() {
         PromptCategory(
             id = "math_physics",
             title = "Math & Physics",
-            iconEmoji = "📐",
+            iconName = "math",
             prompts = listOf(
                 PromptItem(
                     title = "Quantum Physics Sheet",
@@ -97,7 +97,7 @@ class LatexChatViewModel : ViewModel() {
         PromptCategory(
             id = "resumes_docs",
             title = "Resumes & Docs",
-            iconEmoji = "💼",
+            iconName = "work",
             prompts = listOf(
                 PromptItem(
                     title = "Modern Tech Resume",
@@ -124,7 +124,7 @@ class LatexChatViewModel : ViewModel() {
         PromptCategory(
             id = "diagrams_tables",
             title = "Tables",
-            iconEmoji = "📊",
+            iconName = "table",
             prompts = listOf(
                 PromptItem(
                     title = "Comparison Table with TikZ",

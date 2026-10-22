@@ -90,7 +90,7 @@ class AiNetworkClient(private val provider: String, private val apiKey: String, 
                 }
             }
 
-            // 🛡️ FIX 2: Call delay OUTSIDE the Mutex lock so we don't freeze other workers!
+            // FIX 2: Call delay OUTSIDE the Mutex lock so we don't freeze other workers!
             if (delayMs > 0L) {
                 kotlinx.coroutines.delay(delayMs)
                 enforceRateLimit(estimatedTokens)

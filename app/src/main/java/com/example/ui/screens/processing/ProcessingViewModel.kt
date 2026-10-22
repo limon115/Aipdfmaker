@@ -89,7 +89,7 @@ class ProcessingViewModel : ViewModel() {
                 workRequest
             )
 
-            // 🛡️ CRITICAL FIX: Safe observer without memory leaks
+            // CRITICAL FIX: Safe observer without memory leaks
             launch(Dispatchers.Main) {
                 workManager.getWorkInfoByIdLiveData(workRequest.id).observeForever(object : androidx.lifecycle.Observer<WorkInfo> {
                     override fun onChanged(workInfo: WorkInfo) {
@@ -98,7 +98,7 @@ class ProcessingViewModel : ViewModel() {
 
                             when (workInfo.state) {
                                 WorkInfo.State.SUCCEEDED -> {
-                                    // 🛡️ FIX 1: Read JSON from file to bypass 10KB Data limit
+                                    // FIX 1: Read JSON from file to bypass 10KB Data limit
                                     val fileName = workInfo.outputData.getString("blueprint_file")
                                     if (!fileName.isNullOrEmpty()) {
                                         try {
