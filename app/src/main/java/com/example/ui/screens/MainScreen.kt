@@ -281,9 +281,10 @@ fun MainScreen() {
                             .fillMaxSize()
                             .verticalScroll(dashboardScrollState)
                             .padding(start = 16.dp, end = 16.dp, top = 48.dp)
-                    ) {
-                    TermuxControlCard(modifier = Modifier.padding(16.dp))
+                    ) {)
                         com.example.ui.screens.settings.AiUsageDashboardCard()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TermuxControlCard(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp))
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
                     
                     com.example.ui.components.glass.GlassCard(

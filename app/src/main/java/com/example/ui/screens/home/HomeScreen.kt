@@ -481,11 +481,7 @@ fun HomeScreenContent(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        item {
-                TermuxControlCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
-            
-            items(
+                        items(
                             items = tabFiltered,
                             key = { it.id },
                             contentType = { "project_card" }
