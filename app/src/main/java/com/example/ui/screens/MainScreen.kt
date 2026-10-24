@@ -281,7 +281,7 @@ fun MainScreen() {
                             .fillMaxSize()
                             .verticalScroll(dashboardScrollState)
                             .padding(start = 16.dp, end = 16.dp, top = 48.dp)
-                    ) {)
+                    ) {
                         com.example.ui.screens.settings.AiUsageDashboardCard()
                         Spacer(modifier = Modifier.height(16.dp))
                         TermuxControlCard(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp))
