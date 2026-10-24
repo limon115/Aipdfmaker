@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.components.glass.TermuxControlCard
+
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.foundation.clickable
@@ -280,7 +282,8 @@ fun MainScreen() {
                             .verticalScroll(dashboardScrollState)
                             .padding(start = 16.dp, end = 16.dp, top = 48.dp)
                     ) {
-                    com.example.ui.screens.settings.AiUsageDashboardCard()
+                    TermuxControlCard(modifier = Modifier.padding(16.dp))
+                        com.example.ui.screens.settings.AiUsageDashboardCard()
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
                     
                     com.example.ui.components.glass.GlassCard(
