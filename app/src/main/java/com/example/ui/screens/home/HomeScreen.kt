@@ -2,7 +2,6 @@ package com.example.ui.screens.home
 
 import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
-import com.example.ui.components.glass.TermuxControlCard
 import com.example.ui.components.glass.GlassTextField
 import com.example.ui.components.PdfIcon
 
