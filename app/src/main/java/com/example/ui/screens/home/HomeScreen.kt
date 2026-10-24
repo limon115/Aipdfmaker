@@ -2,6 +2,7 @@ package com.example.ui.screens.home
 
 import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
+import com.example.ui.components.glass.TermuxControlCard
 import com.example.ui.components.glass.GlassTextField
 import com.example.ui.components.PdfIcon
 
@@ -480,7 +481,11 @@ fun HomeScreenContent(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(
+                        item {
+                TermuxControlCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
+            
+            items(
                             items = tabFiltered,
                             key = { it.id },
                             contentType = { "project_card" }
