@@ -116,8 +116,7 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
                 leadingIcon = { Text("$", color = Color(0xFF2563EB), fontWeight = FontWeight.Bold) },
                 singleLine = true,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color(0x33FFFFFF),
+                colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0x33FFFFFF), unfocusedContainerColor = Color(0x33FFFFFF), unfocusedBorderColor = Color(0xFFE2E8F0), focusedBorderColor = Color(0xFF2563EB)),
                     unfocusedBorderColor = Color(0xFFE2E8F0),
                     focusedBorderColor = Color(0xFF2563EB)
                 ),
