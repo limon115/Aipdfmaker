@@ -3,6 +3,7 @@ package com.example.data.datastore
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 /**
@@ -60,7 +61,7 @@ class SecureKeyStorage(context: Context) {
     // Migration helper - migrate from unencrypted DataStore
     suspend fun migrateFromDataStore(dataStore: AiSettingsDataStore) {
         try {
-            val settings = dataStore.aiSettingsFlow.kotlinx.coroutines.flow.first()
+            val settings = dataStore.aiSettingsFlow.first()
 
             settings.ai1ApiKey?.let { if (it.isNotBlank()) setAi1ApiKey(it) }
             settings.ai2ApiKey?.let { if (it.isNotBlank()) setAi2ApiKey(it) }
