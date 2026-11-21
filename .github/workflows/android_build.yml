@@ -28,7 +28,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: chmod +x gradlew && ./gradlew assembleRelease
       - name: Rename APK
         run: mv app/build/outputs/apk/release/app-release-unsigned.apk app-latest.apk
       - name: Sign APK
