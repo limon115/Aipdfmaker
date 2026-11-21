@@ -112,6 +112,14 @@ These are development tools, not part of the runtime application. Use them when 
 
 ## Key Features & Workflows
 
+### Update System
+
+The app uses GitHub Actions artifacts for self-updates. Nightly builds are published as pre-releases under the `nightly` tag. The in-app updater:
+- Checks for new builds via ETag comparisons
+- Downloads artifacts with progress tracking
+- Validates APK signatures
+- Uses Android's FileProvider for secure installation
+
 ### 1. Document Processing Pipeline
 User uploads document → OCR via `LocalOcrEngine` → AI processing via `BlueprintService`/`NoteGenerationService` → Export via `ExportEngine` → PDF compilation via Termux bridge
 
