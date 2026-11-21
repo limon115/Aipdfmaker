@@ -683,6 +683,17 @@ fun PdfDocumentPreview(
     }
     var renderError by remember { mutableStateOf<String?>(null) }
 
+    // Cleanup bitmaps when component is disposed or when PDF changes
+    DisposableEffect(pdfFile.absolutePath, recompileKey, pdfFile.lastModified()) {
+        onDispose {
+            pages.forEach { bitmap ->
+                if (!bitmap.isRecycled) {
+                    bitmap.recycle()
+                }
+            }
+        }
+    }
+
     LaunchedEffect(pdfFile.absolutePath, recompileKey, pdfFile.lastModified()) {
         isLoading = true
         renderError = null
