@@ -284,7 +284,7 @@ fun MainScreen() {
                     ) {
                         com.example.ui.screens.settings.AiUsageDashboardCard()
                         Spacer(modifier = Modifier.height(16.dp))
-                        TermuxControlCard(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp))
+                        TermuxControlCard()
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
                     
                     com.example.ui.components.glass.GlassCard(
@@ -299,16 +299,15 @@ fun MainScreen() {
                                 androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("LaTeX AI ChatBot", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                                     androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                    com.example.ui.components.glass.GlassCard(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Text(
                                             "NEW",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                     }
                                 }
