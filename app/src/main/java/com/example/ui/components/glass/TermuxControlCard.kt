@@ -29,9 +29,10 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val termuxPermission = "com.termux.permission.RUN_COMMAND"
     var customCommand by remember { mutableStateOf("") }
-    
-    // Function to physically send the command intent to Termux
+    var isExecuting by remember { mutableStateOf(false) }
+
     val executeCommand: (String) -> Unit = { cmd ->
+        isExecuting = true
         try {
             val intent = Intent("com.termux.RUN_COMMAND").apply {
                 setClassName("com.termux", "com.termux.app.RunCommandService")
@@ -45,13 +46,14 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
             } else {
                 context.startService(intent)
             }
-            Toast.makeText(context, "Command sent to Termux: $cmd", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Command sent", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(context, "Termux Bridge Error: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+        } finally {
+            isExecuting = false
         }
     }
 
-    // Runtime Permission Launcher (Solves the silent permission block)
     var pendingCommand by remember { mutableStateOf<String?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -60,7 +62,7 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
             pendingCommand?.let { executeCommand(it) }
             pendingCommand = null
         } else {
-            Toast.makeText(context, "Termux permission denied!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -77,59 +79,87 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Terminal,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Termux Bridge",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            GlassButton(
+                onClick = { requestAndExecute("python server3.py") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isExecuting
+            ) {
                 Icon(
-                    imageVector = Icons.Default.Terminal,
-                    contentDescription = "Termux Bridge",
-                    tint = Color(0xFF2563EB),
+                    Icons.Default.PlayArrow,
+                    contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Termux Server Bridge",
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color(0xFF0F172A)
-                )
+                Text("Start LaTeX Server", fontWeight = FontWeight.Medium)
             }
 
-            // Dedicated Start Server Button
-            GlassButton(
-                onClick = { requestAndExecute("python server3.py") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Start Localhost Server (server3.py)")
-            }
-
-            // Custom Command Section
             OutlinedTextField(
                 value = customCommand,
                 onValueChange = { customCommand = it },
-                placeholder = { Text("Enter custom bash command...", color = Color(0xFF94A3B8)) },
-                leadingIcon = { Text("$", color = Color(0xFF2563EB), fontWeight = FontWeight.Bold) },
+                placeholder = {
+                    Text(
+                        "Enter bash command...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                leadingIcon = {
+                    Text(
+                        "$",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                },
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                 singleLine = true,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x33FFFFFF),
-                    unfocusedContainerColor = Color(0x33FFFFFF),
-                    unfocusedBorderColor = Color(0xFFE2E8F0),
-                    focusedBorderColor = Color(0xFF2563EB)
+                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)
                 ),
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
                     IconButton(
-                        onClick = { 
-                            if (customCommand.isNotBlank()) requestAndExecute(customCommand) 
-                        }
+                        onClick = {
+                            if (customCommand.isNotBlank()) {
+                                requestAndExecute(customCommand)
+                                customCommand = ""
+                            }
+                        },
+                        enabled = customCommand.isNotBlank() && !isExecuting
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Run", tint = Color(0xFF2563EB))
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Execute",
+                            tint = if (customCommand.isNotBlank() && !isExecuting)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
                     }
                 }
             )
