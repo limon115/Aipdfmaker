@@ -629,21 +629,15 @@ fun LatexChatScreen(
                         .fillMaxWidth()
                         .imePadding()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     // Background execution progress banner
                     if (isGenerating) {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = Color.White.copy(alpha = 0.70f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.85f)),
-                            shadowElevation = 2.dp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -651,13 +645,13 @@ fun LatexChatScreen(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(14.dp),
                                         strokeWidth = 2.dp,
-                                        color = Color(0xFF246BFA)
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = generatingStatus,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF10172A),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -665,19 +659,15 @@ fun LatexChatScreen(
                                     text = "Running in Background",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF246BFA)
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
                     }
 
-                    // Floating Frosted-Glass Prompt Container
+                    // Floating Prompt Container with consistent Glass styling
                     val promptShape = RoundedCornerShape(36.dp)
-                    Surface(
-                        shape = promptShape,
-                        color = Color.White.copy(alpha = 0.60f),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.90f)),
-                        shadowElevation = 6.dp,
+                    GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(promptShape)
@@ -695,10 +685,7 @@ fun LatexChatScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(end = 8.dp),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = Color(0xFF10172A),
-                                    fontSize = 14.5.sp
-                                ),
+                                textStyle = MaterialTheme.typography.bodyMedium,
                                 singleLine = true,
                                 decorationBox = { innerTextField ->
                                     Box(contentAlignment = Alignment.CenterStart) {
@@ -706,10 +693,7 @@ fun LatexChatScreen(
                                             Text(
                                                 text = "Ask for any LaTeX document, formula sheet...",
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = Color(0xFF536580),
-                                                fontSize = 14.5.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         innerTextField()
