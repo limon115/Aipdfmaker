@@ -137,7 +137,7 @@ fun LatexChatScreen(
                     FilledTonalButton(
                         onClick = {
                             viewModel.startNewChat(context)
-                            showHistoryDrawer = false
+                            viewModel.setShowHistoryDrawer(false)
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -152,14 +152,14 @@ fun LatexChatScreen(
                 // Search session bar
                 OutlinedTextField(
                     value = searchSessionQuery,
-                    onValueChange = { searchSessionQuery = it },
+                    onValueChange = { viewModel.updateSearchSessionQuery(it) },
                     placeholder = { Text("Search previous chats...") },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = "Search icon", modifier = Modifier.size(20.dp))
                     },
                     trailingIcon = {
                         if (searchSessionQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchSessionQuery = "" }) {
+                            IconButton(onClick = { viewModel.updateSearchSessionQuery("") }) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear search", modifier = Modifier.size(18.dp))
                             }
                         }
@@ -210,15 +210,15 @@ fun LatexChatScreen(
                                 isSelected = isSelected,
                                 onSelect = {
                                     viewModel.selectSession(context, session.id)
-                                    showHistoryDrawer = false
+                                    viewModel.setShowHistoryDrawer(false)
                                 },
                                 onRename = {
-                                    renameTitleInput = session.title
-                                    showRenameDialog = true
+                                    viewModel.updateRenameTitleInput(session.title)
+                                    viewModel.setShowRenameDialog(true)
                                 },
                                 onDelete = {
-                                    sessionToDeleteId = session.id
-                                    showDeleteDialog = true
+                                    viewModel.setSessionToDeleteId(session.id)
+                                    viewModel.setShowDeleteDialog(true)
                                 }
                             )
                         }
@@ -233,12 +233,12 @@ fun LatexChatScreen(
     // Rename Session Dialog
     if (showRenameDialog && currentSession != null) {
         AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
+            onDismissRequest = { viewModel.setShowRenameDialog(false) },
             title = { Text("Rename Conversation", fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = renameTitleInput,
-                    onValueChange = { renameTitleInput = it },
+                    onValueChange = { viewModel.updateRenameTitleInput(it) },
                     label = { Text("Chat Title") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -251,14 +251,14 @@ fun LatexChatScreen(
                         if (session != null && renameTitleInput.isNotBlank()) {
                             viewModel.renameSession(context, session.id, renameTitleInput)
                         }
-                        showRenameDialog = false
+                        viewModel.setShowRenameDialog(false)
                     }
                 ) {
                     Text("Save")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
+                TextButton(onClick = { viewModel.setShowRenameDialog(false) }) {
                     Text("Cancel")
                 }
             }
@@ -268,7 +268,7 @@ fun LatexChatScreen(
     // Delete Session Confirmation Dialog
     if (showDeleteDialog && sessionToDeleteId != null) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = { viewModel.setShowDeleteDialog(false) },
             icon = {
                 Icon(Icons.Default.Delete, contentDescription = "Delete icon", tint = MaterialTheme.colorScheme.error)
             },
@@ -278,8 +278,8 @@ fun LatexChatScreen(
                 Button(
                     onClick = {
                         sessionToDeleteId?.let { viewModel.deleteSession(context, it) }
-                        showDeleteDialog = false
-                        sessionToDeleteId = null
+                        viewModel.setShowDeleteDialog(false)
+                        viewModel.setSessionToDeleteId(null)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -287,7 +287,7 @@ fun LatexChatScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = { viewModel.setShowDeleteDialog(false) }) {
                     Text("Cancel")
                 }
             }
@@ -466,8 +466,8 @@ fun LatexChatScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable {
-                                renameTitleInput = currentSession?.title ?: ""
-                                showRenameDialog = true
+                                viewModel.updateRenameTitleInput(currentSession?.title ?: "")
+                                viewModel.setShowRenameDialog(true)
                             }
                         ) {
                             Column(modifier = Modifier.weight(1f, fill = false)) {
@@ -586,8 +586,8 @@ fun LatexChatScreen(
                                     leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit icon") },
                                     onClick = {
                                         showMenu = false
-                                        renameTitleInput = currentSession?.title ?: ""
-                                        showRenameDialog = true
+                                        viewModel.updateRenameTitleInput(currentSession?.title ?: "")
+                                        viewModel.setShowRenameDialog(true)
                                     }
                                 )
                                 DropdownMenuItem(
@@ -611,8 +611,8 @@ fun LatexChatScreen(
                                     onClick = {
                                         showMenu = false
                                         currentSession?.let {
-                                            sessionToDeleteId = it.id
-                                            showDeleteDialog = true
+                                            viewModel.setSessionToDeleteId(it.id)
+                                            viewModel.setShowDeleteDialog(true)
                                         }
                                     }
                                 )

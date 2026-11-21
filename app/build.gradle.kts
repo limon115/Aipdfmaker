@@ -101,6 +101,7 @@ dependencies {
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.datastore.preferences)
   implementation("androidx.security:security-crypto:1.1.0-alpha06")
+  implementation("androidx.lifecycle:lifecycle-process:2.8.7")
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)

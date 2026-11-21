@@ -37,11 +37,11 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
         "python -m pip install --upgrade requests" to "Update Dependencies"
     )
 
-    val executeCommand: (String) -> Unit = { cmd ->
+    val executeCommand: (String) -> Unit = executeCommand@{ cmd ->
         // Security: validate command against whitelist
         if (!allowedCommands.any { it.first == cmd }) {
             Toast.makeText(context, "Command not allowed", Toast.LENGTH_SHORT).show()
-            return@Unit
+            return@executeCommand
         }
 
         isExecuting = true
