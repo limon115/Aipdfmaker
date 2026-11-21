@@ -140,13 +140,13 @@ fun LatexChatScreen(
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(Icons.Default.Add, contentDescription = "Add new chat", modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text("New Chat")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Search session bar
                 OutlinedTextField(
@@ -154,12 +154,12 @@ fun LatexChatScreen(
                     onValueChange = { searchSessionQuery = it },
                     placeholder = { Text("Search previous chats...") },
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Search, contentDescription = "Search icon", modifier = Modifier.size(20.dp))
                     },
                     trailingIcon = {
                         if (searchSessionQuery.isNotEmpty()) {
                             IconButton(onClick = { searchSessionQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Close, contentDescription = "Clear search", modifier = Modifier.size(18.dp))
                             }
                         }
                     },
@@ -269,7 +269,7 @@ fun LatexChatScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             icon = {
-                Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Default.Delete, contentDescription = "Delete icon", tint = MaterialTheme.colorScheme.error)
             },
             title = { Text("Delete Conversation?", fontWeight = FontWeight.Bold) },
             text = { Text("This will permanently remove this chat session and its message history.") },
@@ -338,11 +338,11 @@ fun LatexChatScreen(
                             )
                         }
                         IconButton(onClick = { viewModel.stopEditingMessage() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
+                            Icon(Icons.Default.Close, contentDescription = "Close editor")
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     val quickSnippets = remember {
                         listOf(
@@ -425,7 +425,7 @@ fun LatexChatScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
                             onClick = { viewModel.stopEditingMessage() },
@@ -442,8 +442,8 @@ fun LatexChatScreen(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh icon", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("Save & Recompile")
                         }
                     }
@@ -475,20 +475,19 @@ fun LatexChatScreen(
                                         text = currentSession?.title ?: "New Chat",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF10172A),
-                                        fontSize = 18.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Icon(
                                         Icons.Default.Edit,
-                                        contentDescription = "Rename",
-                                        tint = Color(0xFF536580),
-                                        modifier = Modifier.size(15.dp)
+                                        contentDescription = "Rename chat",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                                     val pulseAlpha by infiniteTransition.animateFloat(
@@ -514,7 +513,7 @@ fun LatexChatScreen(
                                     Text(
                                         text = if (isGenerating) generatingStatus else "Online · Background Ready",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF536580),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -527,8 +526,8 @@ fun LatexChatScreen(
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color(0xFF10172A)
+                                contentDescription = "Navigate back",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     },
@@ -553,8 +552,8 @@ fun LatexChatScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.History,
-                                    contentDescription = "History",
-                                    tint = Color(0xFF10172A)
+                                    contentDescription = "Chat history",
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -563,8 +562,8 @@ fun LatexChatScreen(
                         IconButton(onClick = { viewModel.startNewChat(context) }) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "New Chat",
-                                tint = Color(0xFF10172A)
+                                contentDescription = "Start new chat",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -573,8 +572,8 @@ fun LatexChatScreen(
                             IconButton(onClick = { showMenu = true }) {
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More",
-                                    tint = Color(0xFF10172A)
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             DropdownMenu(
@@ -583,7 +582,7 @@ fun LatexChatScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Rename Chat") },
-                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit icon") },
                                     onClick = {
                                         showMenu = false
                                         renameTitleInput = currentSession?.title ?: ""
@@ -592,7 +591,7 @@ fun LatexChatScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Export as Markdown") },
-                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = "Share icon") },
                                     onClick = {
                                         showMenu = false
                                         coroutineScope.launch {
@@ -607,7 +606,7 @@ fun LatexChatScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Delete Chat", color = MaterialTheme.colorScheme.error) },
-                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete icon", tint = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showMenu = false
                                         currentSession?.let {
@@ -776,15 +775,14 @@ fun LatexChatScreen(
                             // Translucent softly illuminated orb
                             IridescentOrb(size = 92.dp)
 
-                            Spacer(modifier = Modifier.height(18.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             // Centered Title
                             Text(
                                 text = "AI LaTeX to PDF Architect",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF10172A),
-                                fontSize = 24.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             )
 
@@ -794,16 +792,14 @@ fun LatexChatScreen(
                             Text(
                                 text = "Create and edit LaTeX, fix syntax, and compile polished vector PDFs in foreground or background.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF536580),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
                                 modifier = Modifier
                                     .widthIn(max = 330.dp)
                                     .padding(horizontal = 8.dp)
                             )
 
-                            Spacer(modifier = Modifier.height(18.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             // Text-only feature chips
                             BoxWithConstraints(
@@ -839,7 +835,7 @@ fun LatexChatScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(18.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             // Category Tabs in a single horizontal row
                             val categoryShape = RoundedCornerShape(32.dp)
@@ -1009,20 +1005,20 @@ private fun SessionItemRow(
                 )
             }
 
-            IconButton(onClick = onRename, modifier = Modifier.size(28.dp)) {
+            IconButton(onClick = onRename, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Default.Edit,
-                    contentDescription = "Rename",
-                    modifier = Modifier.size(15.dp),
+                    contentDescription = "Rename chat",
+                    modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    modifier = Modifier.size(15.dp),
+                    contentDescription = "Delete chat",
+                    modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                 )
             }
@@ -1415,7 +1411,7 @@ private fun BotChatBubble(
                     )
 
                     if (isGeneratingThis) {
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
@@ -1433,7 +1429,7 @@ private fun BotChatBubble(
 
                     // LaTeX Code Card
                     if (!message.latexCode.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -1478,17 +1474,17 @@ private fun BotChatBubble(
                                         )
                                     }
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         IconButton(
                                             onClick = {
                                                 clipboard.setText(AnnotatedString(message.latexCode))
                                                 Toast.makeText(context, "LaTeX code copied!", Toast.LENGTH_SHORT).show()
                                             },
-                                            modifier = Modifier.size(30.dp)
+                                            modifier = Modifier.size(32.dp)
                                         ) {
                                             Icon(
                                                 Icons.Default.ContentCopy,
-                                                contentDescription = "Copy LaTeX",
+                                                contentDescription = "Copy LaTeX code",
                                                 modifier = Modifier.size(16.dp),
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
@@ -1496,11 +1492,11 @@ private fun BotChatBubble(
 
                                         IconButton(
                                             onClick = onEditLatex,
-                                            modifier = Modifier.size(30.dp)
+                                            modifier = Modifier.size(32.dp)
                                         ) {
                                             Icon(
                                                 Icons.Default.Edit,
-                                                contentDescription = "Edit LaTeX",
+                                                contentDescription = "Edit LaTeX code",
                                                 modifier = Modifier.size(16.dp),
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
@@ -1586,14 +1582,14 @@ private fun BotChatBubble(
                                         ) {
                                             Surface(
                                                 shape = CircleShape,
-                                                color = Color(0xFFD32F2F),
-                                                modifier = Modifier.size(38.dp)
+                                                color = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(40.dp)
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
                                                     Icon(
                                                         Icons.Default.PictureAsPdf,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
+                                                        contentDescription = "PDF file icon",
+                                                        tint = MaterialTheme.colorScheme.onError,
                                                         modifier = Modifier.size(20.dp)
                                                     )
                                                 }
@@ -1628,8 +1624,8 @@ private fun BotChatBubble(
                                                 modifier = Modifier.weight(1f),
                                                 shape = RoundedCornerShape(12.dp)
                                             ) {
-                                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF icon", modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
                                                 Text("Open PDF")
                                             }
 
@@ -1639,7 +1635,7 @@ private fun BotChatBubble(
                                                 },
                                                 shape = RoundedCornerShape(12.dp)
                                             ) {
-                                                Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(16.dp))
+                                                Icon(Icons.Default.Share, contentDescription = "Share PDF", modifier = Modifier.size(16.dp))
                                             }
                                         }
                                     }
@@ -1657,9 +1653,9 @@ private fun BotChatBubble(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
                                             Icons.Default.Warning,
-                                            contentDescription = null,
+                                            contentDescription = "Warning icon",
                                             tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
@@ -1678,7 +1674,7 @@ private fun BotChatBubble(
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         TextButton(onClick = onRecompile) {
-                                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Icon(Icons.Default.Refresh, contentDescription = "Refresh icon", modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Text("Retry Compilation")
                                         }

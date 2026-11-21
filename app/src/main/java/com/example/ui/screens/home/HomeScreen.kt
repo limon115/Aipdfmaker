@@ -92,10 +92,10 @@ fun HomeScreenContent(
     var projectToDelete by remember { mutableStateOf<ProjectEntity?>(null) }
     var projectForPdfAction by remember { mutableStateOf<Pair<ProjectEntity, File>?>(null) }
     
-    val allCount = projects.size
-    val notesCount = remember(projects) { projects.count { it.status == "Completed" } }
-    val debugCount = remember(projects) { projects.count { it.status == "Debugged" } }
-    val tasksCount = remember(projects) { projects.count { it.status != "Completed" && it.status != "Debugged" } }
+    val allCount by remember { derivedStateOf { projects.size } }
+    val notesCount by remember { derivedStateOf { projects.count { it.status == "Completed" } } }
+    val debugCount by remember { derivedStateOf { projects.count { it.status == "Debugged" } } }
+    val tasksCount by remember { derivedStateOf { projects.count { it.status != "Completed" && it.status != "Debugged" } } }
 
     val tabs = remember(allCount, notesCount, debugCount, tasksCount) {
         listOf(
@@ -143,7 +143,7 @@ fun HomeScreenContent(
             icon = {
                 Icon(
                     imageVector = Icons.Default.PictureAsPdf,
-                    contentDescription = null,
+                    contentDescription = "PDF document icon",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(36.dp)
                 )
@@ -180,15 +180,14 @@ fun HomeScreenContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF icon", modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("View PDF", fontWeight = FontWeight.Bold)
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedButton(
                         onClick = {
@@ -202,7 +201,7 @@ fun HomeScreenContent(
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Description, contentDescription = "LaTeX notes icon", modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("View LaTeX Notes")
                     }
@@ -297,14 +296,14 @@ fun HomeScreenContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
-        containerColor = androidx.compose.ui.graphics.Color.Transparent
+        containerColor = Color.Transparent
     ) { innerPadding ->
         val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
         Column(
@@ -317,12 +316,12 @@ fun HomeScreenContent(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(percent = 50),
-                color = if (isDarkTheme) Color(0xFF1E2235).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.85f),
+                color = if (isDarkTheme) MaterialTheme.colorScheme.surface.copy(alpha = 0.85f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                 border = BorderStroke(
                     1.dp,
-                    if (isDarkTheme) Color.White.copy(alpha = 0.08f) else Color(0xFFE2E8F0)
+                    if (isDarkTheme) MaterialTheme.colorScheme.outline.copy(alpha = 0.08f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                 ),
                 shadowElevation = if (isDarkTheme) 4.dp else 2.dp
             ) {
@@ -341,7 +340,7 @@ fun HomeScreenContent(
                                 .clip(RoundedCornerShape(percent = 50))
                                 .background(
                                     if (isSelected) {
-                                        if (isDarkTheme) Color(0xFF1E3A8A).copy(alpha = 0.60f) else Color(0xFFDBEAFE)
+                                        MaterialTheme.colorScheme.primaryContainer
                                     } else Color.Transparent
                                 )
                                 .clickable {
@@ -357,18 +356,16 @@ fun HomeScreenContent(
                             ) {
                                 Icon(
                                     imageVector = tab.icon,
-                                    contentDescription = tab.title,
-                                    tint = if (isSelected) Color(0xFF2563EB) else if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B),
-                                    modifier = Modifier.size(15.dp)
+                                    contentDescription = "${tab.title} tab",
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(3.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = tab.title,
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                    ),
-                                    color = if (isSelected) Color(0xFF2563EB) else if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFF475569),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -376,20 +373,17 @@ fun HomeScreenContent(
                                     modifier = Modifier
                                         .clip(CircleShape)
                                         .background(
-                                            if (isSelected) Color(0xFF2563EB)
-                                            else if (isDarkTheme) Color(0xFF334155)
-                                            else Color(0xFFE2E8F0)
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surfaceVariant
                                         )
-                                        .padding(horizontal = 5.dp, vertical = 1.dp),
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = tab.count.toString(),
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                        color = if (isSelected) Color.White else if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -452,7 +446,7 @@ fun HomeScreenContent(
                             ) {
                                 Icon(
                                     imageVector = if (searchQuery.isNotBlank()) Icons.Default.SearchOff else Icons.Outlined.FolderOpen,
-                                    contentDescription = "Empty Projects",
+                                    contentDescription = if (searchQuery.isNotBlank()) "No search results" else "Empty folder",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(56.dp)
                                 )
@@ -477,7 +471,7 @@ fun HomeScreenContent(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, top = 16.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(
@@ -585,9 +579,9 @@ fun ProjectCard(
                     )
                     val isDark = com.example.ui.theme.AppTheme.colors.isDark
                     val (statusBg, statusTextColor) = when (project.status) {
-                        "Completed" -> if (isDark) Color(0xFF1B5E20).copy(alpha = 0.5f) to Color(0xFF81C784) else Color(0xFFE8F5E9) to Color(0xFF2E7D32)
-                        "Debugged" -> if (isDark) Color(0xFF4A148C).copy(alpha = 0.5f) to Color(0xFFCE93D8) else Color(0xFFF3E8FF) to Color(0xFF7E22CE)
-                        else -> if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) to MaterialTheme.colorScheme.primary else Color(0xFFEFF6FF) to Color(0xFF2563EB)
+                        "Completed" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+                        "Debugged" -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+                        else -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
                     }
                     Box(
                         modifier = Modifier
@@ -608,8 +602,8 @@ fun ProjectCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isDark) Color(0xFF0C4A6E).copy(alpha = 0.5f) else Color(0xFFE0F2FE))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "PDF",
@@ -617,7 +611,7 @@ fun ProjectCard(
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                                color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
@@ -644,7 +638,7 @@ fun ProjectCard(
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.PictureAsPdf,
-                                    contentDescription = null,
+                                    contentDescription = "PDF icon",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             },
