@@ -1,5 +1,6 @@
 package com.example.ui.screens.home
 
+import com.example.ui.components.SkeletonProjectCard
 import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.ui.components.glass.GlassTextField
@@ -431,7 +432,20 @@ fun HomeScreenContent(
                     }
                 }
 
-                if (tabFiltered.isEmpty()) {
+                // Show skeleton loaders on initial load (before first data arrives)
+                val showSkeleton = projects.isEmpty() && tabFiltered.isEmpty() && searchQuery.isBlank()
+
+                if (showSkeleton) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 120.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(5) {
+                            SkeletonProjectCard()
+                        }
+                    }
+                } else if (tabFiltered.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

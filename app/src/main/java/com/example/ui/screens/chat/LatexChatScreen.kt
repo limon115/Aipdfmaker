@@ -55,6 +55,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.domain.models.chat.ChatMessage
 import com.example.domain.models.chat.ChatPdfStatus
 import com.example.domain.models.chat.ChatSession
+import com.example.ui.components.SkeletonChatMessage
 import com.example.ui.components.glass.GlassBackground
 import com.example.ui.components.glass.GlassCard
 import com.example.utils.FileUtils
