@@ -85,13 +85,14 @@ fun LatexChatScreen(
     val editingMessage by viewModel.editingMessage.collectAsState()
     val selectedCategoryIndex by viewModel.selectedCategoryIndex.collectAsState()
 
-    var inputText by remember { mutableStateOf("") }
-    var showHistoryDrawer by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var sessionToDeleteId by remember { mutableStateOf<String?>(null) }
-    var renameTitleInput by remember { mutableStateOf("") }
-    var searchSessionQuery by remember { mutableStateOf("") }
+    // UI state from ViewModel - survives configuration changes
+    val inputText by viewModel.inputText.collectAsState()
+    val showHistoryDrawer by viewModel.showHistoryDrawer.collectAsState()
+    val showRenameDialog by viewModel.showRenameDialog.collectAsState()
+    val showDeleteDialog by viewModel.showDeleteDialog.collectAsState()
+    val sessionToDeleteId by viewModel.sessionToDeleteId.collectAsState()
+    val renameTitleInput by viewModel.renameTitleInput.collectAsState()
+    val searchSessionQuery by viewModel.searchSessionQuery.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -105,7 +106,7 @@ fun LatexChatScreen(
     // Modal Bottom Sheet: Chat History & Sessions
     if (showHistoryDrawer) {
         ModalBottomSheet(
-            onDismissRequest = { showHistoryDrawer = false },
+            onDismissRequest = { viewModel.setShowHistoryDrawer(false) },
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
@@ -533,7 +534,7 @@ fun LatexChatScreen(
                     },
                     actions = {
                         // Open Chat History Sheet
-                        IconButton(onClick = { showHistoryDrawer = true }) {
+                        IconButton(onClick = { viewModel.setShowHistoryDrawer(true) }) {
                             BadgedBox(
                                 badge = {
                                     if (sessions.isNotEmpty()) {
@@ -689,7 +690,7 @@ fun LatexChatScreen(
                         ) {
                             BasicTextField(
                                 value = inputText,
-                                onValueChange = { inputText = it },
+                                onValueChange = { viewModel.updateInputText(it) },
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(end = 8.dp),
@@ -731,7 +732,7 @@ fun LatexChatScreen(
                                     .clickable(enabled = canSend) {
                                         if (canSend) {
                                             val text = inputText
-                                            inputText = ""
+                                            viewModel.updateInputText("")
                                             viewModel.sendMessage(context, text)
                                         }
                                     },

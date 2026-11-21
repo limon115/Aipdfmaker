@@ -63,8 +63,59 @@ class LatexChatViewModel : ViewModel() {
     private val _selectedCategoryIndex = MutableStateFlow(0)
     val selectedCategoryIndex: StateFlow<Int> = _selectedCategoryIndex.asStateFlow()
 
+    // UI state - survives configuration changes
+    private val _inputText = MutableStateFlow("")
+    val inputText: StateFlow<String> = _inputText.asStateFlow()
+
+    private val _showHistoryDrawer = MutableStateFlow(false)
+    val showHistoryDrawer: StateFlow<Boolean> = _showHistoryDrawer.asStateFlow()
+
+    private val _showRenameDialog = MutableStateFlow(false)
+    val showRenameDialog: StateFlow<Boolean> = _showRenameDialog.asStateFlow()
+
+    private val _showDeleteDialog = MutableStateFlow(false)
+    val showDeleteDialog: StateFlow<Boolean> = _showDeleteDialog.asStateFlow()
+
+    private val _sessionToDeleteId = MutableStateFlow<String?>(null)
+    val sessionToDeleteId: StateFlow<String?> = _sessionToDeleteId.asStateFlow()
+
+    private val _renameTitleInput = MutableStateFlow("")
+    val renameTitleInput: StateFlow<String> = _renameTitleInput.asStateFlow()
+
+    private val _searchSessionQuery = MutableStateFlow("")
+    val searchSessionQuery: StateFlow<String> = _searchSessionQuery.asStateFlow()
+
     private var observeJob: Job? = null
     private var repository: LatexChatRepository? = null
+
+    // UI state update functions
+    fun updateInputText(text: String) {
+        _inputText.value = text
+    }
+
+    fun setShowHistoryDrawer(show: Boolean) {
+        _showHistoryDrawer.value = show
+    }
+
+    fun setShowRenameDialog(show: Boolean) {
+        _showRenameDialog.value = show
+    }
+
+    fun setShowDeleteDialog(show: Boolean) {
+        _showDeleteDialog.value = show
+    }
+
+    fun setSessionToDeleteId(id: String?) {
+        _sessionToDeleteId.value = id
+    }
+
+    fun updateRenameTitleInput(text: String) {
+        _renameTitleInput.value = text
+    }
+
+    fun updateSearchSessionQuery(query: String) {
+        _searchSessionQuery.value = query
+    }
 
     val promptCategories = listOf(
         PromptCategory(
