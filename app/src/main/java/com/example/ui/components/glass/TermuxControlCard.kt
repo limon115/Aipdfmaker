@@ -102,13 +102,14 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
                     imageVector = Icons.Default.Terminal,
                     contentDescription = "Termux Commands",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(32.dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Text(
                     text = "Termux Bridge",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp
                 )
             }
 
@@ -123,8 +124,12 @@ fun TermuxControlCard(modifier: Modifier = Modifier) {
                         contentDescription = "Run $label",
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(label, fontWeight = FontWeight.Medium)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = label,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp
+                    )
                 }
             }
         }
