@@ -56,6 +56,8 @@ fun LatexCodeEditor(
     var canUndo by remember { mutableStateOf(false) }
     var canRedo by remember { mutableStateOf(false) }
 
+    val isDark = com.example.ui.theme.AppTheme.colors.isDark
+
     // Sync Search
     LaunchedEffect(searchQuery) {
         if (searchQuery.isNotBlank()) {
@@ -85,15 +87,22 @@ fun LatexCodeEditor(
                         tabWidth = 4
                         // auto indent handled differently in newer versions
 
-                        // Replicate exactly the legacy visual aesthetics
+                        // Adaptive color aesthetics based on current theme mode
                         val scheme = colorScheme
+                        val textColor = if (isDark) android.graphics.Color.parseColor("#F1F5F9") else android.graphics.Color.parseColor("#0F172A")
+                        val lineNumColor = if (isDark) android.graphics.Color.parseColor("#64748B") else android.graphics.Color.parseColor("#94A3B8")
+                        val lineDividerColor = if (isDark) android.graphics.Color.parseColor("#334155") else android.graphics.Color.parseColor("#E2E8F0")
+                        val currentLineColor = if (isDark) android.graphics.Color.parseColor("#1E293B") else android.graphics.Color.parseColor("#EFF6FF")
+                        val selectionColor = if (isDark) android.graphics.Color.parseColor("#3B82F6") else android.graphics.Color.parseColor("#2563EB")
+                        val matchColor = if (isDark) android.graphics.Color.parseColor("#854D0E") else android.graphics.Color.parseColor("#FEF08A")
+
                         scheme.setColor(EditorColorScheme.WHOLE_BACKGROUND, android.graphics.Color.TRANSPARENT)
-                        scheme.setColor(EditorColorScheme.TEXT_NORMAL, android.graphics.Color.parseColor("#0F172A"))
-                        scheme.setColor(EditorColorScheme.LINE_NUMBER_PANEL_TEXT, android.graphics.Color.parseColor("#94A3B8"))
-                        scheme.setColor(EditorColorScheme.LINE_DIVIDER, android.graphics.Color.parseColor("#E2E8F0"))
-                        scheme.setColor(EditorColorScheme.CURRENT_LINE, android.graphics.Color.parseColor("#EFF6FF"))
-                        scheme.setColor(EditorColorScheme.SELECTION_INSERT, android.graphics.Color.parseColor("#2563EB"))
-                        scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, android.graphics.Color.parseColor("#FEF08A"))
+                        scheme.setColor(EditorColorScheme.TEXT_NORMAL, textColor)
+                        scheme.setColor(EditorColorScheme.LINE_NUMBER_PANEL_TEXT, lineNumColor)
+                        scheme.setColor(EditorColorScheme.LINE_DIVIDER, lineDividerColor)
+                        scheme.setColor(EditorColorScheme.CURRENT_LINE, currentLineColor)
+                        scheme.setColor(EditorColorScheme.SELECTION_INSERT, selectionColor)
+                        scheme.setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, matchColor)
 
                         subscribeEvent(ContentChangeEvent::class.java) { _, _ ->
                             canUndo = canUndo()
@@ -152,9 +161,9 @@ fun LatexCodeEditor(
 
         // Quick LaTeX Accessory Bar
         Surface(
-            color = Color(0xFFF8FAFC),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.fillMaxWidth(),
-            border = BorderStroke(width = 1.dp, color = Color(0xFFF1F5F9))
+            border = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
         ) {
             Row(
                 modifier = Modifier
@@ -185,7 +194,7 @@ fun LatexCodeEditor(
                 QuickKeyButton(label = "%") { insertSnippet("%") { "%" to 1 } }
                 QuickKeyButton(label = "&") { insertSnippet("&") { "&" to 1 } }
                 Spacer(modifier = Modifier.width(4.dp))
-                
+
                 IconButton(
                     onClick = { editorView?.undo() },
                     enabled = canUndo,
@@ -194,7 +203,7 @@ fun LatexCodeEditor(
                     Icon(
                         Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "Undo",
-                        tint = if (canUndo) Color(0xFF2563EB) else Color(0xFFCBD5E1),
+                        tint = if (canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -206,7 +215,7 @@ fun LatexCodeEditor(
                     Icon(
                         Icons.AutoMirrored.Filled.Redo,
                         contentDescription = "Redo",
-                        tint = if (canRedo) Color(0xFF2563EB) else Color(0xFFCBD5E1),
+                        tint = if (canRedo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -219,8 +228,8 @@ fun LatexCodeEditor(
 private fun QuickKeyButton(label: String, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
@@ -228,7 +237,7 @@ private fun QuickKeyButton(label: String, onClick: () -> Unit) {
             style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E293B),
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
     }

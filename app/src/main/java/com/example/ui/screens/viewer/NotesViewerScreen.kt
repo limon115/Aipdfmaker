@@ -55,6 +55,7 @@ import com.example.ui.components.LatexCodeEditor
 import com.example.ui.components.LatexSearchIndex
 import com.example.ui.components.UndoRedoManager
 import com.example.ui.components.glass.GlassBackground
+import com.example.ui.components.glass.GlassCard
 import com.example.utils.FileUtils
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -283,13 +284,13 @@ fun NotesViewerScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color(0xFF2563EB)
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
                                 Icon(
                                     if (saveStatus == EditorSaveStatus.SAVED) Icons.Default.Check else Icons.Default.Save,
                                     contentDescription = "Save LaTeX Document",
-                                    tint = if (saveStatus == EditorSaveStatus.UNSAVED) Color(0xFF2563EB) else MaterialTheme.colorScheme.onBackground
+                                    tint = if (saveStatus == EditorSaveStatus.UNSAVED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                                 )
                             }
                         }
@@ -304,7 +305,7 @@ fun NotesViewerScreen(
                             Icon(
                                 Icons.Default.PictureAsPdf,
                                 contentDescription = "View PDF",
-                                tint = Color(0xFF2563EB)
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                         if (editorValue.text.isNotBlank()) {
@@ -358,15 +359,15 @@ fun NotesViewerScreen(
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = Color(0xFFF0F6FF),
-                                contentColor = Color(0xFF2563EB)
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                contentColor = MaterialTheme.colorScheme.primary
                             ),
-                            border = BorderStroke(1.dp, Color(0xFFBFDBFE))
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
                         ) {
                             Icon(
                                 Icons.Default.PictureAsPdf,
                                 contentDescription = null,
-                                tint = Color(0xFF2563EB),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -374,7 +375,7 @@ fun NotesViewerScreen(
                                 text = "View PDF",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF2563EB),
+                                color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -388,15 +389,15 @@ fun NotesViewerScreen(
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF2563EB),
-                                contentColor = Color.White
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                         ) {
                             Icon(
                                 Icons.Default.Sync,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -404,7 +405,7 @@ fun NotesViewerScreen(
                                 text = "Recompile",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -445,7 +446,7 @@ fun NotesViewerScreen(
                                 // Source Tab
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (selectedTab == 0) Color(0xFF2563EB) else Color(0xFFF1F5F9),
+                                    color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                     modifier = Modifier.clickable {
                                         selectedTab = 0
                                     }
@@ -457,7 +458,7 @@ fun NotesViewerScreen(
                                         Icon(
                                             Icons.Default.Code,
                                             contentDescription = "Source",
-                                            tint = if (selectedTab == 0) Color.White else Color(0xFF64748B),
+                                            tint = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(5.dp))
@@ -465,7 +466,7 @@ fun NotesViewerScreen(
                                             text = "Source",
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (selectedTab == 0) Color.White else Color(0xFF64748B)
+                                            color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -473,7 +474,7 @@ fun NotesViewerScreen(
                                 // Preview Tab
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (selectedTab == 1) Color(0xFF2563EB) else Color(0xFFF1F5F9),
+                                    color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                     modifier = Modifier.clickable {
                                         if (saveStatus == EditorSaveStatus.UNSAVED) {
                                             saveStatus = EditorSaveStatus.SAVING
@@ -491,7 +492,7 @@ fun NotesViewerScreen(
                                         Icon(
                                             Icons.Default.Visibility,
                                             contentDescription = "Preview",
-                                            tint = if (selectedTab == 1) Color.White else Color(0xFF64748B),
+                                            tint = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(5.dp))
@@ -499,7 +500,7 @@ fun NotesViewerScreen(
                                             text = "Preview",
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (selectedTab == 1) Color.White else Color(0xFF64748B)
+                                            color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -508,8 +509,8 @@ fun NotesViewerScreen(
                             // Editable Status Indicator (prominently indicates code is editable)
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
-                                color = Color(0xFFF1F5F9),
-                                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -518,7 +519,7 @@ fun NotesViewerScreen(
                                     Icon(
                                         Icons.Default.Edit,
                                         contentDescription = null,
-                                        tint = Color(0xFF1E293B),
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(15.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -526,7 +527,7 @@ fun NotesViewerScreen(
                                         text = "Editable",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF1E293B)
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Box(
@@ -740,12 +741,12 @@ fun PdfDocumentPreview(
     if (isLoading) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(color = Color(0xFF2563EB))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     "Rendering document pages...",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF64748B)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -765,7 +766,7 @@ fun PdfDocumentPreview(
                 Text(
                     text = renderError ?: "Unable to render PDF",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -785,7 +786,7 @@ fun PdfDocumentPreview(
                 val bitmap = pages[index]
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     color = Color.White,
                     shadowElevation = 2.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -848,10 +849,8 @@ private fun LatexEditorCard(
 ) {
     var fontSizeMenuExpanded by remember { mutableStateOf(false) }
 
-    Surface(
+    GlassCard(
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -870,7 +869,7 @@ private fun LatexEditorCard(
                     Icon(
                         Icons.Default.Code,
                         contentDescription = null,
-                        tint = Color(0xFF2563EB),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -878,7 +877,7 @@ private fun LatexEditorCard(
                         text = "LaTeX source",
                         style = if (isCompactHeader) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -895,7 +894,7 @@ private fun LatexEditorCard(
                         Icon(
                             Icons.AutoMirrored.Filled.Undo,
                             contentDescription = "Undo",
-                            tint = if (undoRedoManager.canUndo) Color(0xFF2563EB) else Color(0xFF94A3B8),
+                            tint = if (undoRedoManager.canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -909,7 +908,7 @@ private fun LatexEditorCard(
                         Icon(
                             Icons.AutoMirrored.Filled.Redo,
                             contentDescription = "Redo",
-                            tint = if (undoRedoManager.canRedo) Color(0xFF2563EB) else Color(0xFF94A3B8),
+                            tint = if (undoRedoManager.canRedo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -917,8 +916,8 @@ private fun LatexEditorCard(
                     // Dedicated Search Toggle Button
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isSearchOpen) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
-                        border = BorderStroke(1.dp, if (isSearchOpen) Color(0xFFBFDBFE) else Color(0xFFE2E8F0)),
+                        color = if (isSearchOpen) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        border = BorderStroke(1.dp, if (isSearchOpen) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.clickable { onToggleSearch() }
                     ) {
                         Row(
@@ -928,7 +927,7 @@ private fun LatexEditorCard(
                             Icon(
                                 Icons.Default.Search,
                                 contentDescription = "Search",
-                                tint = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF64748B),
+                                tint = if (isSearchOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -936,7 +935,7 @@ private fun LatexEditorCard(
                                 text = "Search",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (isSearchOpen) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF475569)
+                                color = if (isSearchOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -945,8 +944,8 @@ private fun LatexEditorCard(
                     Box {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                            color = Color(0xFFF8FAFC),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                             modifier = Modifier.clickable { fontSizeMenuExpanded = true }
                         ) {
                             Row(
@@ -957,13 +956,13 @@ private fun LatexEditorCard(
                                     text = "${fontSizeScale.toInt()}sp",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1E293B)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Icon(
                                     Icons.Default.KeyboardArrowDown,
                                     contentDescription = "Font size",
-                                    tint = Color(0xFF64748B),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -987,8 +986,8 @@ private fun LatexEditorCard(
                     // Search Icon Button
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                        color = if (isSearchOpen) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        color = if (isSearchOpen) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                         modifier = Modifier.clickable { onToggleSearch() }
                     ) {
                         Box(
@@ -998,7 +997,7 @@ private fun LatexEditorCard(
                             Icon(
                                 Icons.Default.Search,
                                 contentDescription = "Search in code",
-                                tint = if (isSearchOpen) Color(0xFF2563EB) else Color(0xFF64748B),
+                                tint = if (isSearchOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1009,12 +1008,12 @@ private fun LatexEditorCard(
             // Expandable In-Memory Search Bar
             AnimatedVisibility(visible = isSearchOpen) {
                 Surface(
-                    color = Color(0xFFF8FAFC),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -1025,7 +1024,7 @@ private fun LatexEditorCard(
                         Icon(
                             Icons.Default.Search,
                             contentDescription = null,
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -1033,14 +1032,14 @@ private fun LatexEditorCard(
                             value = searchQuery,
                             onValueChange = onSearchQueryChange,
                             modifier = Modifier.weight(1f),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF0F172A)),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
                             singleLine = true,
                             decorationBox = { inner ->
                                 if (searchQuery.isEmpty()) {
                                     Text(
                                         "Find in LaTeX code...",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF94A3B8)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                     )
                                 }
                                 inner()
@@ -1050,7 +1049,7 @@ private fun LatexEditorCard(
                             Text(
                                 text = "${currentMatchIndex + 1}/${searchMatches.size}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF64748B),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                             IconButton(
@@ -1069,7 +1068,7 @@ private fun LatexEditorCard(
                             Text(
                                 text = "No matches",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFFDC2626),
+                                color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
@@ -1083,7 +1082,7 @@ private fun LatexEditorCard(
                 }
             }
 
-            HorizontalDivider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
             // Real Multiline Code-Editing Component
             LatexCodeEditor(
@@ -1115,10 +1114,8 @@ private fun PdfPreviewCard(
     modifier: Modifier = Modifier,
     isCompactHeader: Boolean = false
 ) {
-    Surface(
+    GlassCard(
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
         modifier = modifier
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -1137,7 +1134,7 @@ private fun PdfPreviewCard(
                     Icon(
                         Icons.Default.PictureAsPdf,
                         contentDescription = null,
-                        tint = Color(0xFF2563EB),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -1145,7 +1142,7 @@ private fun PdfPreviewCard(
                         text = "Document preview",
                         style = if (isCompactHeader) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -1161,7 +1158,7 @@ private fun PdfPreviewCard(
                             Icon(
                                 Icons.Default.OpenInNew,
                                 contentDescription = "Open in external viewer",
-                                tint = Color(0xFF2563EB),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1170,7 +1167,10 @@ private fun PdfPreviewCard(
                         onClick = onRecompile,
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         modifier = Modifier.height(28.dp)
                     ) {
                         Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(13.dp))
@@ -1180,7 +1180,7 @@ private fun PdfPreviewCard(
                 }
             }
 
-            HorizontalDivider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
 
             if (pdfFile != null && pdfFile.exists()) {
                 PdfDocumentPreview(
@@ -1201,27 +1201,30 @@ private fun PdfPreviewCard(
                         Icons.Default.PictureAsPdf,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = Color(0xFF2563EB).copy(alpha = 0.5f)
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "No Document Preview Yet",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E293B)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Tap Recompile to compile the LaTeX code and render the PDF preview.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     Button(
                         onClick = onRecompile,
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(6.dp))

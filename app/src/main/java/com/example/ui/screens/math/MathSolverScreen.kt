@@ -280,7 +280,11 @@ fun MathSolverScreen(
                                     .fillMaxWidth()
                                     .height(54.dp),
                                 enabled = problemText.isNotBlank(),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
                             ) {
                                 Text("Solve & Generate PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
@@ -303,13 +307,13 @@ fun MathSolverScreen(
                                     Icon(
                                         imageVector = Icons.Default.Notifications,
                                         contentDescription = "Run in Background",
-                                        tint = androidx.compose.ui.graphics.Color.White
+                                        tint = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         "Solve in Background",
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = androidx.compose.ui.graphics.Color.White,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -423,9 +427,10 @@ fun MathSolverScreen(
                     }
                     is MathSolverState.Error -> {
                         val errorMsg = currentState.message
-                        GlassCard(
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text("Error", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)

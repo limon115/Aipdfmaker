@@ -202,15 +202,14 @@ fun TopicsDetectedScreen(
                     subMessage = "Extracting key concepts, formulas, and headings"
                 )
             } else {
-                com.example.ui.components.glass.GlassCard(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(0.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = if (topics.isNotEmpty()) {
@@ -219,7 +218,7 @@ fun TopicsDetectedScreen(
                             "All topics were removed. Tap 'Add Topic' below to add topics for note generation."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(16.dp)
                     )
                 }

@@ -388,10 +388,10 @@ fun ErrorDiagnosticsCard(code: String, message: String, onRetry: () -> Unit) {
         else -> "ERROR"
     }
     
-    com.example.ui.components.glass.GlassCard(
+    Card(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
